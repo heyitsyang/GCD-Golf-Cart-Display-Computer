@@ -101,6 +101,8 @@ void create_screen_home() {
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_GESTURE_BUBBLE);
     lv_obj_set_style_bg_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_image_src(obj, &img_blk_triangles_2d, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_max_width(obj, 320, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_max_height(obj, 240, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(obj, lv_color_hex(0xff9e9e9e), LV_PART_SCROLLBAR | LV_STATE_PRESSED);
     {
         lv_obj_t *parent_obj = obj;
@@ -108,23 +110,25 @@ void create_screen_home() {
             // lbl_heading_value
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.lbl_heading_value = obj;
-            lv_obj_set_pos(obj, 0, 15);
+            lv_obj_set_pos(obj, 0, 13);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_font(obj, &ui_font_rem_30, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_pad_left(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_label_set_text(obj, "NNW");
+            lv_obj_set_style_align(obj, LV_ALIGN_TOP_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
         }
         {
             // lbl_speed_value
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.lbl_speed_value = obj;
-            lv_obj_set_pos(obj, 276, 15);
+            lv_obj_set_pos(obj, 0, 13);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_font(obj, &ui_font_rem_30, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_pad_right(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_label_set_text(obj, "00");
+            lv_obj_set_style_align(obj, LV_ALIGN_TOP_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
         }
         {
             // lbl_MPH_text
@@ -137,27 +141,30 @@ void create_screen_home() {
             lv_obj_set_style_pad_right(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_font(obj, &lv_font_montserrat_12, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_pad_top(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_align(obj, LV_ALIGN_DEFAULT, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_label_set_text(obj, "MPH");
         }
         {
             // lbl_time_value
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.lbl_time_value = obj;
-            lv_obj_set_pos(obj, 70, 87);
+            lv_obj_set_pos(obj, 0, -5);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_text_font(obj, &ui_font_rem_40, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_label_set_text(obj, "12:00 PM");
+            lv_obj_set_style_text_font(obj, &ui_font_rem_60, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
         }
         {
             // lbl_date_value
             lv_obj_t *obj = lv_label_create(parent_obj);
             objects.lbl_date_value = obj;
-            lv_obj_set_pos(obj, 109, 123);
+            lv_obj_set_pos(obj, 0, 24);
             lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
             lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_font(obj, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_label_set_text(obj, "Tue, Dec 25");
+            lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
         }
         {
             // lbl_heading_text
@@ -170,48 +177,8 @@ void create_screen_home() {
             lv_obj_set_style_pad_bottom(obj, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_text_font(obj, &lv_font_montserrat_12, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_pad_top(obj, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_align(obj, LV_ALIGN_DEFAULT, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_label_set_text(obj, "HEADING");
-        }
-        {
-            // bar_fuel
-            lv_obj_t *obj = lv_bar_create(parent_obj);
-            objects.bar_fuel = obj;
-            lv_obj_set_pos(obj, 293, 61);
-            lv_obj_set_size(obj, 18, 125);
-            lv_bar_set_value(obj, 25, LV_ANIM_ON);
-            lv_obj_set_style_border_width(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
-            {
-                static lv_coord_t dsc[] = {LV_GRID_TEMPLATE_LAST};
-                lv_obj_set_style_grid_row_dsc_array(obj, dsc, LV_PART_MAIN | LV_STATE_DEFAULT);
-            }
-            {
-                static lv_coord_t dsc[] = {LV_GRID_TEMPLATE_LAST};
-                lv_obj_set_style_grid_column_dsc_array(obj, dsc, LV_PART_MAIN | LV_STATE_DEFAULT);
-            }
-            lv_obj_set_style_radius(obj, 6, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_border_color(obj, lv_color_hex(0xff3164c3), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_color(obj, lv_color_hex(0xfff32121), LV_PART_INDICATOR | LV_STATE_DEFAULT);
-            lv_obj_set_style_radius(obj, 0, LV_PART_INDICATOR | LV_STATE_DEFAULT);
-        }
-        {
-            // lbl_fuel_empty
-            lv_obj_t *obj = lv_label_create(parent_obj);
-            objects.lbl_fuel_empty = obj;
-            lv_obj_set_pos(obj, 298, 170);
-            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-            lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_label_set_text(obj, "E");
-        }
-        {
-            // lbl_fuel_full
-            lv_obj_t *obj = lv_label_create(parent_obj);
-            objects.lbl_fuel_full = obj;
-            lv_obj_set_pos(obj, 298, 61);
-            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-            lv_obj_set_style_text_color(obj, lv_color_hex(0xffffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_text_font(obj, &lv_font_montserrat_14, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_label_set_text(obj, "F");
         }
     }
     
@@ -221,6 +188,42 @@ void create_screen_home() {
 void tick_screen_home() {
     void *flowState = getFlowState(0, 0);
     (void)flowState;
+    {
+        const char *new_val = evalTextProperty(flowState, 0, 3, "Failed to evaluate Text in Label widget");
+        const char *cur_val = lv_label_get_text(objects.lbl_heading_value);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.lbl_heading_value;
+            lv_label_set_text(objects.lbl_heading_value, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = evalTextProperty(flowState, 2, 3, "Failed to evaluate Text in Label widget");
+        const char *cur_val = lv_label_get_text(objects.lbl_speed_value);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.lbl_speed_value;
+            lv_label_set_text(objects.lbl_speed_value, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = evalTextProperty(flowState, 4, 3, "Failed to evaluate Text in Label widget");
+        const char *cur_val = lv_label_get_text(objects.lbl_time_value);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.lbl_time_value;
+            lv_label_set_text(objects.lbl_time_value, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
+    {
+        const char *new_val = evalTextProperty(flowState, 5, 3, "Failed to evaluate Text in Label widget");
+        const char *cur_val = lv_label_get_text(objects.lbl_date_value);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.lbl_date_value;
+            lv_label_set_text(objects.lbl_date_value, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
 }
 
 void create_screen_weather() {
@@ -335,6 +338,7 @@ void create_screen_meshtastic() {
     lv_obj_set_size(obj, 320, 240);
     lv_obj_add_event_cb(obj, event_handler_cb_meshtastic_meshtastic, LV_EVENT_ALL, flowState);
     lv_obj_set_style_bg_color(obj, lv_color_hex(0xff000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(obj, &lv_font_montserrat_20, LV_PART_MAIN | LV_STATE_DEFAULT);
     {
         lv_obj_t *parent_obj = obj;
         {
@@ -497,7 +501,7 @@ extern void add_style(lv_obj_t *obj, int32_t styleIndex);
 extern void remove_style(lv_obj_t *obj, int32_t styleIndex);
 
 static const char *screen_names[] = { "Home", "Weather", "Maintenance", "Settings", "Meshtastic", "PIN_Entry", "Diagnostics" };
-static const char *object_names[] = { "home", "weather", "maintenance", "settings", "meshtastic", "pin_entry", "diagnostics", "lbl_heading_value", "lbl_speed_value", "lbl_mph_text", "lbl_time_value", "lbl_date_value", "lbl_heading_text", "bar_fuel", "lbl_fuel_empty", "lbl_fuel_full", "obj0", "obj1", "lbl_maintenance_title", "lbl_settings_title", "lbl_meshastic_title", "lbl_pin_start_title", "btn_matrix_pin", "lbl_show_pin", "lbl_diagnostics_title" };
+static const char *object_names[] = { "home", "weather", "maintenance", "settings", "meshtastic", "pin_entry", "diagnostics", "lbl_heading_value", "lbl_speed_value", "lbl_mph_text", "lbl_time_value", "lbl_date_value", "lbl_heading_text", "obj0", "obj1", "lbl_maintenance_title", "lbl_settings_title", "lbl_meshastic_title", "lbl_pin_start_title", "btn_matrix_pin", "lbl_show_pin", "lbl_diagnostics_title" };
 static const char *style_names[] = { "Page black text white" };
 
 

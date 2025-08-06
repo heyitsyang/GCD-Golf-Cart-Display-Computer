@@ -21,9 +21,6 @@ typedef struct _objects_t {
     lv_obj_t *lbl_time_value;
     lv_obj_t *lbl_date_value;
     lv_obj_t *lbl_heading_text;
-    lv_obj_t *bar_fuel;
-    lv_obj_t *lbl_fuel_empty;
-    lv_obj_t *lbl_fuel_full;
     lv_obj_t *obj0;
     lv_obj_t *obj1;
     lv_obj_t *lbl_maintenance_title;

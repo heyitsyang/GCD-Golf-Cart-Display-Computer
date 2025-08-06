@@ -17,6 +17,14 @@
 *                                                                                            *
 \********************************************************************************************/
 
+/********************************************
+ *                                          *
+ * THIS FILE IS FOR THE CYD 2432S028R BOARD *
+ * - Resistive touch                        *
+ * - ILI9341 screen                         *
+ *                                          *
+ ********************************************/
+
 
 /********************
  *     INCLUDES     *
@@ -25,9 +33,13 @@
 #include <lvgl.h>                 //  lvgl@^9.3.0
 #include <TFT_eSPI.h>             //  bodmer/TFT_eSPI@^2.5.43
 #include <XPT2046_Touchscreen.h>  //  https://github.com/PaulStoffregen/XPT2046_Touchscreen.git
+#include <TinyGPS++.h>
+#include <Timezone.h>
+#include <movingAvg.h>
 
 
 #include "ui/ui.h"            // generated from EEZ Studio
+#include "get_set_vars.h"     // get & set functions for EEZ Studio vars
 #include "prototypes.h"       // declare functions so they can be moved below setup() & loop()
 
 /********************
@@ -55,7 +67,13 @@
 
 /*LVGL draw into this buffer, 1/10 screen size usually works well. The size is in bytes*/
 
-#define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT / 10 * (LV_COLOR_DEPTH / 8))
+#define NUM_BUFS 2
+#define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT * NUM_BUFS / 10 * (LV_COLOR_DEPTH / 8))
+
+// Define the RX, TX pins & baud rate for GPS serial data
+#define GPS_RX_PIN 22
+#define GPS_TX_PIN 27
+#define GPS_BAUD 9600
 
 
 /******************************
@@ -71,9 +89,46 @@ uint8_t *draw_buf;      //draw_buf is allocated on heap otherwise the static are
 uint32_t lastTick = 0;  //Used to track the tick timer
 
 /* App variables */
-int value = 0;
-bool isDirectionUp = true;
+// int value = 0;
+// bool isDirectionUp = true;
 
+
+
+// Create an instance of the HardwareSerial class for CYD Serial Port 2
+HardwareSerial gpsSerial(2);
+
+// Define movingAvg objects
+movingAvg avgAzimuthDeg(8), avgSpeed(10);         // value is number of samples
+
+// The TinyGPS++ object
+TinyGPSPlus gps;
+
+// GPS Time
+int localYear;
+// byte gpsMonth, gpsDay, gpsHour, gpsMinute, gpsSecond;
+int localMonth, localDay, localHour, localMinute, localSecond, localDayOfWeek;
+
+// time zone definitions
+TimeChangeRule mySTD = {"EST", First, Sun, Nov, 2, -300};   //UTC - 5 hours
+TimeChangeRule myDST = {"EDT", Second, Sun, Mar, 2, -240};  //UTC - 4 hours
+TimeChangeRule *tcr;  // pointer to use to extract TZ abbreviation later
+Timezone myTZ(myDST, mySTD);
+
+// time variables
+time_t localTime, utcTime;
+int timesetinterval = 60; //set microcontroller time every 60 seconds
+
+// String cur_date;
+// String hhmm_t;
+// String hhmmss_t;
+// String strAmPm;
+String latitude;
+String longitude;
+String altitude;
+// String speed;
+// String heading;
+String hdop;
+String satellites;
 
 /*****************
  *     SETUP     *
@@ -92,6 +147,13 @@ void setup() {
   touchscreen.begin(touchscreenSpi);                                         // Touchscreen init
   touchscreen.setRotation(TOUCH_ROTATION_180);               //set eSPI touchscreen rotation - independent of display rotation
 
+  avgAzimuthDeg.begin();
+  avgSpeed.begin();
+
+  // Start Serial 2 with the defined RX and TX pins and a baud rate of 9600
+  gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  Serial.println("Serial 2 started at 9600 baud rate");
+
   //Initialise LVGL GUI
   lv_init();
 
@@ -109,11 +171,6 @@ void setup() {
 
   //Integrate GUI from EEZ
   ui_init();
-
-  /* Add event handlers */
-
-  // lv_obj_add_event_cb(objects.btn_reset, btn_reset_value_handler, LV_EVENT_ALL, NULL);
-  // lv_obj_add_event_cb(objects.btn_random, btn_random_value_handler, LV_EVENT_ALL, NULL);
 }
 
 /*****************
@@ -122,31 +179,71 @@ void setup() {
 
 void loop() {
 
-  // * Add app loop code */
+  while (gpsSerial.available() > 0)     // pass any character(s) in rx buffer to the GPS library
+    gps.encode(gpsSerial.read());
+  if (gps.location.isUpdated()) {       // check if end of valid NMEA sentence - typically once per second
+
+    // set the Time to the latest GPS reading
+    if (gps.date. isValid() && gps.time.isValid()) {
+      setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+      utcTime = now();
+      localTime = myTZ.toLocal(utcTime, &tcr);
+      localYear = year(localTime);
+      localMonth = month(localTime);
+      localDay = day(localTime);
+      localHour = hour(localTime);
+      localMinute = minute(localTime);
+      localSecond = second(localTime);
+      localDayOfWeek = weekday(localTime);
+    }
   
-  // //Check if we want to pause
-  // bool isPauseEnabled = lv_obj_has_state(objects.cbx_pause, LV_STATE_CHECKED);
+    Serial.print("LAT: ");
+    latitude = String(gps.location.lat(), 6);
+    Serial.println(latitude);
+    Serial.print("LONG: "); 
+    longitude = String(gps.location.lng(), 6);
+    Serial.println(longitude);
 
-  // if (!isPauseEnabled) {
+    speed = avgSpeed.reading(gps.speed.mph());
+    if(speed < 3) {
+      speed = 0;
+      heading = String("");
+    } else {
+      heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
+    }
+    Serial.print("SPEED (mph) = ");
+    Serial.println(speed);
+    Serial.print("DIRECTION = ");
+    Serial.println(heading);
 
-  //   mockBarValue();
-    
-  //   // Set bar value
-  //   lv_bar_set_value(objects.bar_temperature, value, LV_ANIM_OFF);
+    Serial.print("ALT (min)= ");
+    altitude = String(gps.altitude.meters(), 2);
+    Serial.println(altitude);
+    Serial.print("HDOP = "); 
+    hdop = String(gps.hdop.value() / 100.0, 2);
+    Serial.println(hdop);
+    Serial.print("Satellites = "); 
+    satellites = String(gps.satellites.value());
+    Serial.println(satellites);
 
-  //   //Set value
-  //   lv_label_set_text_fmt(objects.label_value_c, "Celsius: %d", value);
+    Serial.print("Local time: ");
+    Serial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
+    cur_date = String(getDayAbbr(localDayOfWeek)) + ", " + String(getMonthAbbr(localMonth)) + " " + String(localDay);
+    Serial.println(cur_date);
+    hhmm_t = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute));
+    hhmmss_t = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
+    Serial.println(hhmm_t);
+    Serial.println("");
+    str_am_pm = am_pm(localHour);
 
-  //   //Set value to 2 decimal place
-  //   float fahrenheit = ((value * 1.0) * (9.0/5.0)) + 32;
-  //   lv_label_set_text_fmt(objects.label_value_f, "Fahrenheit: %.2f%", fahrenheit);
-  // }
+  }
 
   
   /* Required for LVGL */
   lv_tick_inc(millis() - lastTick);  //Update the tick timer. Tick is new for LVGL 9.x
   lastTick = millis();
-  lv_timer_handler();  //Update the UI
+  lv_timer_handler();   //Update the UI for LVGL
+  ui_tick();            // Update the UI for EEZ Studio Flow
   delay(5);
 }
 
@@ -197,41 +294,66 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
  *   APP FUNCTIONS   *
  *********************/
 
-//  void mockBarValue() {
-//   if (isDirectionUp) {
-//     value = value + 1;
-//     if (value > 210) {
-//       delay(1000);
-//       isDirectionUp = false;
-//     }
-//   } else {
-//     value = value - 1;
-//     if (value < 0) {
-//       delay(1000);
-//       isDirectionUp = true;
-//     }
-//   }
-// }
+String prefix_zero(int max2digits) {
+  return (max2digits < 10) ? "0" + String(max2digits) : String(max2digits);
+}
 
-// static void btn_reset_value_handler(lv_event_t *e) {
-//   lv_event_code_t code = lv_event_get_code(e);
+int make12hr(int time_hr) {
+  return (time_hr > 12) ? time_hr - 12 : time_hr;
+}
 
-//   if (code == LV_EVENT_CLICKED) {
-//     value = 0;
-//     LV_LOG_USER("Clicked");
-//   } else if (code == LV_EVENT_VALUE_CHANGED) {
-//     LV_LOG_USER("Toggled");
-//   }
-// }
+String am_pm(int time_hr) {
+  return (time_hr > 12) ? String("PM") : String("AM");
+}
 
-// static void btn_random_value_handler(lv_event_t *e) {
-//   lv_event_code_t code = lv_event_get_code(e);
+// Function to convert month number to three char abbreviation
+const char* getMonthAbbr(int monthNumber) {
+    // Array of month abbreviations (index 0 unused for 1-based indexing)
+    static const char* monthAbbreviations[] = {
+        "",     // Index 0 (unused)
+        "Jan",  // 1
+        "Feb",  // 2
+        "Mar",  // 3
+        "Apr",  // 4
+        "May",  // 5
+        "Jun",  // 6
+        "Jul",  // 7
+        "Aug",  // 8
+        "Sep",  // 9
+        "Oct",  // 10
+        "Nov",  // 11
+        "Dec"   // 12
+    };
 
-//   if (code == LV_EVENT_CLICKED) {
-//     LV_LOG_USER("Clicked");
-//     value = random(0, 210);
-//   } else if (code == LV_EVENT_VALUE_CHANGED) {
-//     LV_LOG_USER("Toggled");
-//   }
-// }
+    // Check for valid month number
+    if (monthNumber >= 1 && monthNumber <= 12) {
+        return monthAbbreviations[monthNumber];
+    } else {
+        // Return a default or error string for invalid input
+        return "Inv"; // "Invalid" or similar
+    }
+}
 
+// Function to convert timelib weekday (Sunday=1) to 3-char abbreviation
+const char* getDayAbbr(int weekday_num) {
+    // Array of string literals for day abbreviations, indexed from 0.
+    // Since Sunday=1, we need to adjust the index.
+    const char* day_abbreviations[] = {
+        "Sun", // weekday_num = 1
+        "Mon", // weekday_num = 2
+        "Tue", // weekday_num = 3
+        "Wed", // weekday_num = 4
+        "Thu", // weekday_num = 5
+        "Fri", // weekday_num = 6
+        "Sat"  // weekday_num = 7
+    };
+
+    // Check for valid input range
+    if (weekday_num >= 1 && weekday_num <= 7) {
+        // Adjust index for 0-based array: weekday_num - 1
+        return day_abbreviations[weekday_num - 1];
+    } else {
+        // Handle invalid input, e.g., return "Err" or NULL
+        return "Err"; // Or any other suitable error indicator
+    }
+}
