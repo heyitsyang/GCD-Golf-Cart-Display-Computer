@@ -486,6 +486,23 @@ void create_screen_diagnostics() {
             lv_obj_set_style_text_font(obj, &lv_font_montserrat_20, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_label_set_text(obj, "Diagnostics");
         }
+        {
+            // Sats/HDOP
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.sats_hdop = obj;
+            lv_obj_set_pos(obj, 28, 54);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_set_style_text_font(obj, &lv_font_montserrat_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "Sats/HDOP: ");
+        }
+        {
+            lv_obj_t *obj = lv_label_create(parent_obj);
+            objects.obj2 = obj;
+            lv_obj_set_pos(obj, 151, 54);
+            lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+            lv_obj_set_style_text_font(obj, &lv_font_montserrat_20, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_label_set_text(obj, "");
+        }
     }
     
     tick_screen_diagnostics();
@@ -494,6 +511,15 @@ void create_screen_diagnostics() {
 void tick_screen_diagnostics() {
     void *flowState = getFlowState(0, 6);
     (void)flowState;
+    {
+        const char *new_val = evalTextProperty(flowState, 3, 3, "Failed to evaluate Text in Label widget");
+        const char *cur_val = lv_label_get_text(objects.obj2);
+        if (strcmp(new_val, cur_val) != 0) {
+            tick_value_change_obj = objects.obj2;
+            lv_label_set_text(objects.obj2, new_val);
+            tick_value_change_obj = NULL;
+        }
+    }
 }
 
 
@@ -501,7 +527,7 @@ extern void add_style(lv_obj_t *obj, int32_t styleIndex);
 extern void remove_style(lv_obj_t *obj, int32_t styleIndex);
 
 static const char *screen_names[] = { "Home", "Weather", "Maintenance", "Settings", "Meshtastic", "PIN_Entry", "Diagnostics" };
-static const char *object_names[] = { "home", "weather", "maintenance", "settings", "meshtastic", "pin_entry", "diagnostics", "lbl_heading_value", "lbl_speed_value", "lbl_mph_text", "lbl_time_value", "lbl_date_value", "lbl_heading_text", "obj0", "obj1", "lbl_maintenance_title", "lbl_settings_title", "lbl_meshastic_title", "lbl_pin_start_title", "btn_matrix_pin", "lbl_show_pin", "lbl_diagnostics_title" };
+static const char *object_names[] = { "home", "weather", "maintenance", "settings", "meshtastic", "pin_entry", "diagnostics", "lbl_heading_value", "lbl_speed_value", "lbl_mph_text", "lbl_time_value", "lbl_date_value", "lbl_heading_text", "obj0", "obj1", "lbl_maintenance_title", "lbl_settings_title", "lbl_meshastic_title", "lbl_pin_start_title", "btn_matrix_pin", "lbl_show_pin", "lbl_diagnostics_title", "sats_hdop", "obj2" };
 static const char *style_names[] = { "Page black text white" };
 
 

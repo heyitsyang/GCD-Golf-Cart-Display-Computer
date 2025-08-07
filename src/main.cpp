@@ -89,10 +89,6 @@ uint8_t *draw_buf;      //draw_buf is allocated on heap otherwise the static are
 uint32_t lastTick = 0;  //Used to track the tick timer
 
 /* App variables */
-// int value = 0;
-// bool isDirectionUp = true;
-
-
 
 // Create an instance of the HardwareSerial class for CYD Serial Port 2
 HardwareSerial gpsSerial(2);
@@ -127,8 +123,8 @@ String longitude;
 String altitude;
 // String speed;
 // String heading;
-String hdop;
-String satellites;
+// String hdop;
+// String satellites;
 
 /*****************
  *     SETUP     *
@@ -184,7 +180,7 @@ void loop() {
   if (gps.location.isUpdated()) {       // check if end of valid NMEA sentence - typically once per second
 
     // set the Time to the latest GPS reading
-    if (gps.date. isValid() && gps.time.isValid()) {
+    if (gps.date.isValid() && gps.time.isValid()) {
       setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
       utcTime = now();
       localTime = myTZ.toLocal(utcTime, &tcr);
@@ -205,7 +201,7 @@ void loop() {
     Serial.println(longitude);
 
     speed = avgSpeed.reading(gps.speed.mph());
-    if(speed < 3) {
+    if(speed < 3) {                                   //**** change this to if  hdop number > X then too weak ****/
       speed = 0;
       heading = String("");
     } else {
@@ -219,12 +215,9 @@ void loop() {
     Serial.print("ALT (min)= ");
     altitude = String(gps.altitude.meters(), 2);
     Serial.println(altitude);
-    Serial.print("HDOP = "); 
-    hdop = String(gps.hdop.value() / 100.0, 2);
-    Serial.println(hdop);
-    Serial.print("Satellites = "); 
-    satellites = String(gps.satellites.value());
-    Serial.println(satellites);
+    Serial.print("Sats/HDOP = "); 
+    sats_hdop = String(gps.satellites.value()) + "/" + String(gps.hdop.value() / 100.0, 2);
+    Serial.println(sats_hdop);
 
     Serial.print("Local time: ");
     Serial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));

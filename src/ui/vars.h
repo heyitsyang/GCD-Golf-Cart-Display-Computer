@@ -32,6 +32,8 @@ extern const char *get_var_hhmmss_t();
 extern void set_var_hhmmss_t(const char *value);
 extern const char *get_var_str_am_pm();
 extern void set_var_str_am_pm(const char *value);
+extern const char *get_var_sats_hdop();
+extern void set_var_sats_hdop(const char *value);
 
 
 #ifdef __cplusplus

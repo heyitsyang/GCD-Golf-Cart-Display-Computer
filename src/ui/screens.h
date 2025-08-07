@@ -30,6 +30,8 @@ typedef struct _objects_t {
     lv_obj_t *btn_matrix_pin;
     lv_obj_t *lbl_show_pin;
     lv_obj_t *lbl_diagnostics_title;
+    lv_obj_t *sats_hdop;
+    lv_obj_t *obj2;
 } objects_t;
 
 extern objects_t objects;

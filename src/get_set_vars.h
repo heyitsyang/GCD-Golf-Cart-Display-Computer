@@ -44,6 +44,24 @@ extern "C" void set_var_hhmm_t(const char *value) {
     hhmm_t = value;
 }
 
+String str_am_pm;
+extern "C" const char *get_var_str_am_pm() {
+    return str_am_pm.c_str();
+}
+
+extern "C" void set_var_str_am_pm(const char *value) {
+    str_am_pm = value;
+}
+
+String sats_hdop;
+extern "C" const char *get_var_sats_hdop() {
+    return sats_hdop.c_str();
+}
+
+extern "C" void set_var_sats_hdop(const char *value) {
+    sats_hdop = value;
+}
+
 int32_t speed;
 int32_t get_var_speed() {
     return speed;
@@ -53,11 +71,3 @@ void set_var_speed(int32_t value) {
     speed = value;
 }
 
-String str_am_pm;
-extern "C" const char *get_var_str_am_pm() {
-    return str_am_pm.c_str();
-}
-
-extern "C" void set_var_str_am_pm(const char *value) {
-    str_am_pm = value;
-}
