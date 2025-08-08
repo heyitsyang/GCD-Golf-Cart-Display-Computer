@@ -46,6 +46,8 @@
  *      DEFINES     *
  ********************/
 
+#define DEBUG 1               // enable/disable most SerialPrint() messages
+
 // Touch Screen pins
 #define XPT2046_IRQ 36
 #define XPT2046_MOSI 32
@@ -62,8 +64,8 @@
 #define TOUCH_WIDTH 320     // define touch using LANDSCAPE orientation
 #define TOUCH_HEIGHT 240
 
-#define TFT_WIDTH  240      // for some reason display library
-#define TFT_HEIGHT 320      // is defined using PORTRAIT orientation
+#define TFT_WIDTH  240      // define this display/driver using PORTRAIT orientation
+#define TFT_HEIGHT 320      // (XY origin can differ between displays/drivers)
 
 /*LVGL draw into this buffer, 1/10 screen size usually works well. The size is in bytes*/
 
@@ -74,6 +76,8 @@
 #define GPS_RX_PIN 22
 #define GPS_TX_PIN 27
 #define GPS_BAUD 9600
+
+#define HDOP_THRESHOLD 4
 
 
 /******************************
@@ -114,17 +118,19 @@ Timezone myTZ(myDST, mySTD);
 time_t localTime, utcTime;
 int timesetinterval = 60; //set microcontroller time every 60 seconds
 
+String latitude;
+String longitude;
+String altitude;
+float hdop;
+// the rest are defined in get_set_vars.h as aprt of EEZ Studio integration
 // String cur_date;
 // String hhmm_t;
 // String hhmmss_t;
 // String strAmPm;
-String latitude;
-String longitude;
-String altitude;
-// String speed;
 // String heading;
-// String hdop;
+// String sats_hdop;
 // String satellites;
+// int speed;
 
 /*****************
  *     SETUP     *
@@ -192,52 +198,50 @@ void loop() {
       localSecond = second(localTime);
       localDayOfWeek = weekday(localTime);
     }
-  
-    Serial.print("LAT: ");
+
     latitude = String(gps.location.lat(), 6);
+    longitude = String(gps.location.lng(), 6);
+    altitude = String(gps.altitude.meters(), 2);
+    hdop = gps.hdop.value() / 100.0;
+    sats_hdop = String(gps.satellites.value()) + "/" + String(hdop, 2);
+    cur_date = String(getDayAbbr(localDayOfWeek)) + ", " + String(getMonthAbbr(localMonth)) + " " + String(localDay);
+    hhmm_t = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute));
+    hhmmss_t = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
+    str_am_pm = am_pm(localHour);
+
+    if (hdop < HDOP_THRESHOLD) {  // if not reliable data, stay with old values
+     speed = avgSpeed.reading(gps.speed.mph());
+     heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
+    }
+    
+    #if DEBUG == 1
+    Serial.print("LAT: ");
     Serial.println(latitude);
     Serial.print("LONG: "); 
-    longitude = String(gps.location.lng(), 6);
     Serial.println(longitude);
-
-    speed = avgSpeed.reading(gps.speed.mph());
-    if(speed < 3) {                                   //**** change this to if  hdop number > X then too weak ****/
-      speed = 0;
-      heading = String("");
-    } else {
-      heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
-    }
     Serial.print("SPEED (mph) = ");
     Serial.println(speed);
     Serial.print("DIRECTION = ");
     Serial.println(heading);
-
     Serial.print("ALT (min)= ");
-    altitude = String(gps.altitude.meters(), 2);
     Serial.println(altitude);
     Serial.print("Sats/HDOP = "); 
-    sats_hdop = String(gps.satellites.value()) + "/" + String(gps.hdop.value() / 100.0, 2);
     Serial.println(sats_hdop);
-
     Serial.print("Local time: ");
     Serial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
-    cur_date = String(getDayAbbr(localDayOfWeek)) + ", " + String(getMonthAbbr(localMonth)) + " " + String(localDay);
     Serial.println(cur_date);
-    hhmm_t = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute));
-    hhmmss_t = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
     Serial.println(hhmm_t);
     Serial.println("");
-    str_am_pm = am_pm(localHour);
+    #endif
 
   }
-
   
   /* Required for LVGL */
   lv_tick_inc(millis() - lastTick);  //Update the tick timer. Tick is new for LVGL 9.x
   lastTick = millis();
   lv_timer_handler();   //Update the UI for LVGL
   ui_tick();            // Update the UI for EEZ Studio Flow
-  delay(5);
+  delay(5);             // not sure why this is necessary
 }
 
 /*********************************
@@ -273,10 +277,12 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
     data->point.y = map(p.y, touchScreenMinimumY, touchScreenMaximumY, 1, TFT_HEIGHT); // Touchscreen Y calibration
     data->state = LV_INDEV_STATE_PRESSED;
 
+    #if DEBUG == 1
     Serial.print("Touch x ");
     Serial.print(data->point.x);
     Serial.print(" y ");
     Serial.println(data->point.y);
+    #endif
 
   } else {
     data->state = LV_INDEV_STATE_RELEASED;
@@ -287,6 +293,7 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
  *   APP FUNCTIONS   *
  *********************/
 
+ // Utility functions
 String prefix_zero(int max2digits) {
   return (max2digits < 10) ? "0" + String(max2digits) : String(max2digits);
 }
