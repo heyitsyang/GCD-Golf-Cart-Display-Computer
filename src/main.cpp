@@ -77,9 +77,6 @@
 #define GPS_TX_PIN 27
 #define GPS_BAUD 9600
 
-#define HDOP_THRESHOLD 4
-
-
 /******************************
  *    VARIABLES & OBJECTS     *
  ******************************/
@@ -131,6 +128,7 @@ float hdop;
 // String sats_hdop;
 // String satellites;
 // int speed;
+// float max_hdop;
 
 /*****************
  *     SETUP     *
@@ -138,16 +136,20 @@ float hdop;
 
 void setup() {
 
+  //Intialize any variables
+  max_hdop = 3;  //eventually some of these will be stored in nvs paramerters
+
   //Some basic info on the Serial console
   String LVGL_Arduino = "LVGL";
   LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
   Serial.begin(115200);
   Serial.println(LVGL_Arduino);
 
+  
   //Initialise the touchscreen
   touchscreenSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS); // Start second SPI bus for touchscreen
   touchscreen.begin(touchscreenSpi);                                         // Touchscreen init
-  touchscreen.setRotation(TOUCH_ROTATION_180);               //set eSPI touchscreen rotation - independent of display rotation
+  touchscreen.setRotation(TOUCH_ROTATION_180);  
 
   avgAzimuthDeg.begin();
   avgSpeed.begin();
@@ -173,7 +175,8 @@ void setup() {
 
   //Integrate GUI from EEZ
   ui_init();
-}
+
+} // end setup()
 
 /*****************
  *     LOOP      *
@@ -209,12 +212,14 @@ void loop() {
     hhmmss_t = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
     str_am_pm = am_pm(localHour);
 
-    if (hdop < HDOP_THRESHOLD) {  // if not reliable data, stay with old values
+    if (hdop < max_hdop) {  // if not reliable data, stay with old values
      speed = avgSpeed.reading(gps.speed.mph());
      heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
     }
     
     #if DEBUG == 1
+    // vars dependent on GPS signal
+    Serial.println("");
     Serial.print("LAT: ");
     Serial.println(latitude);
     Serial.print("LONG: "); 
@@ -231,18 +236,24 @@ void loop() {
     Serial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
     Serial.println(cur_date);
     Serial.println(hhmm_t);
+
+    // vars not dependent on GPS signal
+    Serial.print("Max HDOP = ");
+    Serial.println(max_hdop);
     Serial.println("");
     #endif
 
   }
-  
+
   /* Required for LVGL */
   lv_tick_inc(millis() - lastTick);  //Update the tick timer. Tick is new for LVGL 9.x
   lastTick = millis();
-  lv_timer_handler();   //Update the UI for LVGL
+  lv_timer_handler();   // Update the UI for LVGL
   ui_tick();            // Update the UI for EEZ Studio Flow
   delay(5);             // not sure why this is necessary
-}
+
+}  // end loop()
+
 
 /*********************************
  *   DISPLAY & TOUCH FUNCTIONS   *

@@ -76,3 +76,11 @@ void set_var_speed(int32_t value) {
     speed = value;
 }
 
+float max_hdop;
+float get_var_max_hdop() {
+    return max_hdop;
+}
+
+void set_var_max_hdop(float value) {
+    max_hdop = value;
+}
