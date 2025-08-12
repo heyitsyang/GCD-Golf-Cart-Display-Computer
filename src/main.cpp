@@ -116,6 +116,7 @@ Timezone myTZ(myDST, mySTD);
 time_t localTime, utcTime;
 int timesetinterval = 60; //set microcontroller time every 60 seconds
 
+
 String latitude;
 String longitude;
 String altitude;
@@ -139,12 +140,12 @@ void setup() {
 
   //Intialize any variables
   max_hdop = 3;  //eventually some of these will be stored in nvs paramerters
-
+  version = String('v') + String(VERSION);
   //Some basic info on the Serial console
   String LVGL_Arduino = "LVGL";
   LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
   Serial.begin(115200);
-  Serial.println(VERSION_FULL);
+  Serial.println(version);
   Serial.println(LVGL_Arduino);
 
   

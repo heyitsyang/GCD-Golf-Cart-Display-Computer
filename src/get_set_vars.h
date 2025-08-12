@@ -84,3 +84,12 @@ float get_var_max_hdop() {
 void set_var_max_hdop(float value) {
     max_hdop = value;
 }
+
+String version;
+extern "C" const char *get_var_version() {
+    return version.c_str();
+}
+
+extern "C" void set_var_version(const char *value) {
+    version = value;
+}
