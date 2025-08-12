@@ -38,6 +38,7 @@
 #include <movingAvg.h>
 
 
+#include "version.h"
 #include "ui/ui.h"            // generated from EEZ Studio
 #include "get_set_vars.h"     // get & set functions for EEZ Studio vars
 #include "prototypes.h"       // declare functions so they can be moved below setup() & loop()
@@ -143,6 +144,7 @@ void setup() {
   String LVGL_Arduino = "LVGL";
   LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
   Serial.begin(115200);
+  Serial.println(VERSION_FULL);
   Serial.println(LVGL_Arduino);
 
   
