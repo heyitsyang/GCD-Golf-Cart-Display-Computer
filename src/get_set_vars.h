@@ -67,13 +67,13 @@ extern "C" void set_var_sats_hdop(const char *value) {
 }
 
 
-int32_t speed;
-int32_t get_var_speed() {
-    return speed;
+int32_t avg_speed;
+int32_t get_var_avg_speed() {
+    return avg_speed;
 }
 
-void set_var_speed(int32_t value) {
-    speed = value;
+void set_var_avg_speed(int32_t value) {
+    avg_speed = value;
 }
 
 float max_hdop;

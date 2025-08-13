@@ -121,6 +121,7 @@ String latitude;
 String longitude;
 String altitude;
 float hdop;
+
 // the rest are defined in get_set_vars.h as aprt of EEZ Studio integration
 // String cur_date;
 // String hhmm_t;
@@ -129,7 +130,7 @@ float hdop;
 // String heading;
 // String sats_hdop;
 // String satellites;
-// int speed;
+// int avg_speed;
 // float max_hdop;
 
 /*****************
@@ -216,8 +217,8 @@ void loop() {
     str_am_pm = am_pm(localHour);
 
     if (hdop < max_hdop) {  // if not reliable data, stay with old values
-     speed = avgSpeed.reading(gps.speed.mph());
-     heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
+      avg_speed = avgSpeed.reading(gps.speed.mph());
+      heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
     }
     
     #if DEBUG == 1
@@ -227,8 +228,8 @@ void loop() {
     Serial.println(latitude);
     Serial.print("LONG: "); 
     Serial.println(longitude);
-    Serial.print("SPEED (mph) = ");
-    Serial.println(speed);
+    Serial.print("AVG_SPEED (mph) = ");
+    Serial.println(avg_speed);
     Serial.print("DIRECTION = ");
     Serial.println(heading);
     Serial.print("ALT (min)= ");
