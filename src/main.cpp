@@ -93,7 +93,7 @@ uint32_t lastTick = 0;  //Used to track the tick timer
 /* App variables */
 
 // Create an instance of the HardwareSerial class for CYD Serial Port 2
-HardwareSerial gpsSerial(2);
+HardwareSerial gpsSerial(2);  //ESP32 maps the GPIOs designated later to UART2
 
 // Define movingAvg objects
 movingAvg avgAzimuthDeg(8), avgSpeed(10);         // value is number of samples
