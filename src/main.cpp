@@ -74,8 +74,10 @@
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT * NUM_BUFS / 10 * (LV_COLOR_DEPTH / 8))
 
 // Define the RX, TX pins & baud rate for GPS serial data
-#define GPS_RX_PIN 22
-#define GPS_TX_PIN 27
+// #define GPS_RX_PIN 22
+// #define GPS_TX_PIN 27
+#define GPS_RX_PIN 03  // USB connector RX
+#define GPS_TX_PIN 01  // USB connector TX
 #define GPS_BAUD 9600
 
 /******************************
@@ -93,7 +95,7 @@ uint32_t lastTick = 0;  //Used to track the tick timer
 /* App variables */
 
 // Create an instance of the HardwareSerial class for CYD Serial Port 2
-HardwareSerial gpsSerial(2);  //ESP32 maps the GPIOs designated later to UART2
+HardwareSerial gpsSerial(0);  //ESP32 maps the GPIOs designated later to UART0
 
 // Define movingAvg objects
 movingAvg avgAzimuthDeg(8), avgSpeed(10);         // value is number of samples
