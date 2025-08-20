@@ -36,7 +36,7 @@
 #include <TinyGPS++.h>
 #include <Timezone.h>
 #include <movingAvg.h>
-
+#include <Preferences.h>          // used to save prefeerences in EEPROM
 
 #include "version.h"
 #include "ui/ui.h"            // generated from EEZ Studio
@@ -48,6 +48,7 @@
  ********************/
 
 #define DEBUG 1               // enable/disable most SerialPrint() messages
+
 
 // Touch Screen pins
 #define XPT2046_IRQ 36
@@ -69,16 +70,22 @@
 #define TFT_HEIGHT 320      // (XY origin can differ between displays/drivers)
 
 /*LVGL draw into this buffer, 1/10 screen size usually works well. The size is in bytes*/
-
 #define NUM_BUFS 2
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT * NUM_BUFS / 10 * (LV_COLOR_DEPTH / 8))
 
 // Define the RX, TX pins & baud rate for GPS serial data
-// #define GPS_RX_PIN 22
-// #define GPS_TX_PIN 27
-#define GPS_RX_PIN 03  // USB connector RX
-#define GPS_TX_PIN 01  // USB connector TX
+#define GPS_UART_NUM 0      // select either UART 0 or 2 only
+
+#if GPS_UART_NUM == 0
+  #define GPS_RX_PIN 03     // USB connector RX UART0
+  #define GPS_TX_PIN 01     // USB connector TX UART0
+#else
+  #define GPS_RX_PIN 22     // RX for UART2
+  #define GPS_TX_PIN 27     // TX for UART2
+#endif
+
 #define GPS_BAUD 9600
+
 
 /******************************
  *    VARIABLES & OBJECTS     *
@@ -95,7 +102,7 @@ uint32_t lastTick = 0;  //Used to track the tick timer
 /* App variables */
 
 // Create an instance of the HardwareSerial class for CYD Serial Port 2
-HardwareSerial gpsSerial(0);  //ESP32 maps the GPIOs designated later to UART0
+HardwareSerial gpsSerial(GPS_UART_NUM);  //ESP32 maps the GPIOs designated later to UART0
 
 // Define movingAvg objects
 movingAvg avgAzimuthDeg(8), avgSpeed(10);         // value is number of samples
@@ -105,6 +112,10 @@ TinyGPSPlus gps;
 
 // GPS Time
 int localYear;
+
+// Preferences
+Preferences prefs;
+
 // byte gpsMonth, gpsDay, gpsHour, gpsMinute, gpsSecond;
 int localMonth, localDay, localHour, localMinute, localSecond, localDayOfWeek;
 
@@ -122,7 +133,7 @@ int timesetinterval = 60; //set microcontroller time every 60 seconds
 String latitude;
 String longitude;
 String altitude;
-float hdop;
+float hdop, old_max_hdop;
 
 // the rest are defined in get_set_vars.h as aprt of EEZ Studio integration
 // String cur_date;
@@ -141,28 +152,39 @@ float hdop;
 
 void setup() {
 
-  //Intialize any variables
-  max_hdop = 3;  //eventually some of these will be stored in nvs paramerters
+  //Print some basic info on the Serial console
   version = String('v') + String(VERSION);
-  //Some basic info on the Serial console
-  String LVGL_Arduino = "LVGL";
+  String SW_Version = "\nSW ";
+  SW_Version += version;
+
+  String LVGL_Arduino = "LVGL ";
   LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
   Serial.begin(115200);
-  Serial.println(version);
+  Serial.println(SW_Version);
   Serial.println(LVGL_Arduino);
 
-  
   //Initialise the touchscreen
   touchscreenSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS); // Start second SPI bus for touchscreen
   touchscreen.begin(touchscreenSpi);                                         // Touchscreen init
   touchscreen.setRotation(TOUCH_ROTATION_180);  
-
+  
+  //Inititalize GPS
   avgAzimuthDeg.begin();
   avgSpeed.begin();
 
-  // Start Serial 2 with the defined RX and TX pins and a baud rate of 9600
+  //Intitalize Preferences name space
+  prefs.begin("eeprom", false); 
+  
+  //Intialize any variables
+
+  max_hdop = prefs.getFloat("max_hdop", 2.5);  // if no such max_hdop, default is the second parameter
+  Serial.print("*************  Max HDOP read from eeprom = ");
+  Serial.println(max_hdop);
+  old_max_hdop = max_hdop;
+
+  // Start Serial with the defined RX and TX pins and a baud rate of 9600
   gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-  Serial.println("Serial 2 started at 9600 baud rate");
+  Serial.print("Serial set by GPS_UART_NUM started at 9600 baud rate");
 
   //Initialise LVGL GUI
   lv_init();
@@ -189,6 +211,7 @@ void setup() {
  *****************/
 
 void loop() {
+
 
   while (gpsSerial.available() > 0)     // pass any character(s) in rx buffer to the GPS library
     gps.encode(gpsSerial.read());
@@ -246,9 +269,19 @@ void loop() {
     // vars not dependent on GPS signal
     Serial.print("Max HDOP = ");
     Serial.println(max_hdop);
+    Serial.print("Old max HDOP = ");
+    Serial.println(old_max_hdop);
     Serial.println("");
     #endif
 
+  }
+  
+  /* Write values to eeprom only if changed */
+  if(max_hdop != old_max_hdop)  {
+    prefs.putFloat("max_hdop", max_hdop);
+    old_max_hdop = max_hdop;
+    Serial.println("**************** max_hdop saved to eeprom:");
+    Serial.println(max_hdop);
   }
 
   /* Required for LVGL */
@@ -259,6 +292,8 @@ void loop() {
   delay(5);             // not sure why this is necessary
 
 }  // end loop()
+
+
 
 
 /*********************************
