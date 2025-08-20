@@ -47,7 +47,7 @@
  *      DEFINES     *
  ********************/
 
-#define DEBUG 1               // enable/disable most SerialPrint() messages
+#define DEBUG 1               // enable/disable most gpsSerialPrint() messages
 
 
 // Touch Screen pins
@@ -73,7 +73,7 @@
 #define NUM_BUFS 2
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT * NUM_BUFS / 10 * (LV_COLOR_DEPTH / 8))
 
-// Define the RX, TX pins & baud rate for GPS serial data
+// Define the RX, TX pins & baud rate for GPS gpsSerial data
 #define GPS_UART_NUM 0      // select either UART 0 or 2 only
 
 #if GPS_UART_NUM == 0
@@ -101,7 +101,7 @@ uint32_t lastTick = 0;  //Used to track the tick timer
 
 /* App variables */
 
-// Create an instance of the HardwareSerial class for CYD Serial Port 2
+// Create an instance of the HardwaregpsSerial class for a CYD gpsSerial Port
 HardwareSerial gpsSerial(GPS_UART_NUM);  //ESP32 maps the GPIOs designated later to UART0
 
 // Define movingAvg objects
@@ -152,16 +152,27 @@ float hdop, old_max_hdop;
 
 void setup() {
 
-  //Print some basic info on the Serial console
+  //Print some basic info on the gpsSerial console
   version = String('v') + String(VERSION);
   String SW_Version = "\nSW ";
   SW_Version += version;
 
   String LVGL_Arduino = "LVGL ";
   LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
-  Serial.begin(115200);
-  Serial.println(SW_Version);
-  Serial.println(LVGL_Arduino);
+
+  /* 
+   * UART0 TX/RX lines are used in this manner:
+   *   - RX is wired to GPS using serial TTL and bypasses the UART0 completely
+   *   - TX is used for serial print messges for debugging and not connected to the GPS
+   *     but can be monitored with normal a USB connection to UART0 (USB connecotr)
+   */
+  
+  // Start gpsSerial with the defined RX and TX pins and a baud rate of 9600
+  gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  gpsSerial.print("gpsSerial set by GPS_UART_NUM started at 9600 baud rate");
+
+  gpsSerial.println(SW_Version);
+  gpsSerial.println(LVGL_Arduino);
 
   //Initialise the touchscreen
   touchscreenSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS); // Start second SPI bus for touchscreen
@@ -178,13 +189,10 @@ void setup() {
   //Intialize any variables
 
   max_hdop = prefs.getFloat("max_hdop", 2.5);  // if no such max_hdop, default is the second parameter
-  Serial.print("*************  Max HDOP read from eeprom = ");
-  Serial.println(max_hdop);
+  gpsSerial.print("*************  Max HDOP read from eeprom = ");
+  gpsSerial.println(max_hdop);
   old_max_hdop = max_hdop;
 
-  // Start Serial with the defined RX and TX pins and a baud rate of 9600
-  gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-  Serial.print("Serial set by GPS_UART_NUM started at 9600 baud rate");
 
   //Initialise LVGL GUI
   lv_init();
@@ -199,7 +207,7 @@ void setup() {
   lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
   lv_indev_set_read_cb(indev, my_touchpad_read);
 
-  Serial.println("LVGL Setup done");
+  gpsSerial.println("LVGL Setup done");
 
   //Integrate GUI from EEZ
   ui_init();
@@ -248,30 +256,30 @@ void loop() {
     
     #if DEBUG == 1
     // vars dependent on GPS signal
-    Serial.println("");
-    Serial.print("LAT: ");
-    Serial.println(latitude);
-    Serial.print("LONG: "); 
-    Serial.println(longitude);
-    Serial.print("AVG_SPEED (mph) = ");
-    Serial.println(avg_speed);
-    Serial.print("DIRECTION = ");
-    Serial.println(heading);
-    Serial.print("ALT (min)= ");
-    Serial.println(altitude);
-    Serial.print("Sats/HDOP = "); 
-    Serial.println(sats_hdop);
-    Serial.print("Local time: ");
-    Serial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
-    Serial.println(cur_date);
-    Serial.println(hhmm_t);
+    gpsSerial.println("");
+    gpsSerial.print("LAT: ");
+    gpsSerial.println(latitude);
+    gpsSerial.print("LONG: "); 
+    gpsSerial.println(longitude);
+    gpsSerial.print("AVG_SPEED (mph) = ");
+    gpsSerial.println(avg_speed);
+    gpsSerial.print("DIRECTION = ");
+    gpsSerial.println(heading);
+    gpsSerial.print("ALT (min)= ");
+    gpsSerial.println(altitude);
+    gpsSerial.print("Sats/HDOP = "); 
+    gpsSerial.println(sats_hdop);
+    gpsSerial.print("Local time: ");
+    gpsSerial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
+    gpsSerial.println(cur_date);
+    gpsSerial.println(hhmm_t);
 
     // vars not dependent on GPS signal
-    Serial.print("Max HDOP = ");
-    Serial.println(max_hdop);
-    Serial.print("Old max HDOP = ");
-    Serial.println(old_max_hdop);
-    Serial.println("");
+    gpsSerial.print("Max HDOP = ");
+    gpsSerial.println(max_hdop);
+    gpsSerial.print("Old max HDOP = ");
+    gpsSerial.println(old_max_hdop);
+    gpsSerial.println("");
     #endif
 
   }
@@ -280,8 +288,8 @@ void loop() {
   if(max_hdop != old_max_hdop)  {
     prefs.putFloat("max_hdop", max_hdop);
     old_max_hdop = max_hdop;
-    Serial.println("**************** max_hdop saved to eeprom:");
-    Serial.println(max_hdop);
+    gpsSerial.println("**************** max_hdop saved to eeprom:");
+    gpsSerial.println(max_hdop);
   }
 
   /* Required for LVGL */
@@ -304,8 +312,8 @@ void loop() {
 #if LV_USE_LOG != 0
 void my_print(lv_log_level_t level, const char *buf) {
   LV_UNUSED(level);
-  Serial.println(buf);
-  Serial.flush();
+  gpsSerial.println(buf);
+  gpsSerial.flush();
 }
 #endif
 
@@ -330,10 +338,10 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
     data->state = LV_INDEV_STATE_PRESSED;
 
     #if DEBUG == 1
-    Serial.print("Touch x ");
-    Serial.print(data->point.x);
-    Serial.print(" y ");
-    Serial.println(data->point.y);
+    gpsSerial.print("Touch x ");
+    gpsSerial.print(data->point.x);
+    gpsSerial.print(" y ");
+    gpsSerial.println(data->point.y);
     #endif
 
   } else {
