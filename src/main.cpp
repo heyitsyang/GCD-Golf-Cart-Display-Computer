@@ -34,9 +34,10 @@
 #include <TFT_eSPI.h>             //  bodmer/TFT_eSPI@^2.5.43
 #include <XPT2046_Touchscreen.h>  //  https://github.com/PaulStoffregen/XPT2046_Touchscreen.git
 #include <TinyGPS++.h>
-#include <Timezone.h>
+#include <Timezone.h>             // https://github.com/JChristensen/Timezone
 #include <movingAvg.h>
 #include <Preferences.h>          // used to save prefeerences in EEPROM
+#include <JC_Sunrise.h>           // https://github.com/JChristensen/JC_Sunrise
 
 #include "version.h"
 #include "ui/ui.h"            // generated from EEZ Studio
@@ -47,7 +48,7 @@
  *      DEFINES     *
  ********************/
 
-#define DEBUG 1               // enable/disable most gpsSerialPrint() messages
+#define DEBUG 1               // enable/disable gpsSerialPrint() messages: 0=none, 1=most, 2=1+touch xy data
 
 
 // Touch Screen pins
@@ -69,6 +70,12 @@
 #define TFT_WIDTH  240      // define this display/driver using PORTRAIT orientation
 #define TFT_HEIGHT 320      // (XY origin can differ between displays/drivers)
 
+#define TFT_BACKLIGHT_PIN 21
+#define LEDC_CHANNEL_0     0      // use first channel of 16 channels (started from zero)
+#define LEDC_BASE_FREQ     5000   // use 5000 Hz as a LEDC base frequency
+#define LEDC_TIMER_12_BIT  12     // use 12 bit precission for LEDC timer
+#define MAX_BACKLIGHT_VALUE 255
+
 /*LVGL draw into this buffer, 1/10 screen size usually works well. The size is in bytes*/
 #define NUM_BUFS 2
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT * NUM_BUFS / 10 * (LV_COLOR_DEPTH / 8))
@@ -85,6 +92,9 @@
 #endif
 
 #define GPS_BAUD 9600
+
+#define MY_LATiTUDE 28.8522f
+#define MY_LONGITUDE -82.0028f
 
 
 /******************************
@@ -117,28 +127,30 @@ int localYear;
 Preferences prefs;
 
 // byte gpsMonth, gpsDay, gpsHour, gpsMinute, gpsSecond;
-int localMonth, localDay, localHour, localMinute, localSecond, localDayOfWeek;
+int localMonth, localDay, old_localDay = 0, localHour, localMinute, localSecond, localDayOfWeek;
 
-// time zone definitions
+// time zone & sunrise/sunset definitions
 TimeChangeRule mySTD = {"EST", First, Sun, Nov, 2, -300};   //UTC - 5 hours
 TimeChangeRule myDST = {"EDT", Second, Sun, Mar, 2, -240};  //UTC - 4 hours
 TimeChangeRule *tcr;  // pointer to use to extract TZ abbreviation later
 Timezone myTZ(myDST, mySTD);
 
+JC_Sunrise sun {MY_LATiTUDE, MY_LONGITUDE, JC_Sunrise::officialZenith};  // set lat & lon for sunrise/sunset calculation
+
 // time variables
 time_t localTime, utcTime;
 int timesetinterval = 60; //set microcontroller time every 60 seconds
-
 
 String latitude;
 String longitude;
 String altitude;
 float hdop, old_max_hdop;
+int old_day_backlight, old_night_backlight;
 
 // the rest are defined in get_set_vars.h as aprt of EEZ Studio integration
 // String cur_date;
-// String hhmm_t;
-// String hhmmss_t;
+// String hhmm_str;
+// String hhmmss_str;
 // String strAmPm;
 // String heading;
 // String sats_hdop;
@@ -169,7 +181,7 @@ void setup() {
   
   // Start gpsSerial with the defined RX and TX pins and a baud rate of 9600
   gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-  gpsSerial.print("gpsSerial set by GPS_UART_NUM started at 9600 baud rate");
+  gpsSerial.print("\ngpsSerial set by GPS_UART_NUM started at 9600 baud rate");
 
   gpsSerial.println(SW_Version);
   gpsSerial.println(LVGL_Arduino);
@@ -178,7 +190,7 @@ void setup() {
   touchscreenSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS); // Start second SPI bus for touchscreen
   touchscreen.begin(touchscreenSpi);                                         // Touchscreen init
   touchscreen.setRotation(TOUCH_ROTATION_180);  
-  
+
   //Inititalize GPS
   avgAzimuthDeg.begin();
   avgSpeed.begin();
@@ -186,13 +198,21 @@ void setup() {
   //Intitalize Preferences name space
   prefs.begin("eeprom", false); 
   
-  //Intialize any variables
-
+  //Intialize EEPROM stored variables
   max_hdop = prefs.getFloat("max_hdop", 2.5);  // if no such max_hdop, default is the second parameter
-  gpsSerial.print("*************  Max HDOP read from eeprom = ");
+  gpsSerial.print("> max_hdop read from eeprom = ");
   gpsSerial.println(max_hdop);
   old_max_hdop = max_hdop;
+  
+  day_backlight = prefs.getInt("day_backlight", 255);  // if no such day_backlight, default is the second parameter
+  gpsSerial.print("> day_backlight read from eeprom = ");
+  gpsSerial.println(day_backlight);
+  old_day_backlight = day_backlight;
 
+  night_backlight = prefs.getInt("night_backlight", 128);  // if no such night_backlight, default is the second parameter
+  gpsSerial.print("> night_backlight  read from eeprom = ");
+  gpsSerial.println(night_backlight);
+  old_night_backlight = night_backlight;
 
   //Initialise LVGL GUI
   lv_init();
@@ -211,8 +231,19 @@ void setup() {
 
   //Integrate GUI from EEZ
   ui_init();
+  
+  //Inititalize screen backlight
+  #if ESP_IDF_VERSION_MAJOR == 5
+    ledcAttach(TFT_BACKLIGHT_PIN, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);
+  #else
+    ledcSetup(LEDC_CHANNEL_0, LEDC_BASE_FREQ, LEDC_TIMER_12_BIT);
+    ledcAttachPin(TFT_BACKLIGHT_PIN, LEDC_CHANNEL_0);
+  #endif
+
+  ledcAnalogWrite(LEDC_CHANNEL_0, 225, MAX_BACKLIGHT_VALUE);  // set backlight to an initial visible state
 
 } // end setup()
+
 
 /*****************
  *     LOOP      *
@@ -220,6 +251,7 @@ void setup() {
 
 void loop() {
 
+  time_t sunrise_t, sunset_t;
 
   while (gpsSerial.available() > 0)     // pass any character(s) in rx buffer to the GPS library
     gps.encode(gpsSerial.read());
@@ -245,16 +277,38 @@ void loop() {
     hdop = gps.hdop.value() / 100.0;
     sats_hdop = String(gps.satellites.value()) + "/" + String(hdop, 2);
     cur_date = String(getDayAbbr(localDayOfWeek)) + ", " + String(getMonthAbbr(localMonth)) + " " + String(localDay);
-    hhmm_t = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute));
-    hhmmss_t = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
-    str_am_pm = am_pm(localHour);
+    hhmm_str = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute));
+    hhmmss_str = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
+    am_pm_str = am_pm(localHour);
 
     if (hdop < max_hdop) {  // if not reliable data, stay with old values
       avg_speed = avgSpeed.reading(gps.speed.mph());
       heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
     }
+
+    if (localDay != old_localDay)      // get new sunrise & sunset time
+      sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
+
+    if ((localTime > sunset_t) && (localTime < sunrise_t)) {
+      ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
+      gpsSerial.print("night_backlight set: ");
+      gpsSerial.println(night_backlight);
+    }
+    else {
+      ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
+      gpsSerial.print("day_backlight set: ");
+      gpsSerial.println(night_backlight);
+    }
     
-    #if DEBUG == 1
+    #if DEBUG > 0
+    // vars not dependent on GPS signal
+    gpsSerial.print("\nsunrise:");
+    gpsSerial.print(ctime(&sunrise_t));
+    gpsSerial.print("sunset:");
+    gpsSerial.print(ctime(&sunset_t));
+    gpsSerial.print("Max HDOP = ");
+    gpsSerial.println(max_hdop);
+
     // vars dependent on GPS signal
     gpsSerial.println("");
     gpsSerial.print("LAT: ");
@@ -271,26 +325,39 @@ void loop() {
     gpsSerial.println(sats_hdop);
     gpsSerial.print("Local time: ");
     gpsSerial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
-    gpsSerial.println(cur_date);
-    gpsSerial.println(hhmm_t);
-
-    // vars not dependent on GPS signal
-    gpsSerial.print("Max HDOP = ");
-    gpsSerial.println(max_hdop);
-    gpsSerial.print("Old max HDOP = ");
-    gpsSerial.println(old_max_hdop);
-    gpsSerial.println("");
+    gpsSerial.println(cur_date + " " + hhmm_str);
     #endif
 
   }
+
+  /*
+   * Write values to eeprom only if changed
+   */
+  if(day_backlight != old_day_backlight) {
+    ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
+    prefs.putInt("day_backlight", day_backlight);
+    old_day_backlight = day_backlight;
+    gpsSerial.print("< day_backlight saved to eeprom:");
+    gpsSerial.println(day_backlight);
+  }
+
+  if(night_backlight != old_night_backlight) {
+    ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
+    prefs.putInt("night_backlight", night_backlight);
+    old_night_backlight = night_backlight;
+    gpsSerial.print("< night_backlight saved to eeprom:");
+    gpsSerial.println(night_backlight);
+  }
   
-  /* Write values to eeprom only if changed */
-  if(max_hdop != old_max_hdop)  {
+  if(max_hdop != old_max_hdop) {
     prefs.putFloat("max_hdop", max_hdop);
     old_max_hdop = max_hdop;
-    gpsSerial.println("**************** max_hdop saved to eeprom:");
+    gpsSerial.print("> max_hdop saved to eeprom:");
     gpsSerial.println(max_hdop);
   }
+
+
+
 
   /* Required for LVGL */
   lv_tick_inc(millis() - lastTick);  //Update the tick timer. Tick is new for LVGL 9.x
@@ -337,7 +404,7 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
     data->point.y = map(p.y, touchScreenMinimumY, touchScreenMaximumY, 1, TFT_HEIGHT); // Touchscreen Y calibration
     data->state = LV_INDEV_STATE_PRESSED;
 
-    #if DEBUG == 1
+    #if DEBUG == 2
     gpsSerial.print("Touch x ");
     gpsSerial.print(data->point.x);
     gpsSerial.print(" y ");
@@ -347,6 +414,16 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
   } else {
     data->state = LV_INDEV_STATE_RELEASED;
   }
+}
+
+// Arduino like analogWrite
+// value has to be between 0 and valueMax
+void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
+  // calculate duty, 4095 from 2 ^ 12 - 1
+  uint32_t duty = (4095 / valueMax) * min(value, valueMax);
+
+  // write duty to LEDC
+  ledcWrite(channel, duty);
 }
 
 /*********************

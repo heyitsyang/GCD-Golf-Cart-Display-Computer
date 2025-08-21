@@ -5,7 +5,7 @@
 void my_print(lv_log_level_t level, const char *buf);
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
 void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data);
-
+void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax);
 
 static uint32_t my_tick_get_cb(void);
 String prefix_zero(int max2digits);

@@ -27,33 +27,33 @@ extern "C" void set_var_heading(const char *value) {
 }
 
 
-String hhmmss_t;
-extern "C" const char *get_var_hhmmss_t() {
-    return hhmmss_t.c_str();
+String hhmmss_str;
+extern "C" const char *get_var_hhmmss_str() {
+    return hhmmss_str.c_str();
 }
 
-extern "C" void set_var_hhmmss_t(const char *value) {
-    hhmmss_t = value;
-}
-
-
-String hhmm_t;
-extern "C" const char *get_var_hhmm_t() {
-    return hhmm_t.c_str();
-}
-
-extern "C" void set_var_hhmm_t(const char *value) {
-    hhmm_t = value;
+extern "C" void set_var_hhmmss_str(const char *value) {
+    hhmmss_str = value;
 }
 
 
-String str_am_pm;
-extern "C" const char *get_var_str_am_pm() {
-    return str_am_pm.c_str();
+String hhmm_str;
+extern "C" const char *get_var_hhmm_str() {
+    return hhmm_str.c_str();
 }
 
-extern "C" void set_var_str_am_pm(const char *value) {
-    str_am_pm = value;
+extern "C" void set_var_hhmm_str(const char *value) {
+    hhmm_str = value;
+}
+
+
+String am_pm_str;
+extern "C" const char *get_var_am_pm_str() {
+    return am_pm_str.c_str();
+}
+
+extern "C" void set_var_am_pm_str(const char *value) {
+    am_pm_str = value;
 }
 
 
@@ -93,3 +93,22 @@ extern "C" const char *get_var_version() {
 extern "C" void set_var_version(const char *value) {
     version = value;
 }
+
+int day_backlight;
+int get_var_day_backlight() {
+    return day_backlight;
+}
+
+void set_var_day_backlight(int value) {
+    day_backlight = value;
+}
+
+int night_backlight;
+int get_var_night_backlight() {
+    return night_backlight;
+}
+
+void set_var_night_backlight(int value) {
+    night_backlight = value;
+}
+
