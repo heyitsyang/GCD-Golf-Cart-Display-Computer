@@ -289,22 +289,30 @@ void loop() {
     if (localDay != old_localDay)      // get new sunrise & sunset time
       sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
 
-    if ((localTime > sunset_t) && (localTime < sunrise_t)) {
-      ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
-      gpsSerial.print("night_backlight set: ");
-      gpsSerial.println(night_backlight);
-    }
-    else {
+    if ((localTime > sunrise_t) && (localTime < sunset_t)) {
       ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
       gpsSerial.print("day_backlight set: ");
+      gpsSerial.println(day_backlight);
+    }
+    else {
+      ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
+      gpsSerial.print("night_backlight set: ");
       gpsSerial.println(night_backlight);
     }
     
     #if DEBUG > 0
     // vars not dependent on GPS signal
-    gpsSerial.print("\nsunrise:");
+    gpsSerial.print("\nutcTime: ");
+    gpsSerial.print(utcTime);
+    gpsSerial.print(ctime(&utcTime));
+    gpsSerial.print("localTime: ");
+    gpsSerial.print(localTime);
+    gpsSerial.print(ctime(&localTime));
+    gpsSerial.print("\nsunrise: ");
+    gpsSerial.print(sunrise_t);
     gpsSerial.print(ctime(&sunrise_t));
-    gpsSerial.print("sunset:");
+    gpsSerial.print("sunset: ");
+    gpsSerial.print(sunset_t);
     gpsSerial.print(ctime(&sunset_t));
     gpsSerial.print("Max HDOP = ");
     gpsSerial.println(max_hdop);
