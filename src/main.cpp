@@ -172,6 +172,8 @@ void setup() {
   String LVGL_Arduino = "LVGL ";
   LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
 
+  cur_date = String("NO SIGNAL");
+
   /* 
    * UART0 TX/RX lines are used in this manner:
    *   - RX is wired to GPS using serial TTL and bypasses the UART0 completely
