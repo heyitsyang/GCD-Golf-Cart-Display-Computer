@@ -40,16 +40,17 @@
 #include <JC_Sunrise.h>           // https://github.com/JChristensen/JC_Sunrise
 
 #include "version.h"
-#include "ui/ui.h"            // generated from EEZ Studio
-#include "get_set_vars.h"     // get & set functions for EEZ Studio vars
-#include "prototypes.h"       // declare functions so they can be moved below setup() & loop()
+#include "ui/ui.h"                // generated from EEZ Studio
+#include "get_set_vars.h"         // get & set functions for EEZ Studio vars
+#include "prototypes.h"           // declare functions so they can be moved below setup() & loop()
 
 /********************
  *      DEFINES     *
  ********************/
 
-#define DEBUG 1               // enable/disable gpsSerialPrint() messages: 0=none, 1=most, 2=1+touch xy data
-
+#define DEBUG_TOUCH_SCREEN 0
+#define DEBUG_GPS 0
+#define DEBUG_MESHTASTIC 1
 
 // Touch Screen pins
 #define XPT2046_IRQ 36
@@ -302,7 +303,7 @@ void loop() {
       gpsSerial.println(night_backlight);
     }
     
-    #if DEBUG > 0
+    #if DEBUG_GPS == 1
     // vars not dependent on GPS signal
     gpsSerial.print("\nutcTime: ");
     gpsSerial.print(utcTime);
@@ -414,7 +415,7 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
     data->point.y = map(p.y, touchScreenMinimumY, touchScreenMaximumY, 1, TFT_HEIGHT); // Touchscreen Y calibration
     data->state = LV_INDEV_STATE_PRESSED;
 
-    #if DEBUG == 2
+    #if DEBUG_TOUCH_SCREEN == 1
     gpsSerial.print("Touch x ");
     gpsSerial.print(data->point.x);
     gpsSerial.print(" y ");
