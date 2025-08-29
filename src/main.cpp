@@ -94,7 +94,8 @@
 
 #define GPS_BAUD 9600
 
-#define MY_LATiTUDE 28.8522f
+// Needed for JCSunrise library before GPS has signal
+#define MY_LATITUDE 28.8522f
 #define MY_LONGITUDE -82.0028f
 
 
@@ -137,7 +138,7 @@ TimeChangeRule myDST = {"EDT", Second, Sun, Mar, 2, -240};  //UTC - 4 hours
 TimeChangeRule *tcr;  // pointer to use to extract TZ abbreviation later
 Timezone myTZ(myDST, mySTD);
 
-JC_Sunrise sun {MY_LATiTUDE, MY_LONGITUDE, JC_Sunrise::officialZenith};  // set lat & lon for sunrise/sunset calculation
+JC_Sunrise sun {MY_LATITUDE, MY_LONGITUDE, JC_Sunrise::officialZenith};  // set lat & lon for sunrise/sunset calculation
 
 // time variables
 time_t localTime, utcTime;
