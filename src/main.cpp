@@ -112,8 +112,9 @@ uint32_t lastTick = 0;  //Used to track the tick timer
 
 /* App variables */
 
-// Create an instance of the HardwaregpsSerial class for a CYD gpsSerial Port
-HardwareSerial gpsSerial(GPS_UART_NUM);  //ESP32 maps the GPIOs designated later to UART0
+// GPS and debug serial use the same serial port - GPS uses RX, normal serial debug Serial.print uses TX
+// To clarify, gpsSerial is used for gps functions - Serial is used for debug serail printing
+HardwareSerial& gpsSerial = Serial;   // create gpsSerial reference to debugSerial so we can use gpsSerial even though it is the same serial port
 
 // Define movingAvg objects
 movingAvg avgAzimuthDeg(8), avgSpeed(10);         // value is number of samples
@@ -173,7 +174,7 @@ void setup() {
   String LVGL_Arduino = "LVGL ";
   LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
 
-  cur_date = String("NO SIGNAL");
+  cur_date = String("NO GPS");
 
   /* 
    * UART0 TX/RX lines are used in this manner:
@@ -182,12 +183,12 @@ void setup() {
    *     but can be monitored with normal a USB connection to UART0 (USB connecotr)
    */
   
-  // Start gpsSerial with the defined RX and TX pins and a baud rate of 9600
-  gpsSerial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-  gpsSerial.print("\ngpsSerial set by GPS_UART_NUM started at 9600 baud rate");
+  // Start Serial (aka gpsSerial) with the defined RX and TX pins and a baud rate of 9600
+  Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+  Serial.print("\ngpsSerial set by GPS_UART_NUM started at 9600 baud rate");
 
-  gpsSerial.println(SW_Version);
-  gpsSerial.println(LVGL_Arduino);
+  Serial.println(SW_Version);
+  Serial.println(LVGL_Arduino);
 
   //Initialise the touchscreen
   touchscreenSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS); // Start second SPI bus for touchscreen
@@ -203,18 +204,18 @@ void setup() {
   
   //Intialize EEPROM stored variables
   max_hdop = prefs.getFloat("max_hdop", 2.5);  // if no such max_hdop, default is the second parameter
-  gpsSerial.print("> max_hdop read from eeprom = ");
-  gpsSerial.println(max_hdop);
+  Serial.print("> max_hdop read from eeprom = ");
+  Serial.println(max_hdop);
   old_max_hdop = max_hdop;
   
   day_backlight = prefs.getInt("day_backlight", 255);  // if no such day_backlight, default is the second parameter
-  gpsSerial.print("> day_backlight read from eeprom = ");
-  gpsSerial.println(day_backlight);
+  Serial.print("> day_backlight read from eeprom = ");
+  Serial.println(day_backlight);
   old_day_backlight = day_backlight;
 
   night_backlight = prefs.getInt("night_backlight", 128);  // if no such night_backlight, default is the second parameter
-  gpsSerial.print("> night_backlight  read from eeprom = ");
-  gpsSerial.println(night_backlight);
+  Serial.print("> night_backlight  read from eeprom = ");
+  Serial.println(night_backlight);
   old_night_backlight = night_backlight;
 
   //Initialise LVGL GUI
@@ -230,7 +231,7 @@ void setup() {
   lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
   lv_indev_set_read_cb(indev, my_touchpad_read);
 
-  gpsSerial.println("LVGL Setup done");
+  Serial.println("LVGL Setup done");
 
   //Integrate GUI from EEZ
   ui_init();
@@ -294,49 +295,49 @@ void loop() {
 
     if ((localTime > sunrise_t) && (localTime < sunset_t)) {
       ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
-      gpsSerial.print("day_backlight set: ");
-      gpsSerial.println(day_backlight);
+      Serial.print("day_backlight set: ");
+      Serial.println(day_backlight);
     }
     else {
       ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
-      gpsSerial.print("night_backlight set: ");
-      gpsSerial.println(night_backlight);
+      Serial.print("night_backlight set: ");
+      Serial.println(night_backlight);
     }
     
     #if DEBUG_GPS == 1
     // vars not dependent on GPS signal
-    gpsSerial.print("\nutcTime: ");
-    gpsSerial.print(utcTime);
-    gpsSerial.print(ctime(&utcTime));
-    gpsSerial.print("localTime: ");
-    gpsSerial.print(localTime);
-    gpsSerial.print(ctime(&localTime));
-    gpsSerial.print("\nsunrise: ");
-    gpsSerial.print(sunrise_t);
-    gpsSerial.print(ctime(&sunrise_t));
-    gpsSerial.print("sunset: ");
-    gpsSerial.print(sunset_t);
-    gpsSerial.print(ctime(&sunset_t));
-    gpsSerial.print("Max HDOP = ");
-    gpsSerial.println(max_hdop);
+    Serial.print("\nutcTime: ");
+    Serial.print(utcTime);
+    Serial.print(ctime(&utcTime));
+    Serial.print("localTime: ");
+    Serial.print(localTime);
+    Serial.print(ctime(&localTime));
+    Serial.print("\nsunrise: ");
+    Serial.print(sunrise_t);
+    Serial.print(ctime(&sunrise_t));
+    Serial.print("sunset: ");
+    Serial.print(sunset_t);
+    Serial.print(ctime(&sunset_t));
+    Serial.print("Max HDOP = ");
+    Serial.println(max_hdop);
 
     // vars dependent on GPS signal
-    gpsSerial.println("");
-    gpsSerial.print("LAT: ");
-    gpsSerial.println(latitude);
-    gpsSerial.print("LONG: "); 
-    gpsSerial.println(longitude);
-    gpsSerial.print("AVG_SPEED (mph) = ");
-    gpsSerial.println(avg_speed);
-    gpsSerial.print("DIRECTION = ");
-    gpsSerial.println(heading);
-    gpsSerial.print("ALT (min)= ");
-    gpsSerial.println(altitude);
-    gpsSerial.print("Sats/HDOP = "); 
-    gpsSerial.println(sats_hdop);
-    gpsSerial.print("Local time: ");
-    gpsSerial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
-    gpsSerial.println(cur_date + " " + hhmm_str);
+    Serial.println("");
+    Serial.print("LAT: ");
+    Serial.println(latitude);
+    Serial.print("LONG: "); 
+    Serial.println(longitude);
+    Serial.print("AVG_SPEED (mph) = ");
+    Serial.println(avg_speed);
+    Serial.print("DIRECTION = ");
+    Serial.println(heading);
+    Serial.print("ALT (min)= ");
+    Serial.println(altitude);
+    Serial.print("Sats/HDOP = "); 
+    Serial.println(sats_hdop);
+    Serial.print("Local time: ");
+    Serial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
+    Serial.println(cur_date + " " + hhmm_str);
     #endif
 
   }
@@ -348,23 +349,23 @@ void loop() {
     ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
     prefs.putInt("day_backlight", day_backlight);
     old_day_backlight = day_backlight;
-    gpsSerial.print("< day_backlight saved to eeprom:");
-    gpsSerial.println(day_backlight);
+    Serial.print("< day_backlight saved to eeprom:");
+    Serial.println(day_backlight);
   }
 
   if(night_backlight != old_night_backlight) {
     ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
     prefs.putInt("night_backlight", night_backlight);
     old_night_backlight = night_backlight;
-    gpsSerial.print("< night_backlight saved to eeprom:");
-    gpsSerial.println(night_backlight);
+    Serial.print("< night_backlight saved to eeprom:");
+    Serial.println(night_backlight);
   }
   
   if(max_hdop != old_max_hdop) {
     prefs.putFloat("max_hdop", max_hdop);
     old_max_hdop = max_hdop;
-    gpsSerial.print("> max_hdop saved to eeprom:");
-    gpsSerial.println(max_hdop);
+    Serial.print("> max_hdop saved to eeprom:");
+    Serial.println(max_hdop);
   }
 
 
@@ -390,7 +391,7 @@ void loop() {
 #if LV_USE_LOG != 0
 void my_print(lv_log_level_t level, const char *buf) {
   LV_UNUSED(level);
-  gpsSerial.println(buf);
+  Serial.println(buf);
   gpsSerial.flush();
 }
 #endif
@@ -416,10 +417,10 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
     data->state = LV_INDEV_STATE_PRESSED;
 
     #if DEBUG_TOUCH_SCREEN == 1
-    gpsSerial.print("Touch x ");
-    gpsSerial.print(data->point.x);
-    gpsSerial.print(" y ");
-    gpsSerial.println(data->point.y);
+    Serial.print("Touch x ");
+    Serial.print(data->point.x);
+    Serial.print(" y ");
+    Serial.println(data->point.y);
     #endif
 
   } else {
