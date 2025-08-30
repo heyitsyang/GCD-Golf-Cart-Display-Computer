@@ -43,14 +43,17 @@
 #include "ui/ui.h"                // generated from EEZ Studio
 #include "get_set_vars.h"         // get & set functions for EEZ Studio vars
 #include "prototypes.h"           // declare functions so they can be moved below setup() & loop()
+#include "Meshtastic.h"
 
 /********************
  *      DEFINES     *
  ********************/
 
+// enabling any DEBUG bogs down the loop
 #define DEBUG_TOUCH_SCREEN 0
 #define DEBUG_GPS 0
-#define DEBUG_MESHTASTIC 1
+//#define DEBUG_MESHTASTIC 1
+#define MT_DEBUGGING 0            // set to 1 for in-depth debugging
 
 // Touch Screen pins
 #define XPT2046_IRQ 36
@@ -81,22 +84,21 @@
 #define NUM_BUFS 2
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT * NUM_BUFS / 10 * (LV_COLOR_DEPTH / 8))
 
-// Define the RX, TX pins & baud rate for GPS gpsSerial data
-#define GPS_UART_NUM 0      // select either UART 0 or 2 only
+#define MT_SERIAL_TX_PIN 22       // Meshtasic TX
+#define MT_SERIAL_RX_PIN 27       // Meshtasic RX
+#define MT_DEV_BAUD_RATE 9600     // Meshtastic device baud rate
 
-#if GPS_UART_NUM == 0
-  #define GPS_RX_PIN 03     // USB connector RX UART0
-  #define GPS_TX_PIN 01     // USB connector TX UART0
-#else
-  #define GPS_RX_PIN 22     // RX for UART2
-  #define GPS_TX_PIN 27     // TX for UART2
-#endif
-
-#define GPS_BAUD 9600
+#define GPS_RX_PIN 03     // USB connector RX UART0
+#define GPS_TX_PIN 01     // USB connector TX UART0
+#define GPS_BAUD 9600     // gpsSerial & Serial baud rate
 
 // Needed for JCSunrise library before GPS has signal
 #define MY_LATITUDE 28.8522f
 #define MY_LONGITUDE -82.0028f
+
+
+// Send a text message every this many seconds
+#define SEND_PERIOD 300
 
 
 /******************************
@@ -161,48 +163,37 @@ int old_day_backlight, old_night_backlight;
 // int avg_speed;
 // float max_hdop;
 
+uint32_t next_send_time = 0;
+bool not_yet_connected = true;
+
 /*****************
  *     SETUP     *
  *****************/
 
 void setup() {
 
-  //Print some basic info on the gpsSerial console
-  version = String('v') + String(VERSION);
-  String SW_Version = "\nSW ";
-  SW_Version += version;
 
-  String LVGL_Arduino = "LVGL ";
-  LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
 
-  cur_date = String("NO GPS");
-
-  /* 
+    /* 
    * UART0 TX/RX lines are used in this manner:
    *   - RX is wired to GPS using serial TTL and bypasses the UART0 completely
    *   - TX is used for serial print messges for debugging and not connected to the GPS
    *     but can be monitored with normal a USB connection to UART0 (USB connecotr)
    */
   
-  // Start Serial (aka gpsSerial) with the defined RX and TX pins and a baud rate of 9600
+  // Initialize Serial (aka gpsSerial) with the defined RX and TX pins and a baud rate of 9600
   Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-  Serial.print("\ngpsSerial set by GPS_UART_NUM started at 9600 baud rate");
+  Serial.print("\ngpsSerial started at 9600 baud rate");
 
+  //Print version on the Serial console
+  version = String('v') + String(VERSION);
+  String SW_Version = "\nSW ";
+  SW_Version += version;
   Serial.println(SW_Version);
-  Serial.println(LVGL_Arduino);
-
-  //Initialise the touchscreen
-  touchscreenSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS); // Start second SPI bus for touchscreen
-  touchscreen.begin(touchscreenSpi);                                         // Touchscreen init
-  touchscreen.setRotation(TOUCH_ROTATION_180);  
-
-  //Inititalize GPS
-  avgAzimuthDeg.begin();
-  avgSpeed.begin();
 
   //Intitalize Preferences name space
   prefs.begin("eeprom", false); 
-  
+
   //Intialize EEPROM stored variables
   max_hdop = prefs.getFloat("max_hdop", 2.5);  // if no such max_hdop, default is the second parameter
   Serial.print("> max_hdop read from eeprom = ");
@@ -219,8 +210,23 @@ void setup() {
   Serial.println(night_backlight);
   old_night_backlight = night_backlight;
 
-  //Initialise LVGL GUI
-  lv_init();
+  //Inititalize GPS
+  avgAzimuthDeg.begin();
+  avgSpeed.begin();
+
+  //Initialise the touchscreen
+  touchscreenSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS); // Start second SPI bus for touchscreen
+  touchscreen.begin(touchscreenSpi);                                         // Touchscreen init
+  touchscreen.setRotation(TOUCH_ROTATION_180);  
+
+  // Initialize LVGL
+  String LVGL_Arduino = "LVGL ";
+  LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
+  Serial.println(LVGL_Arduino);
+
+  cur_date = String("NO GPS");  // display this until GPS date is avaialble
+
+  lv_init();    // initialize LVGL GUI
 
   draw_buf = new uint8_t[DRAW_BUF_SIZE];
   lv_display_t *disp;
@@ -246,6 +252,15 @@ void setup() {
   #endif
 
   ledcAnalogWrite(LEDC_CHANNEL_0, 225, MAX_BACKLIGHT_VALUE);  // set backlight to an initial visible state
+
+  // Initialize Meshtastic
+  mt_serial_init(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);  // start meshtastic serial port
+
+  randomSeed(micros());   // randomise the random() function using micros()
+
+  mt_request_node_report(connected_callback);   // Initial connection to the Meshtastic device
+
+  set_text_message_callback(text_message_callback);  // Register a callback function to be called whenever a text message is received
 
 } // end setup()
 
@@ -291,21 +306,22 @@ void loop() {
       heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
     }
 
+    
     if (localDay != old_localDay)      // get new sunrise & sunset time
       sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
 
     if ((localTime > sunrise_t) && (localTime < sunset_t)) {
       ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
-      Serial.print("day_backlight set: ");
-      Serial.println(day_backlight);
+      // Serial.print("now using day_backlight value: ");
+      // Serial.println(day_backlight);
     }
     else {
       ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
-      Serial.print("night_backlight set: ");
-      Serial.println(night_backlight);
+      // Serial.print("now using night_backlight value: ");
+      // Serial.println(night_backlight);
     }
     
-    #if DEBUG_GPS == 1
+    #if DEBUG_GPS == 1                           // comment out lines  unnecessary for your purposes
     // vars not dependent on GPS signal
     Serial.print("\nutcTime: ");
     Serial.print(utcTime);
@@ -368,6 +384,30 @@ void loop() {
     Serial.print("> max_hdop saved to eeprom:");
     Serial.println(max_hdop);
   }
+
+
+
+
+  // Record the time that this loop began (in milliseconds since the device booted)
+  uint32_t loop_start = millis();
+
+  // Run the Meshtastic loop, and see if it's able to send requests to the device yet
+  bool can_send = mt_loop(loop_start);
+
+  // If we can send, and it's time to do so, send a text message and schedule the next one.
+  if (can_send && loop_start >= next_send_time) {
+    
+    // Change this to a specific node number if you want to send to just one node
+    uint32_t dest = BROADCAST_ADDR; 
+    // Change this to another index if you want to send on a different channel
+    // Remember routine Meshtastic telemetry is only sent on channel 0
+    uint8_t channel_index = 0;   // For the golf cart:  0 = Telemetry, 1 = TheVillages, 2 = LongFast
+
+    mt_send_text("Hello, world from CYD!", dest, channel_index);
+
+    next_send_time = loop_start + SEND_PERIOD * 1000;
+  }
+
 
 
 
@@ -506,4 +546,35 @@ const char* getDayAbbr(int weekday_num) {
         // Handle invalid input, e.g., return "Err" or NULL
         return "Err"; // Or any other suitable error indicator
     }
+}
+
+/****************************
+ *   MESHTASTIC FUNCTIONS   *
+ ****************************/
+
+// This callback function will be called whenever the radio connects to a node
+void connected_callback(mt_node_t *node, mt_nr_progress_t progress) {
+  if (not_yet_connected) 
+    Serial.println("Connected to Meshtastic device!");
+  not_yet_connected = false;
+}
+
+// This callback function will be called whenever the radio receives a text message
+void text_message_callback(uint32_t from, uint32_t to,  uint8_t channel, const char* text) {
+  // Do your own thing here. This example just prints the message to the serial console.
+  Serial.print("Received a text message on channel: ");
+  Serial.print(channel);
+  Serial.print(" from: ");
+  Serial.print(from);
+  Serial.print(" to: ");
+  Serial.print(to);
+  Serial.print(" message: ");
+  Serial.println(text);
+  if (to == 0xFFFFFFFF){
+    Serial.println("This is a BROADCAST message.");
+  } else if (to == my_node_num){
+    Serial.println("This is a DM to me!");
+  } else {
+    Serial.println("This is a DM to someone else.");
+  }
 }
