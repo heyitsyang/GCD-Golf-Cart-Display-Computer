@@ -112,13 +112,13 @@ void set_var_night_backlight(int value) {
     night_backlight = value;
 }
 
-String mac_addr;
-extern "C" const char *get_var_mac_addr() {
-    return mac_addr.c_str();
+String cyd_mac_addr;
+extern "C" const char *get_var_cyd_mac_addr() {
+    return cyd_mac_addr.c_str();
 }
 
-extern "C" void set_var_mac_addr(const char *value) {
-    mac_addr = value;
+extern "C" void set_var_cyd_mac_addr(const char *value) {
+    cyd_mac_addr = value;
 }
 
 bool manual_reboot;
@@ -131,3 +131,12 @@ extern "C" void set_var_manual_reboot(bool value) {
     manual_reboot = value;
 }
 
+String espnow_mac_addr;
+
+extern "C" const char *get_var_espnow_mac_addr() {
+    return espnow_mac_addr.c_str();
+}
+
+extern "C" void set_var_espnow_mac_addr(const char *value) {
+    espnow_mac_addr = value;
+}

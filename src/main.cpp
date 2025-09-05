@@ -172,6 +172,9 @@ float accumDistance;
 uint32_t next_send_time = 0;
 bool not_yet_connected = true;
 
+// ESPNow
+String old_espnow_mac_addr;
+
 /*****************
  *     SETUP     *
  *****************/
@@ -195,8 +198,8 @@ void setup() {
   SW_Version += version;
   Serial.println(SW_Version);
 
-  mac_addr = String(WiFi.macAddress());
-  Serial.println(mac_addr);
+  cyd_mac_addr = String(WiFi.macAddress());
+  Serial.println(cyd_mac_addr);
 
   //Intitalize Preferences name space
   prefs.begin("eeprom", false); 
@@ -216,6 +219,11 @@ void setup() {
   Serial.print("> night_backlight  read from eeprom = ");
   Serial.println(night_backlight);
   old_night_backlight = night_backlight;
+
+  espnow_mac_addr = prefs.getString("espnow_mac_addr", "NONE");  // if no such espnow_mac_addr, default is the second parameter
+  Serial.print("> espnow_mac_addr read from eeprom = ");
+  Serial.println(espnow_mac_addr);
+  old_espnow_mac_addr = espnow_mac_addr;
 
   //Inititalize GPS
   avgAzimuthDeg.begin();
@@ -412,7 +420,12 @@ void loop() {
     Serial.println(max_hdop);
   }
 
-
+  if(espnow_mac_addr != old_espnow_mac_addr) {
+    prefs.putString("espnow_mac_addr", espnow_mac_addr);
+    old_espnow_mac_addr = espnow_mac_addr;
+    Serial.print("> espnow_mac_addr saved to eeprom:");
+    Serial.println(espnow_mac_addr);
+  }
 
 
   // Record the time that this loop began (in milliseconds since the device booted)
