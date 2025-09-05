@@ -16,6 +16,10 @@ void mt_serial_init(int8_t rx_pin, int8_t tx_pin, uint32_t baud) {
   mt_serial_mode = true;
 }
 
+void mt_serial_end() {
+  meshSerial.end();
+}
+
 bool mt_serial_send_radio(const char * buf, size_t len) {
   size_t wrote = meshSerial.write(buf, len);
   if (wrote == len) return true;

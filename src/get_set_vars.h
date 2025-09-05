@@ -140,3 +140,14 @@ extern "C" const char *get_var_espnow_mac_addr() {
 extern "C" void set_var_espnow_mac_addr(const char *value) {
     espnow_mac_addr = value;
 }
+
+bool mesh_comm;
+
+bool get_var_mesh_comm() {
+    return mesh_comm;
+}
+
+void set_var_mesh_comm(bool value) {
+    mesh_comm = value;
+}
+

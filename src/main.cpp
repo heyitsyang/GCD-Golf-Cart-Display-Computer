@@ -171,6 +171,8 @@ float accumDistance;
 // Meshtastic
 uint32_t next_send_time = 0;
 bool not_yet_connected = true;
+bool old_mesh_comm = true;
+
 
 // ESPNow
 String old_espnow_mac_addr;
@@ -210,12 +212,12 @@ void setup() {
   Serial.println(max_hdop);
   old_max_hdop = max_hdop;
   
-  day_backlight = prefs.getInt("day_backlight", 255);  // if no such day_backlight, default is the second parameter
+  day_backlight = prefs.getInt("day_backlight", 10);  // if no such day_backlight, default is the second parameter
   Serial.print("> day_backlight read from eeprom = ");
   Serial.println(day_backlight);
   old_day_backlight = day_backlight;
 
-  night_backlight = prefs.getInt("night_backlight", 128);  // if no such night_backlight, default is the second parameter
+  night_backlight = prefs.getInt("night_backlight", 5);  // if no such night_backlight, default is the second parameter
   Serial.print("> night_backlight  read from eeprom = ");
   Serial.println(night_backlight);
   old_night_backlight = night_backlight;
@@ -278,6 +280,7 @@ void setup() {
   set_text_message_callback(text_message_callback);  // Register a callback function to be called whenever a text message is received
 
   manual_reboot = false;
+  mesh_comm = true;
 
 } // end setup()
 
@@ -296,6 +299,19 @@ void loop() {
   if(manual_reboot == true)    // rebooted from UI
     ESP.restart();
   
+  if(mesh_comm != old_mesh_comm) {
+    old_mesh_comm = mesh_comm;
+    if(mesh_comm == false) {
+      mt_serial_end();           // stop the port
+      Serial.println("meshSerial disabled");
+    }
+    else {
+      mt_serial_init(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);  // start meshtastic serial port
+      Serial.println("meshSerial enabled");
+    }
+  }
+    
+
   elapsed_gps_read = currentGPSms - previousGPSms;
   if (elapsed_gps_read >= GPS_READ_INTERVAL) {
     previousGPSms = currentGPSms; // Update the last execution time
@@ -339,12 +355,12 @@ void loop() {
         sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
 
       if ((localTime > sunrise_t) && (localTime < sunset_t)) {
-        ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
+        ledcAnalogWrite(LEDC_CHANNEL_0, ((day_backlight*20) + 55), MAX_BACKLIGHT_VALUE);
         // Serial.print("now using day_backlight value: ");
         // Serial.println(day_backlight);
       }
       else {
-        ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
+        ledcAnalogWrite(LEDC_CHANNEL_0, (night_backlight*20), MAX_BACKLIGHT_VALUE);
         // Serial.print("now using night_backlight value: ");
         // Serial.println(night_backlight);
       }
@@ -398,7 +414,7 @@ void loop() {
    * Write values to eeprom only if changed
    */
   if(day_backlight != old_day_backlight) {
-    ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
+    ledcAnalogWrite(LEDC_CHANNEL_0, ((day_backlight*20) + 55), MAX_BACKLIGHT_VALUE);
     prefs.putInt("day_backlight", day_backlight);
     old_day_backlight = day_backlight;
     Serial.print("< day_backlight saved to eeprom:");
@@ -406,7 +422,7 @@ void loop() {
   }
 
   if(night_backlight != old_night_backlight) {
-    ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
+    ledcAnalogWrite(LEDC_CHANNEL_0, (night_backlight*20), MAX_BACKLIGHT_VALUE);
     prefs.putInt("night_backlight", night_backlight);
     old_night_backlight = night_backlight;
     Serial.print("< night_backlight saved to eeprom:");

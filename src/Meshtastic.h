@@ -47,6 +47,8 @@ void mt_wifi_init(const char * ssid, const char * password);
 // Initialize, using serial pins and baud rate to connect to the MT radio
 void mt_serial_init(int8_t rx_pin, int8_t tx_pin, uint32_t baud = BAUD_DEFAULT);
 
+void mt_serial_end();
+
 // Call this once per loop() and pass the current millis(). Returns bool indicating whether the connection is ready.
 bool mt_loop(uint32_t now);
 
