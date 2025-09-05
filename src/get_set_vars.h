@@ -112,3 +112,22 @@ void set_var_night_backlight(int value) {
     night_backlight = value;
 }
 
+String mac_addr;
+extern "C" const char *get_var_mac_addr() {
+    return mac_addr.c_str();
+}
+
+extern "C" void set_var_mac_addr(const char *value) {
+    mac_addr = value;
+}
+
+bool manual_reboot;
+
+extern "C" bool get_var_manual_reboot() {
+    return manual_reboot;
+}
+
+extern "C" void set_var_manual_reboot(bool value) {
+    manual_reboot = value;
+}
+

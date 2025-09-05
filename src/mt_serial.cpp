@@ -1,7 +1,7 @@
 /*
 * mt_wifi.cpp
 *  - modified for ESP32 (YS)
-*  - siplified by removing #define clutter (YS)
+*  - simplified by removing #define clutter (YS)
 */
 
 #include "mt_internals.h"

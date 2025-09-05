@@ -38,6 +38,7 @@
 #include <movingAvg.h>
 #include <Preferences.h>          // used to save prefeerences in EEPROM
 #include <JC_Sunrise.h>           // https://github.com/JChristensen/JC_Sunrise
+#include <WiFi.h>
 
 #include "version.h"
 #include "ui/ui.h"                // generated from EEZ Studio
@@ -51,7 +52,7 @@
 
 // enabling any DEBUG bogs down the loop
 #define DEBUG_TOUCH_SCREEN 0
-#define DEBUG_GPS 0
+#define DEBUG_GPS 1
 //#define DEBUG_MESHTASTIC 1
 #define MT_DEBUGGING 0            // set to 1 for in-depth debugging
 
@@ -84,13 +85,14 @@
 #define NUM_BUFS 2
 #define DRAW_BUF_SIZE (TFT_WIDTH * TFT_HEIGHT * NUM_BUFS / 10 * (LV_COLOR_DEPTH / 8))
 
-#define MT_SERIAL_TX_PIN 22       // Meshtasic TX
-#define MT_SERIAL_RX_PIN 27       // Meshtasic RX
+#define MT_SERIAL_TX_PIN 22       // TX to Meshtasic
+#define MT_SERIAL_RX_PIN 27       // RX from Meshtasic
 #define MT_DEV_BAUD_RATE 9600     // Meshtastic device baud rate
 
-#define GPS_RX_PIN 03     // USB connector RX UART0
-#define GPS_TX_PIN 01     // USB connector TX UART0
-#define GPS_BAUD 9600     // gpsSerial & Serial baud rate
+#define GPS_RX_PIN 03             // USB connector RX UART0
+#define GPS_TX_PIN 01             // USB connector TX UART0
+#define GPS_BAUD 9600             // gpsSerial & Serial baud rate
+#define GPS_READ_INTERVAL 15000   // in ms
 
 // Needed for JCSunrise library before GPS has signal
 #define MY_LATITUDE 28.8522f
@@ -146,11 +148,14 @@ JC_Sunrise sun {MY_LATITUDE, MY_LONGITUDE, JC_Sunrise::officialZenith};  // set 
 time_t localTime, utcTime;
 int timesetinterval = 60; //set microcontroller time every 60 seconds
 
+// GPS
 String latitude;
 String longitude;
 String altitude;
 float hdop, old_max_hdop;
 int old_day_backlight, old_night_backlight;
+unsigned long previousGPSms = 0;
+float accumDistance;
 
 // the rest are defined in get_set_vars.h as aprt of EEZ Studio integration
 // String cur_date;
@@ -163,6 +168,7 @@ int old_day_backlight, old_night_backlight;
 // int avg_speed;
 // float max_hdop;
 
+// Meshtastic
 uint32_t next_send_time = 0;
 bool not_yet_connected = true;
 
@@ -171,8 +177,6 @@ bool not_yet_connected = true;
  *****************/
 
 void setup() {
-
-
 
     /* 
    * UART0 TX/RX lines are used in this manner:
@@ -190,6 +194,9 @@ void setup() {
   String SW_Version = "\nSW ";
   SW_Version += version;
   Serial.println(SW_Version);
+
+  mac_addr = String(WiFi.macAddress());
+  Serial.println(mac_addr);
 
   //Intitalize Preferences name space
   prefs.begin("eeprom", false); 
@@ -262,6 +269,8 @@ void setup() {
 
   set_text_message_callback(text_message_callback);  // Register a callback function to be called whenever a text message is received
 
+  manual_reboot = false;
+
 } // end setup()
 
 
@@ -272,91 +281,109 @@ void setup() {
 void loop() {
 
   time_t sunrise_t, sunset_t;
+  unsigned long currentGPSms = millis();
+  int elapsed_gps_read;
+  float incDistance;
 
-  while (gpsSerial.available() > 0)     // pass any character(s) in rx buffer to the GPS library
-    gps.encode(gpsSerial.read());
-  if (gps.location.isUpdated()) {       // check if end of valid NMEA sentence - typically once per second
+  if(manual_reboot == true)    // rebooted from UI
+    ESP.restart();
+  
+  elapsed_gps_read = currentGPSms - previousGPSms;
+  if (elapsed_gps_read >= GPS_READ_INTERVAL) {
+    previousGPSms = currentGPSms; // Update the last execution time
+    while (gpsSerial.available() > 0)     // pass any character(s) in rx buffer to the GPS library
+      gps.encode(gpsSerial.read());
+    if (gps.location.isUpdated()) {       // check if end of valid NMEA sentence - typically once per second
 
-    // set the Time to the latest GPS reading
-    if (gps.date.isValid() && gps.time.isValid()) {
-      setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
-      utcTime = now();
-      localTime = myTZ.toLocal(utcTime, &tcr);
-      localYear = year(localTime);
-      localMonth = month(localTime);
-      localDay = day(localTime);
-      localHour = hour(localTime);
-      localMinute = minute(localTime);
-      localSecond = second(localTime);
-      localDayOfWeek = weekday(localTime);
+      // set the Time to the latest GPS reading
+      if (gps.date.isValid() && gps.time.isValid()) {
+        setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+        utcTime = now();
+        localTime = myTZ.toLocal(utcTime, &tcr);
+        localYear = year(localTime);
+        localMonth = month(localTime);
+        localDay = day(localTime);
+        localHour = hour(localTime);
+        localMinute = minute(localTime);
+        localSecond = second(localTime);
+        localDayOfWeek = weekday(localTime);
+      }
+
+      latitude = String(gps.location.lat(), 6);
+      longitude = String(gps.location.lng(), 6);
+      altitude = String(gps.altitude.meters(), 2);
+      hdop = gps.hdop.value() / 100.0;
+      sats_hdop = String(gps.satellites.value()) + "/" + String(hdop, 2);
+      cur_date = String(getDayAbbr(localDayOfWeek)) + ", " + String(getMonthAbbr(localMonth)) + " " + String(localDay);
+      hhmm_str = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute));
+      hhmmss_str = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
+      am_pm_str = am_pm(localHour);
+
+      if (hdop < max_hdop) {  // if not reliable data, stay with old values
+        avg_speed = avgSpeed.reading(gps.speed.mph());
+        heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
+      }
+
+      incDistance = avg_speed * elapsed_gps_read / 3600000;
+      accumDistance = accumDistance + incDistance;
+
+      if (localDay != old_localDay)      // get new sunrise & sunset time
+        sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
+
+      if ((localTime > sunrise_t) && (localTime < sunset_t)) {
+        ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
+        // Serial.print("now using day_backlight value: ");
+        // Serial.println(day_backlight);
+      }
+      else {
+        ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
+        // Serial.print("now using night_backlight value: ");
+        // Serial.println(night_backlight);
+      }
+      
+      #if DEBUG_GPS == 1                           // comment out lines not necessary for your debug
+      // vars not dependent on GPS signal
+      Serial.print("\nutcTime: ");
+      Serial.print(utcTime);
+      Serial.print(ctime(&utcTime));
+      Serial.print("localTime: ");
+      Serial.print(localTime);
+      Serial.print(ctime(&localTime));
+      Serial.print("\nsunrise: ");
+      Serial.print(sunrise_t);
+      Serial.print(ctime(&sunrise_t));
+      Serial.print("sunset: ");
+      Serial.print(sunset_t);
+      Serial.print(ctime(&sunset_t));
+      Serial.print("Max HDOP = ");
+      Serial.println(max_hdop);
+
+      // vars dependent on GPS signal
+      Serial.println("");
+      Serial.print("elapsed_gps_read: ");
+      Serial.println(elapsed_gps_read);
+      Serial.print("incDistance: ");
+      Serial.println(incDistance);
+      Serial.print("accumDistance: ");
+      Serial.println(accumDistance);
+      Serial.print("LAT: ");
+      Serial.println(latitude);
+      Serial.print("LONG: "); 
+      Serial.println(longitude);
+      Serial.print("AVG_SPEED (mph) = ");
+      Serial.println(avg_speed);
+      Serial.print("DIRECTION = ");
+      Serial.println(heading);
+      Serial.print("ALT (min)= ");
+      Serial.println(altitude);
+      Serial.print("Sats/HDOP = "); 
+      Serial.println(sats_hdop);
+      Serial.print("Local time: ");
+      Serial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
+      Serial.println(cur_date + " " + hhmm_str);
+      #endif
+
     }
-
-    latitude = String(gps.location.lat(), 6);
-    longitude = String(gps.location.lng(), 6);
-    altitude = String(gps.altitude.meters(), 2);
-    hdop = gps.hdop.value() / 100.0;
-    sats_hdop = String(gps.satellites.value()) + "/" + String(hdop, 2);
-    cur_date = String(getDayAbbr(localDayOfWeek)) + ", " + String(getMonthAbbr(localMonth)) + " " + String(localDay);
-    hhmm_str = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute));
-    hhmmss_str = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
-    am_pm_str = am_pm(localHour);
-
-    if (hdop < max_hdop) {  // if not reliable data, stay with old values
-      avg_speed = avgSpeed.reading(gps.speed.mph());
-      heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
-    }
-
-    
-    if (localDay != old_localDay)      // get new sunrise & sunset time
-      sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
-
-    if ((localTime > sunrise_t) && (localTime < sunset_t)) {
-      ledcAnalogWrite(LEDC_CHANNEL_0, day_backlight, MAX_BACKLIGHT_VALUE);
-      // Serial.print("now using day_backlight value: ");
-      // Serial.println(day_backlight);
-    }
-    else {
-      ledcAnalogWrite(LEDC_CHANNEL_0, night_backlight, MAX_BACKLIGHT_VALUE);
-      // Serial.print("now using night_backlight value: ");
-      // Serial.println(night_backlight);
-    }
-    
-    #if DEBUG_GPS == 1                           // comment out lines  unnecessary for your purposes
-    // vars not dependent on GPS signal
-    Serial.print("\nutcTime: ");
-    Serial.print(utcTime);
-    Serial.print(ctime(&utcTime));
-    Serial.print("localTime: ");
-    Serial.print(localTime);
-    Serial.print(ctime(&localTime));
-    Serial.print("\nsunrise: ");
-    Serial.print(sunrise_t);
-    Serial.print(ctime(&sunrise_t));
-    Serial.print("sunset: ");
-    Serial.print(sunset_t);
-    Serial.print(ctime(&sunset_t));
-    Serial.print("Max HDOP = ");
-    Serial.println(max_hdop);
-
-    // vars dependent on GPS signal
-    Serial.println("");
-    Serial.print("LAT: ");
-    Serial.println(latitude);
-    Serial.print("LONG: "); 
-    Serial.println(longitude);
-    Serial.print("AVG_SPEED (mph) = ");
-    Serial.println(avg_speed);
-    Serial.print("DIRECTION = ");
-    Serial.println(heading);
-    Serial.print("ALT (min)= ");
-    Serial.println(altitude);
-    Serial.print("Sats/HDOP = "); 
-    Serial.println(sats_hdop);
-    Serial.print("Local time: ");
-    Serial.println(String(localYear) + "-" + String(localMonth) + "-" + String(localDay) + ", " + String(localHour) + ":" + String(localMinute) + ":" + String(localSecond));
-    Serial.println(cur_date + " " + hhmm_str);
-    #endif
-
   }
 
   /*
@@ -471,12 +498,12 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
 
 // Arduino like analogWrite
 // value has to be between 0 and valueMax
-void ledcAnalogWrite(uint8_t channel, uint32_t value, uint32_t valueMax = 255) {
+void ledcAnalogWrite(uint8_t ledc_channel, uint32_t value, uint32_t valueMax = 255) {
   // calculate duty, 4095 from 2 ^ 12 - 1
   uint32_t duty = (4095 / valueMax) * min(value, valueMax);
 
   // write duty to LEDC
-  ledcWrite(channel, duty);
+  ledcWrite(ledc_channel, duty);
 }
 
 /*********************
