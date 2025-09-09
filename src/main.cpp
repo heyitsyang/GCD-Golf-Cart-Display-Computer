@@ -134,7 +134,7 @@ int localYear;
 Preferences prefs;
 
 // byte gpsMonth, gpsDay, gpsHour, gpsMinute, gpsSecond;
-int localMonth, localDay, old_localDay = 0, localHour, localMinute, localSecond, localDayOfWeek;
+int localMonth, localDay = 0, old_localDay = 0, localHour, localMinute, localSecond, localDayOfWeek;
 
 // time zone & sunrise/sunset definitions
 TimeChangeRule mySTD = {"EST", First, Sun, Nov, 2, -300};   //UTC - 5 hours
@@ -348,9 +348,9 @@ void loop() {
         heading = String(gps.cardinal(avgAzimuthDeg.reading(gps.course.deg())));
       }
 
-      incDistance = avg_speed * elapsed_gps_read / 3600000;
-      accumDistance = accumDistance + incDistance;
-
+      /*
+      * Set the display's backlight
+      */
       if (localDay != old_localDay)      // get new sunrise & sunset time
         sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
 
@@ -364,6 +364,12 @@ void loop() {
         // Serial.print("now using night_backlight value: ");
         // Serial.println(night_backlight);
       }
+
+      /*
+       * Approximate distance traveleled
+       */
+      incDistance = avg_speed * elapsed_gps_read / 3600000;
+      accumDistance = accumDistance + incDistance;
       
       #if DEBUG_GPS == 1                           // comment out lines not necessary for your debug
       // vars not dependent on GPS signal
@@ -632,5 +638,5 @@ void text_message_callback(uint32_t from, uint32_t to,  uint8_t channel, const c
     Serial.println("This is a DM to me!");
   } else {
     Serial.println("This is a DM to someone else.");
-  }
+    }
 }

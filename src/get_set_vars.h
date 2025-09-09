@@ -95,20 +95,20 @@ extern "C" void set_var_version(const char *value) {
 }
 
 int day_backlight;
-int get_var_day_backlight() {
+int get_var_cyd_day_backlight() {
     return day_backlight;
 }
 
-void set_var_day_backlight(int value) {
+void set_var_cyd_day_backlight(int value) {
     day_backlight = value;
 }
 
 int night_backlight;
-int get_var_night_backlight() {
+int get_var_cyd_night_backlight() {
     return night_backlight;
 }
 
-void set_var_night_backlight(int value) {
+void set_var_cyd_night_backlight(int value) {
     night_backlight = value;
 }
 
@@ -150,4 +150,15 @@ bool get_var_mesh_comm() {
 void set_var_mesh_comm(bool value) {
     mesh_comm = value;
 }
+
+String wx_rcv_time;
+
+extern "C" const char *get_var_wx_rcv_time() {
+    return wx_rcv_time.c_str();
+}
+
+extern "C" void set_var_wx_rcv_time(const char *value) {
+    wx_rcv_time = value;
+}
+
 
