@@ -101,8 +101,9 @@
 
 // Send a text message every this many seconds
 #define SEND_PERIOD 300
-#define MAX_MESHTASTIC_PAYLOAD 237  //max actual payload bytes after subtracting overhead
 
+#define MAX_MESHTASTIC_PAYLOAD 237  // max actual payload bytes after subtracting overhead
+#define HOT_PKT_HEADER_OFFSET 5     // used in decoding HoT packets which have a header
 
 /******************************
  *    VARIABLES & OBJECTS     *
@@ -244,8 +245,9 @@ void setup() {
   LVGL_Arduino += String('v') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
   Serial.println(LVGL_Arduino);
 
-  cur_date = String("NO GPS");  // display this until GPS date is avaialble
-  wx_rcv_time = String(" NO DATA YET");  // display until weather report is avaialble
+  cur_date = String("NO GPS");           // display this until GPS date is avaialble
+  wx_rcv_time = String(" NO DATA YET");  // display until weather report is available
+  cur_temp = String("--");
 
   lv_init();    // initialize LVGL GUI
 
@@ -358,7 +360,8 @@ void loop() {
       if (localDay != old_localDay)      // get new sunrise & sunset time
         sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
 
-      if ((localTime > sunrise_t) && (localTime < sunset_t)) {
+        // stored backlight values from the GUI are 1-10, actual scale os 1-255
+        if ((localTime > sunrise_t) && (localTime < sunset_t)) {
         ledcAnalogWrite(LEDC_CHANNEL_0, ((day_backlight*20) + 55), MAX_BACKLIGHT_VALUE);
         // Serial.print("now using day_backlight value: ");
         // Serial.println(day_backlight);
@@ -683,8 +686,7 @@ void text_message_callback(uint32_t from, uint32_t to,  uint8_t channel, const c
 
 
 // Parse weather forecast data from input string into eez studio globals
-// Input format: "76.0#1pm,4,0.0#2pm,4,0.0#3pm,7,0.03#4pm,7,0.01#"
-// Returns: number of hourly entries parsed (0-MAX_HOURLY_DATA)
+// Example input format: "76.0#1pm,4,0.0#2pm,4,0.0#3pm,7,0.03#4pm,7,0.01#"
 int parseWeatherData(char* input) {
 
     int ptr, len;
@@ -717,8 +719,6 @@ int parseWeatherData(char* input) {
     //     else Serial.print(input[i]);
     // }
     // Serial.println();
-
-    #define HOT_PKT_HEADER_OFFSET 5
     
     ptr = HOT_PKT_HEADER_OFFSET;
     cur_temp = String(&input[ptr]);
