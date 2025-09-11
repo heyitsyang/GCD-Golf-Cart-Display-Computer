@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include "ui/vars.h"
+//#include "ui/structs.h"
 
 String cur_date;
 extern "C" const char *get_var_cur_date() {
@@ -162,3 +163,150 @@ extern "C" void set_var_wx_rcv_time(const char *value) {
 }
 
 
+// Weather globals
+
+String cur_temp;
+
+extern "C" const char *get_var_cur_temp() {
+    return cur_temp.c_str();
+}
+
+extern "C" void set_var_cur_temp(const char *value) {
+    cur_temp = value;
+}
+
+
+// hour 1 data
+String fcast_hr1;
+
+extern "C" const char *get_var_fcast_hr1() {
+    return fcast_hr1.c_str();
+}
+
+extern "C" void set_var_fcast_hr1(const char *value) {
+    fcast_hr1 = value;
+}
+
+
+String fcast_glyph1;
+
+extern "C" const char *get_var_fcast_glyph1() {
+    return fcast_glyph1.c_str();
+}
+
+extern "C" void set_var_fcast_glyph1(const char *value) {
+    fcast_glyph1 = value;
+}
+
+
+String fcast_precip1;
+
+extern "C" const char *get_var_fcast_precip1() {
+    return fcast_precip1.c_str();
+}
+
+extern "C" void set_var_fcast_precip1(const char *value) {
+    fcast_precip1 = value;
+}
+
+
+// hour 2 data
+String fcast_hr2;
+
+extern "C" const char *get_var_fcast_hr2() {
+    return fcast_hr2.c_str();
+}
+
+extern "C" void set_var_fcast_hr2(const char *value) {
+    fcast_hr2 = value;
+}
+
+
+String fcast_glyph2;
+
+extern "C" const char *get_var_fcast_glyph2() {
+    return fcast_glyph2.c_str();
+}
+
+extern "C" void set_var_fcast_glyph2(const char *value) {
+    fcast_glyph2 = value;
+}
+
+
+String fcast_precip2;
+
+extern "C" const char *get_var_fcast_precip2() {
+    return fcast_precip2.c_str();
+}
+
+extern "C" void set_var_fcast_precip2(const char *value) {
+    fcast_precip2 = value;
+}
+
+
+// hour 3 data
+String fcast_hr3;
+
+extern "C" const char *get_var_fcast_hr3() {
+    return fcast_hr3.c_str();
+}
+
+extern "C" void set_var_fcast_hr3(const char *value) {
+    fcast_hr3 = value;
+}
+
+
+String fcast_glyph3;
+
+extern "C" const char *get_var_fcast_glyph3() {
+    return fcast_glyph3.c_str();
+}
+
+extern "C" void set_var_fcast_glyph3(const char *value) {
+    fcast_glyph3 = value;
+}
+
+
+String fcast_precip3;
+
+extern "C" const char *get_var_fcast_precip3() {
+    return fcast_precip3.c_str();
+}
+
+extern "C" void set_var_fcast_precip3(const char *value) {
+    fcast_precip3 = value;
+}
+
+
+// hour 4 data
+String fcast_hr4;
+
+extern "C" const char *get_var_fcast_hr4() {
+    return fcast_hr4.c_str();
+}
+
+extern "C" void set_var_fcast_hr4(const char *value) {
+    fcast_hr4 = value;
+}
+
+
+String fcast_glyph4;
+
+extern "C" const char *get_var_fcast_glyph4() {
+    return fcast_glyph4.c_str();
+}
+
+extern "C" void set_var_fcast_glyph4(const char *value) {
+    fcast_glyph4 = value;
+}
+
+
+String fcast_precip4;
+
+extern "C" const char *get_var_fcast_precip4() {
+    return fcast_precip4.c_str();
+}
+
+extern "C" void set_var_fcast_precip4(const char *value) {
+    fcast_precip4 = value;
+}

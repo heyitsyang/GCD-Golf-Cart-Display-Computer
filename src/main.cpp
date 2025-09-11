@@ -52,7 +52,7 @@
 
 // enabling any DEBUG bogs down the loop
 #define DEBUG_TOUCH_SCREEN 0
-#define DEBUG_GPS 1
+#define DEBUG_GPS 0
 //#define DEBUG_MESHTASTIC 1
 #define MT_DEBUGGING 0            // set to 1 for in-depth debugging
 
@@ -101,6 +101,7 @@
 
 // Send a text message every this many seconds
 #define SEND_PERIOD 300
+#define MAX_MESHTASTIC_PAYLOAD 237  //max actual payload bytes after subtracting overhead
 
 
 /******************************
@@ -168,10 +169,12 @@ float accumDistance;
 // int avg_speed;
 // float max_hdop;
 
+
 // Meshtastic
 uint32_t next_send_time = 0;
 bool not_yet_connected = true;
 bool old_mesh_comm = true;
+
 
 
 // ESPNow
@@ -242,6 +245,7 @@ void setup() {
   Serial.println(LVGL_Arduino);
 
   cur_date = String("NO GPS");  // display this until GPS date is avaialble
+  wx_rcv_time = String(" NO DATA YET");  // display until weather report is avaialble
 
   lv_init();    // initialize LVGL GUI
 
@@ -461,7 +465,7 @@ void loop() {
     
     // Change this to a specific node number if you want to send to just one node
     uint32_t dest = BROADCAST_ADDR; 
-    // Change this to another index if you want to send on a different channel
+    // Change this to another input if you want to send on a different channel
     // Remember routine Meshtastic telemetry is only sent on channel 0
     uint8_t channel_index = 0;   // For the golf cart:  0 = Telemetry, 1 = TheVillages, 2 = LongFast
 
@@ -469,9 +473,6 @@ void loop() {
 
     next_send_time = loop_start + SEND_PERIOD * 1000;
   }
-
-
-
 
 
   /* Required for LVGL */
@@ -615,14 +616,18 @@ const char* getDayAbbr(int weekday_num) {
  ****************************/
 
 // This callback function will be called whenever the radio connects to a node
+// callback activated when responding to mt_request_node_report()
 void connected_callback(mt_node_t *node, mt_nr_progress_t progress) {
-  if (not_yet_connected) 
+  if (not_yet_connected)   
     Serial.println("Connected to Meshtastic device!");
   not_yet_connected = false;
 }
 
 // This callback function will be called whenever the radio receives a text message
 void text_message_callback(uint32_t from, uint32_t to,  uint8_t channel, const char* text) {
+
+  char scratch[MAX_MESHTASTIC_PAYLOAD] = {0};   //use as scratchpad buffer
+
   // Do your own thing here. This example just prints the message to the serial console.
   Serial.print("Received a text message on channel: ");
   Serial.print(channel);
@@ -639,4 +644,113 @@ void text_message_callback(uint32_t from, uint32_t to,  uint8_t channel, const c
   } else {
     Serial.println("This is a DM to someone else.");
     }
+
+
+  // coded telemetry message
+  // example wx packet:   |#01#76#1pm,4,0.0#2pm,4,0.0#3pm,7,0.03#4pm,7,0.01#
+  // where | is start of pkt character for a HoT pkt, 01 is telemetery pkt type (01 = wx), and the rest is wx pkt payload
+  if (text != NULL && text[0] == '|') {
+    Serial.println("Received a HoT pkt");
+    // Now, combine the 3rd and 4th characters into a single integer.
+    // Memory-efficient method: Perform the conversion manually.
+    // '0' is 48 in ASCII, '1' is 49. '1' - '0' = 1.
+    int HotPktType = (text[2] - '0') * 10 + (text[3] - '0');
+
+    // Handle potential invalid input for robustness
+    if (text[2] < '0' || text[2] > '9' || text[3] < '0' || text[3] > '9') {
+        Serial.print("Malformed HotPktType:  ");
+        Serial.println(HotPktType);
+    } else {
+
+      // Process the extracted number using a switch statement
+      switch (HotPktType) {
+          case 1:   // wx packet
+              Serial.println("WX packet received");
+              wx_rcv_time = cur_date + "  " + hhmm_str + am_pm_str;
+              parseWeatherData((char *)text);
+              break;
+          // Add more cases as needed
+          default:
+              Serial.print("Unrecognized HotPktType:  ");
+              Serial.println(HotPktType);
+              break;
+      }
+    }
+  }
+  ui_tick();            // Update the UI for EEZ Studio Flow
+}
+
+
+
+// Parse weather forecast data from input string into eez studio globals
+// Input format: "76.0#1pm,4,0.0#2pm,4,0.0#3pm,7,0.03#4pm,7,0.01#"
+// Returns: number of hourly entries parsed (0-MAX_HOURLY_DATA)
+int parseWeatherData(char* input) {
+
+    int ptr, len;
+    len = strlen(input);
+
+    // Add this debug code right after len = strlen(input);
+    // Serial.print("Original length: "); Serial.println(len);
+    // Serial.print("Original input: "); Serial.println(input);
+
+    if (!input)
+        return 0;
+
+    // Replace the for loop with this debug version:
+    for(ptr = 0; ptr < len; ptr++) {
+        // Serial.print("Position "); Serial.print(ptr); 
+        // Serial.print(": '"); Serial.print(input[ptr]); Serial.print("' ");
+        
+        if ((input[ptr] == '#') || (input[ptr] == ',')) {
+            // Serial.println("-> REPLACING with null");
+            input[ptr] = '\0';
+        } else {
+            // Serial.println("-> keeping");
+        }
+    }
+
+    // // Serial.print("Modified input: ");
+    // for(int i = 0; i < len; i++) {  // Use len, not strlen(input)
+    //     if(input[i] == '\0') 
+    //         Serial.print("\\0");
+    //     else Serial.print(input[i]);
+    // }
+    // Serial.println();
+
+    #define HOT_PKT_HEADER_OFFSET 5
+    
+    ptr = HOT_PKT_HEADER_OFFSET;
+    cur_temp = String(&input[ptr]);
+    ptr = ptr + strlen(&input[ptr]) + 1;
+
+    fcast_hr1 = String(&input[ptr]);
+    ptr = ptr + fcast_hr1.length() + 1;
+    fcast_glyph1 = String(&input[ptr]);
+    ptr = ptr + fcast_glyph1.length() + 1;
+    fcast_precip1 = String(&input[ptr]);
+    ptr = ptr + fcast_precip1.length() + 1;
+
+    fcast_hr2 = String(&input[ptr]);
+    ptr = ptr + fcast_hr2.length() + 1;
+    fcast_glyph2 = String(&input[ptr]);
+    ptr = ptr + fcast_glyph2.length() + 1;
+    fcast_precip2 = String(&input[ptr]);
+    ptr = ptr + fcast_precip2.length() + 1;
+
+    fcast_hr3 = String(&input[ptr]);
+    ptr = ptr + fcast_hr3.length() + 1;
+    fcast_glyph3 = String(&input[ptr]);
+    ptr = ptr + fcast_glyph3.length() + 1;
+    fcast_precip3 = String(&input[ptr]);
+    ptr = ptr + fcast_precip3.length() + 1;
+
+    fcast_hr4 = String(&input[ptr]);
+    ptr = ptr + fcast_hr4.length() + 1;
+    fcast_glyph4 = String(&input[ptr]);
+    ptr = ptr + fcast_glyph4.length() + 1;
+    fcast_precip4 = String(&input[ptr]);
+    ptr = ptr + fcast_precip4.length() + 1;
+
+    return 1;
 }
