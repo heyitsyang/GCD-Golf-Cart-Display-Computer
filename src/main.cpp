@@ -139,7 +139,16 @@ typedef struct
   } value;
 } eepromWriteItem_t;
 
-/* Meshtastic Callback Queue Item */
+/* Meshtastic Message Queue Item */
+typedef struct
+{
+  uint32_t dest;
+  uint8_t channel;
+  char message[MAX_MESHTASTIC_PAYLOAD];
+  uint32_t timestamp;
+  uint8_t retryCount;
+  bool isPending;
+} meshtasticMessageItem_t;
 typedef struct
 {
   uint32_t from;
@@ -483,7 +492,7 @@ void guiTask(void *parameter)
   }
 }
 
-// Meshtastic Task - Handles all Meshtastic communication
+// Meshtastic Task - High frequency to ensure mt_loop() is called continuously
 void meshtasticTask(void *parameter)
 {
   while (true)
@@ -505,14 +514,16 @@ void meshtasticTask(void *parameter)
     }
 
     // Record the time that this loop began (in milliseconds since the device booted)
-    uint32_t loop_start = millis();
+    uint32_t now = millis();
 
-    // Run the Meshtastic loop, and see if it's able to send requests to the device yet
-    bool can_send = mt_loop(loop_start);
+    // Run the Meshtastic loop - THIS MUST BE CALLED CONTINUOUSLY
+    bool can_send = mt_loop(now);
 
     // If we can send, and it's time to do so, send a text message and schedule the next one.
-    if (can_send && loop_start >= next_send_time)
+    if (can_send && now >= next_send_time)
     {
+      Serial.print("\nSending test message at: ");
+      Serial.println(hhmm_str);
 
       // Change this to a specific node number if you want to send to just one node
       uint32_t dest = BROADCAST_ADDR;
@@ -520,12 +531,17 @@ void meshtasticTask(void *parameter)
       // Remember routine Meshtastic telemetry is only sent on channel 0
       uint8_t channel_index = 0; // For the golf cart:  0 = Telemetry, 1 = TheVillages, 2 = LongFast
 
-      mt_send_text("Hello, world from the CYD Golf Cart Computer!", dest, channel_index);
+      bool success = mt_send_text("Hello, world from the CYD Golf Cart Computer!", dest, channel_index);
+      Serial.print("mt_send_text returned: ");
+      Serial.println(success ? "SUCCESS" : "***** FAILED ****");
 
-      next_send_time = loop_start + SEND_PERIOD * 1000;
+      next_send_time = now + SEND_PERIOD * 1000;
+      Serial.printf("Next send time in: %d minutes\n", (SEND_PERIOD / 60));
+
     }
 
-    vTaskDelay(pdMS_TO_TICKS(50)); // Run at 20Hz
+    // Minimal delay to prevent watchdog issues but keep mt_loop() frequency high
+    vTaskDelay(pdMS_TO_TICKS(1)); // 1ms delay = 1000Hz mt_loop() calls
   }
 }
 
@@ -604,7 +620,6 @@ void meshtasticCallbackTask(void *parameter)
           }
         }
       }
-      ui_tick(); // Update the UI for EEZ Studio Flow
     }
   }
 }
