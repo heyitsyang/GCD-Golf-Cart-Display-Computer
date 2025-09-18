@@ -37,9 +37,11 @@
 
 #include "version.h"
 #include "ui/ui.h"        // generated from EEZ Studio
+#include "ui/actions.h"
 #include "get_set_vars.h" // get & set functions for EEZ Studio vars
 #include "prototypes.h"   // declare functions so they can be moved below setup() & loop()
 #include "Meshtastic.h"
+
 
 /********************
  *      DEFINES     *
@@ -1179,4 +1181,125 @@ int parseWeatherData(char *input)
   ptr = ptr + fcast_precip4.length() + 1;
 
   return 1;
+}
+
+
+/****************************
+ *  USER_ACTIONS FUNCTIONS  *
+ ****************************/
+
+// Function to display venue/event data in LVGL table format
+void displayVenueEventTable(const char* dataString) {
+    // Get the current screen instead of creating a new one
+    lv_obj_t * current_screen = lv_scr_act();
+    
+    // Find the container_now_playing by name using LVGL naming system
+    lv_obj_t * container = NULL;
+    // uint32_t child_count = lv_obj_get_child_cnt(current_screen);
+    // for(uint32_t i = 0; i < child_count; i++) {
+    //     lv_obj_t * child = lv_obj_get_child(current_screen, i);
+    //     if(child != NULL) {
+    //         const char* name = lv_obj_get_name(child);
+    //         if (name != NULL && strcmp(name, "container_now_playing") == 0) {
+    //             container = child;
+    //             break;
+    //         }
+    //     }
+    // }
+    
+    // // Debug output if container not found
+    // if (container == NULL) {
+    //     Serial.println("ERROR: container_now_playing not found by name!");
+    //     container = current_screen;  // Fall back to screen
+    // } else {
+    //     Serial.println("SUCCESS: Found container_now_playing by name");
+    // }
+
+    container = lv_obj_create(current_screen);
+    lv_obj_set_pos(container, 0, 40);  // set absolute position
+    lv_obj_set_size(container, TFT_HEIGHT, TFT_WIDTH - 40);  // height & width intentionally swapped for landscape orientation
+    lv_obj_set_style_bg_color(container, lv_color_black(), LV_PART_MAIN); 
+
+    
+    // Count events to determine table size
+    String dataStr = String(dataString);
+    int eventCount = 0;
+    int pos = 0;
+    
+    while (pos < dataStr.length()) {
+        int delimiterPos = dataStr.indexOf('#', pos);
+        if (delimiterPos == -1) break;
+        
+        String pair = dataStr.substring(pos, delimiterPos);
+        if (pair.indexOf(',') != -1) {
+            eventCount++;
+        }
+        pos = delimiterPos + 1;
+    }
+    
+    // Limit to maximum of 12 events
+    int maxEvents = min(eventCount, 12);
+    
+    // Create the table inside the container
+    lv_obj_t * table = lv_table_create(container);
+    
+    // Size table to fill the container
+    lv_coord_t container_width = lv_obj_get_width(container);
+    lv_coord_t container_height = lv_obj_get_height(container);
+    lv_obj_set_size(table, container_width, container_height);
+    lv_obj_set_pos(table, 0, 0);
+    
+    // Set table style - same as Version 1
+    lv_obj_set_style_bg_color(table, lv_color_black(), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(table, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(table, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    
+    // Set up table structure with 2 columns and only the rows needed for data
+    lv_table_set_col_cnt(table, 2);
+    lv_table_set_row_cnt(table, maxEvents);
+    
+    // Style all table cells with consistent font - same as Version 1
+    lv_obj_set_style_bg_color(table, lv_color_hex(0x404040), LV_PART_ITEMS | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(table, lv_color_white(), LV_PART_ITEMS | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(table, &lv_font_montserrat_16, LV_PART_ITEMS | LV_STATE_DEFAULT);
+    
+    // Parse the data string and populate the table - same logic as Version 1
+    int row = 0; 
+    int startPos = 0;
+    
+    while (startPos < dataStr.length() && row < maxEvents) {
+        int delimiterPos = dataStr.indexOf('#', startPos);
+        if (delimiterPos == -1) break;
+        
+        String pair = dataStr.substring(startPos, delimiterPos);
+        int commaPos = pair.indexOf(',');
+        
+        if (commaPos != -1) {
+            String venue = pair.substring(0, commaPos);
+            String event = pair.substring(commaPos + 1);
+            
+            // Trim whitespace
+            venue.trim();
+            event.trim();
+            
+            // Add to table
+            lv_table_set_cell_value(table, row, 0, venue.c_str());
+            lv_table_set_cell_value(table, row, 1, event.c_str());
+            
+            row++;
+        }
+        
+        startPos = delimiterPos + 1;
+    }
+    
+    // Set column widths to split the container width evenly
+    lv_table_set_col_width(table, 0, container_width / 2);  // First column - half width
+    lv_table_set_col_width(table, 1, container_width / 2);  // Second column - half width
+}
+
+extern "C" void action_display_now_playing(lv_event_t *e) {
+    // Example data - replace with your actual data source
+    const char* exampleData = "Sawgrass,Thirsty Thursday#Spanish Springs,Penta#Lake Sumter,X Girlfriend Event#Brownwood,Southbound#Sawgrass,Steve Hogie Event#";
+    
+    displayVenueEventTable(exampleData);
 }
