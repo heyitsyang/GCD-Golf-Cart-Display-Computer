@@ -310,3 +310,14 @@ extern "C" const char *get_var_fcast_precip4() {
 extern "C" void set_var_fcast_precip4(const char *value) {
     fcast_precip4 = value;
 }
+
+
+String np_rcv_time;
+
+extern "C" const char *get_var_np_rcv_time() {
+    return np_rcv_time.c_str();
+}
+
+extern "C" void set_var_np_rcv_time(const char *value) {
+    np_rcv_time = value;
+}

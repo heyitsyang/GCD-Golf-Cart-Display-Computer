@@ -246,6 +246,9 @@ bool old_mesh_comm = true;
 // ESPNow
 String old_espnow_mac_addr;
 
+// Live venue/event data from Meshtastic
+String live_venue_event_data = ""; // Stores the most recent HoTPktType 2 data
+
 /***********************
  *    TASK FUNCTIONS   *
  ***********************/
@@ -610,9 +613,12 @@ void meshtasticCallbackTask(void *parameter)
             wx_rcv_time = cur_date + "  " + hhmm_str + am_pm_str;
             parseWeatherData((char *)item.text);
             break;
-          case 2: // Add case for packet type 2
-            Serial.println("Type 2 packet received");
-            // Add appropriate handling for type 2 packets here
+          case 2: // venue/event data packet
+            Serial.println("Venue/Event packet received");  // Format expected: |#02#venue1,event1#venue2,event2#venue3,event3#...
+            np_rcv_time = cur_date + "  " + hhmm_str + am_pm_str;
+            live_venue_event_data = String(&item.text[HOT_PKT_HEADER_OFFSET]);  // Store the raw data starting after the HoT packet header
+            Serial.print("Stored venue/event data: ");
+            Serial.println(live_venue_event_data);
             break;
           // Add more cases as needed
           default:
@@ -800,8 +806,9 @@ void setup()
   Serial.println(LVGL_Arduino);
 
   cur_date = String("NO GPS");          // display this until GPS date is available
-  wx_rcv_time = String(" NO DATA YET"); // display until weather report is available
   cur_temp = String("--");
+  wx_rcv_time = String(" NO DATA YET"); // display until weather report is available
+  np_rcv_time = String(" NO DATA YET"); // display until now playing report is available
 
   lv_init(); // initialize LVGL GUI
 
@@ -1193,33 +1200,11 @@ void displayVenueEventTable(const char* dataString) {
     // Get the current screen instead of creating a new one
     lv_obj_t * current_screen = lv_scr_act();
     
-    // Find the container_now_playing by name using LVGL naming system
-    lv_obj_t * container = NULL;
-    // uint32_t child_count = lv_obj_get_child_cnt(current_screen);
-    // for(uint32_t i = 0; i < child_count; i++) {
-    //     lv_obj_t * child = lv_obj_get_child(current_screen, i);
-    //     if(child != NULL) {
-    //         const char* name = lv_obj_get_name(child);
-    //         if (name != NULL && strcmp(name, "container_now_playing") == 0) {
-    //             container = child;
-    //             break;
-    //         }
-    //     }
-    // }
-    
-    // // Debug output if container not found
-    // if (container == NULL) {
-    //     Serial.println("ERROR: container_now_playing not found by name!");
-    //     container = current_screen;  // Fall back to screen
-    // } else {
-    //     Serial.println("SUCCESS: Found container_now_playing by name");
-    // }
-
-    container = lv_obj_create(current_screen);
+    lv_obj_t * container = lv_obj_create(current_screen);
     lv_obj_set_pos(container, 0, 40);  // set absolute position
     lv_obj_set_size(container, TFT_HEIGHT, TFT_WIDTH - 40);  // height & width intentionally swapped for landscape orientation
     lv_obj_set_style_bg_color(container, lv_color_black(), LV_PART_MAIN); 
-
+    lv_obj_set_style_border_width(container, 0, LV_PART_MAIN);  // Remove container border for cleaner look
     
     // Count events to determine table size
     String dataStr = String(dataString);
@@ -1239,31 +1224,38 @@ void displayVenueEventTable(const char* dataString) {
     
     // Limit to maximum of 12 events
     int maxEvents = min(eventCount, 12);
+    if (maxEvents == 0) maxEvents = 1; // Ensure at least 1 row
     
     // Create the table inside the container
     lv_obj_t * table = lv_table_create(container);
     
-    // Size table to fill the container
-    lv_coord_t container_width = lv_obj_get_width(container);
-    lv_coord_t container_height = lv_obj_get_height(container);
-    lv_obj_set_size(table, container_width, container_height);
-    lv_obj_set_pos(table, 0, 0);
-    
-    // Set table style - same as Version 1
-    lv_obj_set_style_bg_color(table, lv_color_black(), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_color(table, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(table, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
-    
-    // Set up table structure with 2 columns and only the rows needed for data
+    // CRITICAL: Set up table structure BEFORE setting size
     lv_table_set_col_cnt(table, 2);
     lv_table_set_row_cnt(table, maxEvents);
     
-    // Style all table cells with consistent font - same as Version 1
+    // Set column widths FIRST - this allows LVGL to calculate proper table dimensions
+    lv_table_set_col_width(table, 0, (TFT_HEIGHT - 30) / 2);  // First column - venue
+    lv_table_set_col_width(table, 1, (TFT_HEIGHT - 30) / 2);  // Second column - event
+    
+    // Now set table size and position
+    lv_obj_set_size(table, TFT_HEIGHT - 20, TFT_WIDTH - 60);
+    lv_obj_align(table, LV_ALIGN_CENTER, 0, 0);
+    
+    // Set table main style with rounded corners
+    lv_obj_set_style_bg_color(table, lv_color_black(), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(table, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(table, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(table, 10, LV_PART_MAIN | LV_STATE_DEFAULT);  // Add rounded corners to table
+    
+    // Style all table cells with consistent font - same as original code pattern
     lv_obj_set_style_bg_color(table, lv_color_hex(0x404040), LV_PART_ITEMS | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(table, lv_color_white(), LV_PART_ITEMS | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(table, &lv_font_montserrat_16, LV_PART_ITEMS | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(table, &lv_font_montserrat_18, LV_PART_ITEMS | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(table, lv_color_hex(0x808080), LV_PART_ITEMS | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(table, 1, LV_PART_ITEMS | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_all(table, 3, LV_PART_ITEMS | LV_STATE_DEFAULT);
     
-    // Parse the data string and populate the table - same logic as Version 1
+    // Parse the data string and populate the table - same logic as original
     int row = 0; 
     int startPos = 0;
     
@@ -1292,14 +1284,28 @@ void displayVenueEventTable(const char* dataString) {
         startPos = delimiterPos + 1;
     }
     
-    // Set column widths to split the container width evenly
-    lv_table_set_col_width(table, 0, container_width / 2);  // First column - half width
-    lv_table_set_col_width(table, 1, container_width / 2);  // Second column - half width
+    // If no data was populated, add placeholder
+    if (row == 0) {
+        lv_table_set_cell_value(table, 0, 0, "No Data");
+        lv_table_set_cell_value(table, 0, 1, "Available");
+    }
+    
+    Serial.printf("Table created with %d rows\n", maxEvents);
 }
 
 extern "C" void action_display_now_playing(lv_event_t *e) {
-    // Example data - replace with your actual data source
-    const char* exampleData = "Sawgrass,Thirsty Thursday#Spanish Springs,Penta#Lake Sumter,X Girlfriend Event#Brownwood,Southbound#Sawgrass,Steve Hogie Event#";
+    // Use live data if available, otherwise fall back to example data
+    const char* dataToDisplay;
     
-    displayVenueEventTable(exampleData);
+    if (live_venue_event_data.length() > 0) {
+        // Use the live data from Meshtastic HoTPktType 2
+        dataToDisplay = live_venue_event_data.c_str();
+        Serial.println("Using live venue/event data from Meshtastic");
+    } else {
+        // Fall back to default data if no live data available
+        dataToDisplay = "Sawgrass,NA#Spanish Springs,NA#Lake Sumter,NA#Brownwood,NA#Sawgrass,NA#";
+        Serial.println("Using default data - no live Meshtastic data available");
+    }
+    
+    displayVenueEventTable(dataToDisplay);
 }
