@@ -93,8 +93,8 @@ void setup() {
     // Initialize display strings
     cur_date = String("NO GPS");
     cur_temp = String("--");
-    wx_rcv_time = String(" NO DATA YET");
-    np_rcv_time = String(" NO DATA YET");
+    wx_rcv_time = String("        NO DATA YET");
+    np_rcv_time = String("        NO DATA YET");
     espnow_status = "Not initialized";
     espnow_last_received = "";
     
