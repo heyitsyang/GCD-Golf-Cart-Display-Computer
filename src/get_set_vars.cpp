@@ -35,6 +35,7 @@ float max_hdop = 2.5;
 int32_t day_backlight = 10;
 int32_t night_backlight = 5;
 bool manual_reboot = false;
+bool new_rx_data_flag = false;
 bool mesh_comm = true;
 
 // Static buffers for C string returns
@@ -145,6 +146,14 @@ bool get_var_manual_reboot() {
 
 void set_var_manual_reboot(bool value) {
     manual_reboot = value;
+}
+
+bool get_var_new_rx_data_flag() {
+    return new_rx_data_flag;
+}
+
+void set_var_new_rx_data_flag(bool value) {
+    new_rx_data_flag = value;
 }
 
 const char* get_var_espnow_mac_addr() {

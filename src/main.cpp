@@ -32,6 +32,8 @@
 #include "Meshtastic.h"
 #include "communication/hot_packet_parser.h"
 #include "communication/espnow_handler.h"
+#include "communication/meshtastic_wrapper.h"
+
 
 // Tasks
 #include "tasks/tasks.h"
@@ -78,18 +80,23 @@ void setup() {
 
     // Initialize display
     initDisplay();
-    
+
     // Initialize backlight
     initBacklight();
-    
+
     // Initialize display and touchscreen
     initTouchscreen();
-    
+
     // Initialize LVGL
-    String LVGL_Arduino = "LVGL v" + String(lv_version_major()) + "." + 
+    String LVGL_Arduino = "LVGL v" + String(lv_version_major()) + "." +
                          String(lv_version_minor()) + "." + String(lv_version_patch());
     Serial.println(LVGL_Arduino);
-    
+
+    // Clear screen to black immediately after LVGL init
+    lv_obj_t* default_screen = lv_scr_act();
+    lv_obj_set_style_bg_color(default_screen, lv_color_black(), LV_PART_MAIN);
+    lv_refr_now(NULL);  // Force immediate refresh
+
     // Initialize display strings
     cur_date = String("NO GPS");
     cur_temp = String("--");
@@ -97,20 +104,19 @@ void setup() {
     np_rcv_time = String("        NO DATA YET");
     espnow_status = "Not initialized";
     espnow_last_received = "";
-    
 
-    
     // Initialize UI from EEZ Studio
     ui_init();
     
     // Initialize Meshtastic
-    mt_serial_init(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);
+    meshtasticWrapper.initialize(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);
     randomSeed(micros());
-    mt_request_node_report(connected_callback);
-    set_text_message_callback(text_message_callback);
+    meshtasticWrapper.requestNodeReport(connected_callback);
+    meshtasticWrapper.setTextMessageCallback(text_message_callback);
     
     // Initialize application variables
     manual_reboot = false;
+    new_rx_data_flag = false;
     mesh_comm = true;
     
     // Create synchronization objects

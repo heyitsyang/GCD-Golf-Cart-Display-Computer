@@ -66,6 +66,9 @@
 #define MY_LATITUDE 28.8522f
 #define MY_LONGITUDE -82.0028f
 
+// UI update flag timing (milliseconds)
+#define NEW_RX_DATA_FLAG_RESET_TIME 5000  // Auto-reset flag after 5 seconds
+
 // Task Stack Sizes (in bytes)
 #define GPS_TASK_STACK_SIZE 4096
 #define GUI_TASK_STACK_SIZE 8192

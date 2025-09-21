@@ -53,6 +53,9 @@ void set_var_cyd_mac_addr(const char* value);
 bool get_var_manual_reboot();
 void set_var_manual_reboot(bool value);
 
+bool get_var_new_rx_data_flag();
+void set_var_new_rx_data_flag(bool value);
+
 const char* get_var_espnow_mac_addr();
 void set_var_espnow_mac_addr(const char* value);
 
@@ -151,6 +154,7 @@ extern float max_hdop;
 extern int32_t day_backlight;
 extern int32_t night_backlight;
 extern bool manual_reboot;
+extern bool new_rx_data_flag;
 extern bool mesh_comm;
 
 #endif // __cplusplus

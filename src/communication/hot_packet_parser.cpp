@@ -22,9 +22,12 @@ int parseHotPacketType(const char* text) {
 
 void processHotPacket(const char* text) {
     Serial.println("Received a HoT pkt");
-    
+
+    // Set flag for any HOT packet received (for UI updates)
+    new_rx_data_flag = true;
+
     int HotPktType = parseHotPacketType(text);
-    
+
     if (HotPktType == -1) {
         Serial.println("Malformed HotPktType");
         return;
@@ -74,28 +77,36 @@ int parseWeatherData(char* input) {
     fcast_glyph1 = String(&input[ptr]);
     ptr = ptr + fcast_glyph1.length() + 1;
     fcast_precip1 = String(&input[ptr]);
-    ptr = ptr + fcast_precip1.length() + 1;
-    
+    int precip1_len = fcast_precip1.length();
+    if (fcast_precip1 == "0.0") fcast_precip1 = "";
+    ptr = ptr + precip1_len + 1;
+
     fcast_hr2 = String(&input[ptr]);
     ptr = ptr + fcast_hr2.length() + 1;
     fcast_glyph2 = String(&input[ptr]);
     ptr = ptr + fcast_glyph2.length() + 1;
     fcast_precip2 = String(&input[ptr]);
-    ptr = ptr + fcast_precip2.length() + 1;
-    
+    int precip2_len = fcast_precip2.length();
+    if (fcast_precip2 == "0.0") fcast_precip2 = "";
+    ptr = ptr + precip2_len + 1;
+
     fcast_hr3 = String(&input[ptr]);
     ptr = ptr + fcast_hr3.length() + 1;
     fcast_glyph3 = String(&input[ptr]);
     ptr = ptr + fcast_glyph3.length() + 1;
     fcast_precip3 = String(&input[ptr]);
-    ptr = ptr + fcast_precip3.length() + 1;
-    
+    int precip3_len = fcast_precip3.length();
+    if (fcast_precip3 == "0.0") fcast_precip3 = "";
+    ptr = ptr + precip3_len + 1;
+
     fcast_hr4 = String(&input[ptr]);
     ptr = ptr + fcast_hr4.length() + 1;
     fcast_glyph4 = String(&input[ptr]);
     ptr = ptr + fcast_glyph4.length() + 1;
     fcast_precip4 = String(&input[ptr]);
-    ptr = ptr + fcast_precip4.length() + 1;
+    int precip4_len = fcast_precip4.length();
+    if (fcast_precip4 == "0.0") fcast_precip4 = "";
+    ptr = ptr + precip4_len + 1;
     
     return 1;
 }
