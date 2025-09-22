@@ -1,9 +1,0 @@
-This meshtastic_serial+wifi folder is essentially a copy of the SendReceiveClient
-from https://github.com/meshtastic/Meshtastic-arduino/tree/master/src
-
-- Any code modules that have been changed from github has a modified file name ending 
-  in ys_modified.cpp
-- The edits in this directory are for the Golf Cart Computer project which uses a serial
-  connection to the meshtastic radio and does not use WiFi
-- If a refresh of this directory is done, unmodified files will need removal to prevent
-  duplicate functions.

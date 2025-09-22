@@ -1,0 +1,7 @@
+This meshtastic-arduino_src folder contains Meshtastic protobuf definitions and core protocol files
+from https://github.com/meshtastic/Meshtastic-arduino/tree/master/src
+
+- ESP32-specific customizations have been moved to lib/meshtastic_customizations/esp32_overrides/
+- This directory contains only upstream protobuf definitions and core protocol files
+- Use lib/meshtastic_customizations/update_scripts/update_meshtastic.py to safely update protobuf definitions
+- ESP32 customizations for Golf Cart Computer project are now in clean, separate files
