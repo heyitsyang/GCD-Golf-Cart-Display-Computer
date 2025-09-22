@@ -10,6 +10,7 @@
 void guiTask(void *parameter) {
     static uint32_t last_flag_set_time = 0;
     static uint32_t last_inactivity_check = 0;
+    static lv_obj_t* previous_screen = nullptr;
 
     while (true) {
         uint32_t now = millis();
@@ -18,6 +19,17 @@ void guiTask(void *parameter) {
         lastTick = now;
         lv_timer_handler();
         ui_tick();
+
+        // Check for screen changes and reset countdown if screen changed
+        lv_obj_t* current_screen = lv_scr_act();
+        if (current_screen != previous_screen) {
+            previous_screen = current_screen;
+            // Reset countdown when entering a new screen (except splash)
+            if (current_screen != objects.splash) {
+                set_var_screen_inactivity_countdown(SCREEN_INACTIVITY_TIMEOUT_MS);
+                Serial.println("GUI: Screen changed, resetting inactivity countdown");
+            }
+        }
 
         // Check if Now Playing screen needs updating when new data flag is set
         if (new_rx_data_flag) {
@@ -59,17 +71,12 @@ void handleInactivityCountdown(uint32_t now) {
         return;
     }
 
-    // Initialize countdown if not set and we have touch activity
-    if (get_var_screen_inactivity_countdown() == 0 && lastTouchActivity > 0) {
-        set_var_screen_inactivity_countdown(SCREEN_INACTIVITY_TIMEOUT_MS);
-        return;
-    }
-
     // Decrement countdown if active
     if (get_var_screen_inactivity_countdown() > 0) {
         int32_t remaining = get_var_screen_inactivity_countdown() - 100;
         if (remaining <= 0) {
             remaining = 0;
+            Serial.println("DEBUG: screen_inactivity_countdown = 0 (timeout reached)");
         }
         set_var_screen_inactivity_countdown(remaining);
     }
