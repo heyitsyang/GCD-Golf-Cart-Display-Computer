@@ -1,6 +1,7 @@
 #include "display.h"
 #include "config.h"
 #include "globals.h"
+#include "get_set_vars.h"
 
 void initDisplay() {
     // Initialize LVGL
@@ -58,14 +59,18 @@ void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
 
 void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
     if (touchscreen.touched()) {
+        // Update touch activity timestamp and reset countdown
+        lastTouchActivity = millis();
+        set_var_screen_inactivity_countdown((int32_t)SCREEN_INACTIVITY_TIMEOUT_MS);
+
         TS_Point p = touchscreen.getPoint();
-        
+
         // Auto calibration
         if (p.x < touchScreenMinimumX) touchScreenMinimumX = p.x;
         if (p.x > touchScreenMaximumX) touchScreenMaximumX = p.x;
         if (p.y < touchScreenMinimumY) touchScreenMinimumY = p.y;
         if (p.y > touchScreenMaximumY) touchScreenMaximumY = p.y;
-        
+
         // Map to pixel position
         data->point.x = map(p.x, touchScreenMinimumX, touchScreenMaximumX, 1, TFT_WIDTH);
         data->point.y = map(p.y, touchScreenMinimumY, touchScreenMaximumY, 1, TFT_HEIGHT);

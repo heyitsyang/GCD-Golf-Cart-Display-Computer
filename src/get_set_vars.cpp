@@ -37,6 +37,7 @@ int32_t night_backlight = 5;
 bool manual_reboot = false;
 bool new_rx_data_flag = false;
 bool mesh_comm = true;
+int32_t screen_inactivity_countdown = 0;
 
 // Static buffers for C string returns
 static char temp_buffer[256];
@@ -308,5 +309,14 @@ const char* get_var_espnow_last_received() {
 void set_var_espnow_last_received(const char* value) {
     espnow_last_received = String(value);
 }
+
+int32_t get_var_screen_inactivity_countdown() {
+    return screen_inactivity_countdown;
+}
+
+void set_var_screen_inactivity_countdown(int32_t value) {
+    screen_inactivity_countdown = value;
+}
+
 
 } // extern "C"

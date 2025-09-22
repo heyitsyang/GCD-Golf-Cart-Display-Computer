@@ -6,7 +6,7 @@
 import os
 import re
 
-file_path = os.path.join('src', 'ui', 'eez-flow.cpp')
+file_path = os.path.join('src', 'ui_eez', 'eez-flow.cpp')
 
 # Regex to match:
 # lv_dropdown_set_selected(anything1, anything2, anything3);

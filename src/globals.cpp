@@ -73,6 +73,9 @@ uint32_t next_send_time = 0;
 bool not_yet_connected = true;
 bool old_mesh_comm = true;
 
+// Inactivity timeout variables
+uint32_t lastTouchActivity = 0;
+
 // ESP-NOW variables
 bool espnow_enabled = true;
 bool old_espnow_enabled = true;

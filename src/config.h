@@ -69,6 +69,9 @@
 // UI update flag timing (milliseconds)
 #define NEW_RX_DATA_FLAG_RESET_TIME 5000  // Auto-reset flag after 5 seconds
 
+// Inactivity timeout configuration
+#define SCREEN_INACTIVITY_TIMEOUT_MS (5 * 60 * 1000)  // 5 minutes
+
 // Task Stack Sizes (in bytes)
 #define GPS_TASK_STACK_SIZE 4096
 #define GUI_TASK_STACK_SIZE 8192

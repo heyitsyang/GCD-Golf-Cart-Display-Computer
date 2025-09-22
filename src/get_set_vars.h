@@ -113,6 +113,9 @@ void set_var_espnow_status(const char* value);
 const char* get_var_espnow_last_received();
 void set_var_espnow_last_received(const char* value);
 
+int32_t get_var_screen_inactivity_countdown();
+void set_var_screen_inactivity_countdown(int32_t value);
+
 #ifdef __cplusplus
 }
 #endif
@@ -156,6 +159,7 @@ extern int32_t night_backlight;
 extern bool manual_reboot;
 extern bool new_rx_data_flag;
 extern bool mesh_comm;
+extern int32_t screen_inactivity_countdown;
 
 #endif // __cplusplus
 

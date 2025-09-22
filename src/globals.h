@@ -76,6 +76,9 @@ extern uint32_t next_send_time;
 extern bool not_yet_connected;
 extern bool old_mesh_comm;
 
+// Inactivity timeout variables (NOT in get_set_vars.h)
+extern uint32_t lastTouchActivity;
+
 // ESP-NOW variables (NOT in get_set_vars.h)
 extern bool espnow_enabled;
 extern bool old_espnow_enabled;

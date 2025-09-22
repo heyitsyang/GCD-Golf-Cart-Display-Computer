@@ -40,8 +40,8 @@
 #include "tasks/meshtastic_callback_task.h"
 
 // UI
-#include "ui/ui.h"
-#include "ui/actions.h"
+#include "ui_eez/ui.h"
+#include "ui_eez/actions.h"
 #include "ui/venue_event_display.h"
 #include "ui/espnow_display.h"
 

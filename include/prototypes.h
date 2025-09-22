@@ -23,10 +23,12 @@ const char* getDayAbbr(int weekday_num);
 // Task function prototypes
 void gpsTask(void *parameter);
 void guiTask(void *parameter);
+void handleInactivityCountdown(uint32_t now);
 void meshtasticTask(void *parameter);
 void meshtasticCallbackTask(void *parameter);
 void eepromTask(void *parameter);
 void systemTask(void *parameter);
+void espnowTask(void *parameter);
 
 // Callback function prototypes
 void connected_callback(mt_node_t *node, mt_nr_progress_t progress);

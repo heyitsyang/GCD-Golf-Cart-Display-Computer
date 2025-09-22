@@ -49,7 +49,7 @@ The system runs 7 concurrent FreeRTOS tasks:
 - **ESP-NOW Handler**: Direct device-to-device WiFi communication
 - **Hot Packet Parser**: Custom protocol for weather and venue event data
 
-#### 3. UI System (`src/ui/`)
+#### 3. UI System (`src/ui_eez/`)
 - **EEZ Studio Flow Integration**: UI designed in EEZ Studio, exported to LVGL code
 - **LVGL Framework**: Graphics library for embedded displays
 - **Touch Input**: XPT2046 touchscreen controller integration
