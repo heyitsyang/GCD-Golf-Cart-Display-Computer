@@ -4,30 +4,4 @@
 .vscode/launch.json
 .vscode/ipch
 
-
-################################################
-# Since these are generated from EEZ Flow      #
-# and just confuse tracking main code changes, #
-# ignore EEZ Studio generated files in src/ui_eez/     #  
-################################################
-src/ui_eez/actions.h
-src/ui_eez/screens.c
-src/ui_eez/screens.h
-src/ui_eez/ui.c
-src/ui_eez/ui.h
-src/ui_eez/vars.h
-
-# ignore EEZ Flow files, if used
-src/ui_eez/eez-flow.h
-src/ui_eez/eez-flow.cpp
-src/ui_eez/eez-flow-lz4.h
-src/ui_eez/eez-flow-lz4.c
-src/ui_eez/eez-flow-sha256.h
-src/ui_eez/eez-flow-sha256.c
-
-# ignore generated image and font binaries, if any
-src/ui_eez/images/*.bin
-src/ui_eez/fonts/*.bin
-
-# ignore project file, which is typically in the project root
-*.eez-project
+src/ui_eez
