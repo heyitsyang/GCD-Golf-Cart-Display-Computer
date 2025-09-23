@@ -1,6 +1,7 @@
 #include "venue_event_display.h"
 #include "config.h"
 #include "globals.h"
+#include "ui_eez/screens.h"
 
 // Static variables to track table state
 static lv_obj_t* current_venue_table_container = nullptr;
@@ -133,6 +134,15 @@ extern "C" void action_display_now_playing(lv_event_t *e) {
 void checkAndUpdateNowPlayingScreen() {
     // Only check if we're on the Now Playing screen and have new data
     if (!is_now_playing_screen_active || !new_rx_data_flag) {
+        return;
+    }
+
+    // Critical fix: Verify we're actually on the Now Playing screen
+    lv_obj_t* current_screen = lv_scr_act();
+    if (current_screen != objects.now_playing) {
+        // We're not on the Now Playing screen anymore, clean up state
+        Serial.println("checkAndUpdateNowPlayingScreen: Not on Now Playing screen, calling onNowPlayingScreenExit");
+        onNowPlayingScreenExit();
         return;
     }
 

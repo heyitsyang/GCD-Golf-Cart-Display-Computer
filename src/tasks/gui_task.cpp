@@ -23,6 +23,12 @@ void guiTask(void *parameter) {
         // Check for screen changes and reset countdown if screen changed
         lv_obj_t* current_screen = lv_scr_act();
         if (current_screen != previous_screen) {
+            // Check if we're leaving the Now Playing screen
+            if (previous_screen == objects.now_playing && current_screen != objects.now_playing) {
+                Serial.println("GUI: Leaving Now Playing screen, calling onNowPlayingScreenExit");
+                onNowPlayingScreenExit();
+            }
+
             previous_screen = current_screen;
             // Reset countdown when entering a new screen (except splash)
             if (current_screen != objects.splash) {
