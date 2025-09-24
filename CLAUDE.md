@@ -135,4 +135,5 @@ Contains essential configuration files:
 - `src/types.h`: Defines all custom data structures and enums
 - `src/prototypes.h`: Function declarations for cross-module communication
 - `src/version.h`: Auto-generated version information
-- `lib/meshtastic-arduino_src/`: Custom Meshtastic protocol implementation
+- `lib/meshtastic-arduino_src/`: Meshtastic protocol implementation copied from github.com/meshtastic/Meshtastic-arduino
+- `lib/meshtastic-custimizarions/`: Customizations of lib/meshtastic-arduino_src code
