@@ -1,3 +1,16 @@
+#
+# Library updates overwrite configuration file with defaults, so this copy
+# program copies customized configuration files lv_conf.h and User_Setup.h
+# into their proper folders.  
+# 
+# lv_conf.h only copies if the destination file does not already exist.  
+# This mechanism prevents this program from endlessly copying (platformio build flag
+# doesn't work as you would expect), so delete the destination .pio/libdeps/cyd/lv.conf 
+# file first to cause a copy before the next build.
+#
+# Customizations to should be applied to the files in the NECESSARY TEMPLATE FILES folder
+#
+
 Import("env")
 
 from shutil import copyfile
@@ -23,11 +36,11 @@ if not os.path.isdir(template_dir):
     Exit(1) # Exit with an error code
 
 lv_conf_src = os.path.join(template_dir, "lv_conf.h")
-# This destination assumes the 'cyd' library is installed and lv_conf.h goes directly into its root
+# This destination assumes the '.pio/libdeps/cyd' folder exists and lv_conf.h goes there
 lv_conf_dest = os.path.join(env.get("PROJECT_LIBDEPS_DIR"), env.get("PIOENV"), "lv_conf.h")
 
 user_setup_src = os.path.join(template_dir, "User_Setup.h")
-# This destination assumes the TFT_eSPI library is installed and User_Setup.h goes into its root
+# This destination assumes the the '.pio/libdeps/cyd/TFT_eSPI' folder exists and User_Setup.h goes into its root
 user_setup_dest = os.path.join(env.get("PROJECT_LIBDEPS_DIR"), env.get("PIOENV"), "TFT_eSPI", "User_Setup.h")
 
 # Ensure destination directories exist
