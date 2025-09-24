@@ -35,10 +35,11 @@ bool ESPNowHandler::init() {
     
     initialized = true;
     status = "Ready";
+    espnow_connected = false;  // No peers yet
     Serial.println("ESP-NOW initialized successfully");
     Serial.print("MAC Address: ");
     Serial.println(getMyMacAddress());
-    
+
     return true;
 }
 
@@ -51,6 +52,7 @@ void ESPNowHandler::deinit() {
     initialized = false;
     peer_count = 0;
     status = "Disabled";
+    espnow_connected = false;
     Serial.println("ESP-NOW deinitialized");
 }
 
@@ -95,6 +97,16 @@ bool ESPNowHandler::addPeer(const uint8_t *mac_addr, const char* name) {
     
     espnow_peer_count = peer_count;
     status = String("Connected (") + String(peer_count) + " peers)";
+
+    // Update global connection status
+    bool was_connected = espnow_connected;
+    espnow_connected = (peer_count > 0);
+
+    if (was_connected != espnow_connected) {
+        Serial.printf("*** ESP-NOW peer added - connection state changed to: %s ***\n",
+                     espnow_connected ? "CONNECTED" : "DISCONNECTED");
+    }
+
     return true;
 }
 
@@ -121,6 +133,16 @@ bool ESPNowHandler::removePeer(const uint8_t *mac_addr) {
             peer_count--;
             espnow_peer_count = peer_count;
             status = String("Connected (") + String(peer_count) + " peers)";
+
+            // Update global connection status
+            bool was_connected = espnow_connected;
+            espnow_connected = (peer_count > 0);
+
+            if (was_connected != espnow_connected) {
+                Serial.printf("*** ESP-NOW peer removed - connection state changed to: %s ***\n",
+                             espnow_connected ? "CONNECTED" : "DISCONNECTED");
+            }
+
             break;
         }
     }

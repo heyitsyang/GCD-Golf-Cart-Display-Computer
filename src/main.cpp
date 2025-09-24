@@ -32,7 +32,6 @@
 #include "Meshtastic.h"
 #include "communication/hot_packet_parser.h"
 #include "communication/espnow_handler.h"
-#include "communication/meshtastic_wrapper.h"
 
 
 // Tasks
@@ -109,15 +108,15 @@ void setup() {
     ui_init();
     
     // Initialize Meshtastic
-    meshtasticWrapper.initialize(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);
+    mt_serial_init(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);
     randomSeed(micros());
-    meshtasticWrapper.requestNodeReport(connected_callback);
-    meshtasticWrapper.setTextMessageCallback(text_message_callback);
+    mt_request_node_report(connected_callback);
+    set_text_message_callback(text_message_callback);
     
     // Initialize application variables
     manual_reboot = false;
     new_rx_data_flag = false;
-    mesh_comm = true;
+    mesh_serial_enabled = true;
     
     // Create synchronization objects
     gpsMutex = xSemaphoreCreateMutex();

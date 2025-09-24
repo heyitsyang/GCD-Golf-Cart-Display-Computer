@@ -59,8 +59,11 @@ void set_var_new_rx_data_flag(bool value);
 const char* get_var_espnow_mac_addr();
 void set_var_espnow_mac_addr(const char* value);
 
-bool get_var_mesh_comm();
-void set_var_mesh_comm(bool value);
+bool get_var_mesh_serial_enabled();
+void set_var_mesh_serial_enabled(bool value);
+
+bool get_var_espnow_connected();
+void set_var_espnow_connected(bool value);
 
 const char* get_var_wx_rcv_time();
 void set_var_wx_rcv_time(const char* value);
@@ -158,7 +161,8 @@ extern int32_t day_backlight;
 extern int32_t night_backlight;
 extern bool manual_reboot;
 extern bool new_rx_data_flag;
-extern bool mesh_comm;
+extern bool mesh_serial_enabled;
+extern bool espnow_connected;
 extern int32_t screen_inactivity_countdown;
 
 #endif // __cplusplus

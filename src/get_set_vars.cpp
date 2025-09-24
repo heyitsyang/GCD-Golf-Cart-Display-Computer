@@ -36,7 +36,8 @@ int32_t day_backlight = 10;
 int32_t night_backlight = 5;
 bool manual_reboot = false;
 bool new_rx_data_flag = false;
-bool mesh_comm = true;
+bool mesh_serial_enabled = true;
+bool espnow_connected = false;
 int32_t screen_inactivity_countdown = 0;
 
 // Static buffers for C string returns
@@ -165,12 +166,20 @@ void set_var_espnow_mac_addr(const char* value) {
     espnow_mac_addr = String(value);
 }
 
-bool get_var_mesh_comm() {
-    return mesh_comm;
+bool get_var_mesh_serial_enabled() {
+    return mesh_serial_enabled;
 }
 
-void set_var_mesh_comm(bool value) {
-    mesh_comm = value;
+void set_var_mesh_serial_enabled(bool value) {
+    mesh_serial_enabled = value;
+}
+
+bool get_var_espnow_connected() {
+    return espnow_connected;
+}
+
+void set_var_espnow_connected(bool value) {
+    espnow_connected = value;
 }
 
 const char* get_var_wx_rcv_time() {

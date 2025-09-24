@@ -13,6 +13,18 @@ void espnowTask(void *parameter) {
     espnowRecvQueue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_recv_item_t));
     
     while (true) {
+        // Update ESP-NOW connection status
+        bool current_espnow_connected = espnow_enabled && espNow.isInitialized() && (espNow.getPeerCount() > 0);
+        if (current_espnow_connected != espnow_connected) {
+            espnow_connected = current_espnow_connected;
+            Serial.printf("*** ESPNOW_CONNECTED STATE CHANGE: %s ***\n",
+                         espnow_connected ? "CONNECTED" : "DISCONNECTED");
+            Serial.printf("    espnow_enabled: %s\n", espnow_enabled ? "true" : "false");
+            Serial.printf("    initialized: %s\n", espNow.isInitialized() ? "true" : "false");
+            Serial.printf("    peer count: %d\n", espNow.getPeerCount());
+            Serial.printf("    status: %s\n", espNow.getStatus().c_str());
+        }
+
         // Check if ESP-NOW should be enabled/disabled
         if (espnow_enabled != old_espnow_enabled) {
             old_espnow_enabled = espnow_enabled;
@@ -29,6 +41,9 @@ void espnowTask(void *parameter) {
                         }
                     }
                     espnow_status = espNow.getStatus();
+
+                    // Update connection status after peer setup
+                    espnow_connected = espNow.getPeerCount() > 0;
                 } else {
                     espnow_status = "Init failed";
                     Serial.println("ESP-NOW Task: Initialization failed");
@@ -36,6 +51,7 @@ void espnowTask(void *parameter) {
             } else {
                 espNow.deinit();
                 espnow_status = "Disabled";
+                espnow_connected = false;
                 Serial.println("ESP-NOW disabled");
             }
         }

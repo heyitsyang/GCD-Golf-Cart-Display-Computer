@@ -43,6 +43,9 @@ void connected_callback(mt_node_t *node, mt_nr_progress_t progress) {
 }
 
 void text_message_callback(uint32_t from, uint32_t to, uint8_t channel, const char *text) {
+    Serial.printf("MESSAGE CALLBACK: from=%lu, to=%lu, channel=%d, text='%s'\n",
+                 from, to, channel, text ? text : "NULL");
+
     meshtasticCallbackItem_t item;
     item.from = from;
     item.to = to;
