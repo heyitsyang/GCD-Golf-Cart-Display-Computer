@@ -28,6 +28,12 @@ void loadPreferences() {
     Serial.print("> espnow_mac_addr read from eeprom = ");
     Serial.println(espnow_mac_addr);
     old_espnow_mac_addr = espnow_mac_addr;
+
+    flip_screen = prefs.getBool("flip_screen", false);
+    Serial.print("> flip_screen read from eeprom = ");
+    Serial.println(flip_screen ? "true" : "false");
+    set_var_flip_screen(flip_screen);
+    old_flip_screen = flip_screen;
 }
 
 void queuePreferenceWrite(const char* key, float value) {
@@ -51,5 +57,13 @@ void queuePreferenceWrite(const char* key, const String& value) {
     item.type = EEPROM_STRING;
     strcpy(item.key, key);
     strcpy(item.value.stringVal, value.c_str());
+    xQueueSend(eepromWriteQueue, &item, 0);
+}
+
+void queuePreferenceWrite(const char* key, bool value) {
+    eepromWriteItem_t item;
+    item.type = EEPROM_BOOL;
+    strcpy(item.key, key);
+    item.value.boolVal = value;
     xQueueSend(eepromWriteQueue, &item, 0);
 }

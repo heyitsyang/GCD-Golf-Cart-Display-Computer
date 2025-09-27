@@ -8,7 +8,8 @@
 typedef enum {
     EEPROM_FLOAT,
     EEPROM_INT,
-    EEPROM_STRING
+    EEPROM_STRING,
+    EEPROM_BOOL
 } eepromType_t;
 
 typedef struct {
@@ -18,6 +19,7 @@ typedef struct {
         float floatVal;
         int intVal;
         char stringVal[64];
+        bool boolVal;
     } value;
 } eepromWriteItem_t;
 

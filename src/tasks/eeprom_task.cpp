@@ -33,6 +33,14 @@ void eepromTask(void *parameter) {
                         Serial.print(" saved to eeprom: ");
                         Serial.println(item.value.stringVal);
                         break;
+
+                    case EEPROM_BOOL:
+                        prefs.putBool(item.key, item.value.boolVal);
+                        Serial.print("> ");
+                        Serial.print(item.key);
+                        Serial.print(" saved to eeprom: ");
+                        Serial.println(item.value.boolVal ? "true" : "false");
+                        break;
                 }
                 xSemaphoreGive(eepromMutex);
             }

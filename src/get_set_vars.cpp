@@ -1,5 +1,7 @@
 #include "get_set_vars.h"
 #include <Arduino.h>
+#include "storage/preferences_manager.h"
+#include "hardware/display.h"
 
 // String variable definitions
 String cur_date;
@@ -39,6 +41,7 @@ bool new_rx_data_flag = false;
 bool mesh_serial_enabled = true;
 bool espnow_connected = false;
 int32_t screen_inactivity_countdown = 0;
+bool flip_screen = false;
 
 // Static buffers for C string returns
 static char temp_buffer[256];
@@ -327,5 +330,25 @@ void set_var_screen_inactivity_countdown(int32_t value) {
     screen_inactivity_countdown = value;
 }
 
+bool get_var_flip_screen() {
+    return flip_screen;
+}
+
+void set_var_flip_screen(bool value) {
+    if (flip_screen != value) {
+        Serial.print("flip_screen changed from ");
+        Serial.print(flip_screen ? "true" : "false");
+        Serial.print(" to ");
+        Serial.println(value ? "true" : "false");
+
+        flip_screen = value;
+
+        // Update display rotation immediately
+        updateDisplayRotation();
+
+        // Queue the preference write to save to EEPROM
+        queuePreferenceWrite("flip_screen", value);
+    }
+}
 
 } // extern "C"

@@ -8,5 +8,6 @@ void loadPreferences();
 void queuePreferenceWrite(const char* key, float value);
 void queuePreferenceWrite(const char* key, int value);
 void queuePreferenceWrite(const char* key, const String& value);
+void queuePreferenceWrite(const char* key, bool value);
 
 #endif // PREFERENCES_MANAGER_H

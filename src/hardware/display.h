@@ -9,6 +9,8 @@ void initDisplay();
 void initTouchscreen();
 void initBacklight();
 void setBacklight(uint32_t value);
+void updateDisplayRotation();
+void updateTouchscreenRotation();
 void ledcAnalogWrite(uint8_t ledc_channel, uint32_t value, uint32_t valueMax = 255);
 void my_disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
 void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data);

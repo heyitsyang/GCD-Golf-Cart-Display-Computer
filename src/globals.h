@@ -67,6 +67,7 @@ extern float avg_speed_calc;  // Float version for GPS calculations
 
 // Old tracking variables (NOT in get_set_vars.h)
 extern String old_espnow_mac_addr;
+extern bool old_flip_screen;
 
 // Now playing variables (NOT in get_set_vars.h)
 extern String live_venue_event_data;

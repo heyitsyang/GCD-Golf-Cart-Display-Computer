@@ -3,32 +3,51 @@
 #include "globals.h"
 #include "get_set_vars.h"
 
+// Global display handle
+static lv_display_t *display_handle = nullptr;
+
 void initDisplay() {
     // Initialize LVGL
     lv_init();
-    
+
     // Allocate draw buffer
     draw_buf = new uint8_t[DRAW_BUF_SIZE];
-    
+
     // Create display
-    lv_display_t *disp;
-    disp = lv_tft_espi_create(TFT_WIDTH, TFT_HEIGHT, draw_buf, DRAW_BUF_SIZE);
-    lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_270);
-    
+    display_handle = lv_tft_espi_create(TFT_WIDTH, TFT_HEIGHT, draw_buf, DRAW_BUF_SIZE);
+    updateDisplayRotation();
+
     Serial.println("Display initialized");
+}
+
+void updateDisplayRotation() {
+    if (display_handle != nullptr) {
+        if (get_var_flip_screen()) {
+            lv_display_set_rotation(display_handle, LV_DISPLAY_ROTATION_90);
+        } else {
+            lv_display_set_rotation(display_handle, LV_DISPLAY_ROTATION_270);
+        }
+    }
+}
+
+void updateTouchscreenRotation() {
+    // Both modes use the same rotation
+    touchscreen.setRotation(TOUCH_ROTATION_180);
 }
 
 void initTouchscreen() {
     // Initialize touchscreen SPI
     touchscreenSpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
     touchscreen.begin(touchscreenSpi);
-    touchscreen.setRotation(TOUCH_ROTATION_180);
-    
+
+    // Set initial touchscreen rotation based on flip_screen setting
+    updateTouchscreenRotation();
+
     // Create input device
     indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev, my_touchpad_read);
-    
+
     Serial.println("Touchscreen initialized");
 }
 

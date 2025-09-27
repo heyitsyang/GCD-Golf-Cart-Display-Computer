@@ -119,6 +119,12 @@ void set_var_espnow_last_received(const char* value);
 int32_t get_var_screen_inactivity_countdown();
 void set_var_screen_inactivity_countdown(int32_t value);
 
+bool get_var_flip_screen();
+void set_var_flip_screen(bool value);
+
+
+
+
 #ifdef __cplusplus
 }
 #endif
@@ -164,6 +170,8 @@ extern bool new_rx_data_flag;
 extern bool mesh_serial_enabled;
 extern bool espnow_connected;
 extern int32_t screen_inactivity_countdown;
+extern bool flip_screen;
+
 
 #endif // __cplusplus
 
