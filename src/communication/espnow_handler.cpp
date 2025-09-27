@@ -1,6 +1,7 @@
 #include "espnow_handler.h"
 #include "config.h"
 #include "globals.h"
+#include "get_set_vars.h"
 #include <esp_wifi.h>
 
 // Global instance
@@ -36,6 +37,7 @@ bool ESPNowHandler::init() {
     initialized = true;
     status = "Ready";
     espnow_connected = false;  // No peers yet
+    set_var_espnow_connected(false);  // Update UI variable
     Serial.println("ESP-NOW initialized successfully");
     Serial.print("MAC Address: ");
     Serial.println(getMyMacAddress());
@@ -53,6 +55,7 @@ void ESPNowHandler::deinit() {
     peer_count = 0;
     status = "Disabled";
     espnow_connected = false;
+    set_var_espnow_connected(false);  // Update UI variable
     Serial.println("ESP-NOW deinitialized");
 }
 
@@ -97,18 +100,9 @@ bool ESPNowHandler::addPeer(const uint8_t *mac_addr, const char* name) {
     Serial.printf("ESP-NOW: Peer added - %02X:%02X:%02X:%02X:%02X:%02X\n",
                   mac_addr[0], mac_addr[1], mac_addr[2],
                   mac_addr[3], mac_addr[4], mac_addr[5]);
-    
+
     espnow_peer_count = peer_count;
     status = String("Connected (") + String(peer_count) + " peers)";
-
-    // Update global connection status
-    bool was_connected = espnow_connected;
-    espnow_connected = (peer_count > 0);
-
-    if (was_connected != espnow_connected) {
-        Serial.printf("*** ESP-NOW peer added - connection state changed to: %s ***\n",
-                     espnow_connected ? "CONNECTED" : "DISCONNECTED");
-    }
 
     return true;
 }
@@ -137,13 +131,15 @@ bool ESPNowHandler::removePeer(const uint8_t *mac_addr) {
             espnow_peer_count = peer_count;
             status = String("Connected (") + String(peer_count) + " peers)";
 
-            // Update global connection status
-            bool was_connected = espnow_connected;
-            espnow_connected = (peer_count > 0);
+            // If no peers left, definitely disconnect
+            if (peer_count == 0) {
+                bool was_connected = espnow_connected;
+                espnow_connected = false;
+                set_var_espnow_connected(false);  // Update UI variable
 
-            if (was_connected != espnow_connected) {
-                Serial.printf("*** ESP-NOW peer removed - connection state changed to: %s ***\n",
-                             espnow_connected ? "CONNECTED" : "DISCONNECTED");
+                if (was_connected) {
+                    Serial.printf("*** ESP-NOW peer removed - connection state changed to: %s ***\n", "DISCONNECTED");
+                }
             }
 
             break;
@@ -255,12 +251,19 @@ bool ESPNowHandler::macStringToBytes(const String& mac_str, uint8_t* mac_bytes) 
 }
 
 void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
-    // Update peer info
+    // Update peer info and connection status
     for (int i = 0; i < peer_count; i++) {
         if (memcmp(peers[i].mac_addr, item.mac_addr, 6) == 0) {
             peers[i].is_online = true;
             peers[i].last_seen = millis();
             peers[i].last_rssi = item.rssi;
+
+            // Set connected status when we receive data from a known peer
+            if (!espnow_connected) {
+                espnow_connected = true;
+                set_var_espnow_connected(true);
+                Serial.printf("*** ESP-NOW connection established ***\n");
+            }
             break;
         }
     }
@@ -314,6 +317,24 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
 
 // Handle raw golf cart interface data
 void handleRawGolfCartData(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    // Update peer info for timeout tracking
+    for (int i = 0; i < espNow.getPeerCount(); i++) {
+        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
+        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
+            peer->is_online = true;
+            peer->last_seen = millis();
+            peer->last_rssi = -50;
+            break;
+        }
+    }
+
+    // Set connected status when we receive data
+    if (!espnow_connected) {
+        espnow_connected = true;
+        set_var_espnow_connected(true);
+        Serial.printf("*** ESP-NOW connection established ***\n");
+    }
+
     // Copy received data to global golf cart variables
     memcpy(&dataFromGci, data, sizeof(structMsgFromGci));
 
@@ -336,6 +357,24 @@ void handleRawGolfCartData(const uint8_t *mac_addr, const uint8_t *data, int dat
 
 // Handle raw golf cart command data
 void handleRawGolfCartCommand(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    // Update peer info for timeout tracking
+    for (int i = 0; i < espNow.getPeerCount(); i++) {
+        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
+        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
+            peer->is_online = true;
+            peer->last_seen = millis();
+            peer->last_rssi = -50;
+            break;
+        }
+    }
+
+    // Set connected status when we receive data
+    if (!espnow_connected) {
+        espnow_connected = true;
+        set_var_espnow_connected(true);
+        Serial.printf("*** ESP-NOW connection established ***\n");
+    }
+
     structMsgToGci receivedCmd;
     memcpy(&receivedCmd, data, sizeof(structMsgToGci));
 

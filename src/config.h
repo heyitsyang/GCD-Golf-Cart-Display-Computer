@@ -59,8 +59,9 @@
 #define ESPNOW_QUEUE_SIZE 10
 #define ESPNOW_SEND_RETRY_COUNT 3
 #define ESPNOW_SEND_RETRY_DELAY 100
-#define ESPNOW_HEARTBEAT_INTERVAL 30000
+#define ESPNOW_HEARTBEAT_INTERVAL 10000
 #define ESPNOW_GPS_SEND_INTERVAL 60000
+#define ESPNOW_PEER_TIMEOUT 40000  // 40 seconds - 4x heartbeat interval
 
 // Default location (for sunrise/sunset before GPS lock)
 #define MY_LATITUDE 28.8522f

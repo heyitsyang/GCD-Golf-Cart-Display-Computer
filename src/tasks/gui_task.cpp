@@ -4,8 +4,45 @@
 #include <lvgl.h>
 #include "ui_eez/ui.h"
 #include "ui_eez/screens.h"
+#include "ui_eez/styles.h"
 #include "ui/venue_event_display.h"
 #include "get_set_vars.h"
+
+void updateEspnowIndicatorColor() {
+    static bool last_espnow_connected_state = false;
+    static bool initialized = false;
+
+    // Only update if we're on the info screen that has the espnow_indicator
+    lv_obj_t* current_screen = lv_scr_act();
+    if (current_screen == nullptr || current_screen != objects.info) {
+        // Reset initialization when not on info screen
+        initialized = false;
+        return;
+    }
+
+    // Check if espnow_indicator exists and is valid
+    if (objects.espnow_indicator == nullptr) {
+        return;
+    }
+
+    bool current_state = get_var_espnow_connected();
+
+    // Initialize or update when state changes
+    if (!initialized || current_state != last_espnow_connected_state) {
+        Serial.printf("DEBUG: ESP-NOW connection state changed to: %s\n", current_state ? "CONNECTED" : "DISCONNECTED");
+        if (current_state) {
+            // Connected - apply green color (#00ff2d)
+            lv_obj_set_style_text_color(objects.espnow_indicator, lv_color_hex(0xff00ff2d), LV_PART_MAIN | LV_STATE_DEFAULT);
+            Serial.println("DEBUG: Applied GREEN color to espnow_indicator");
+        } else {
+            // Disconnected - apply red color (#ff0000)
+            lv_obj_set_style_text_color(objects.espnow_indicator, lv_color_hex(0xffff0000), LV_PART_MAIN | LV_STATE_DEFAULT);
+            Serial.println("DEBUG: Applied RED color to espnow_indicator");
+        }
+        last_espnow_connected_state = current_state;
+        initialized = true;
+    }
+}
 
 void guiTask(void *parameter) {
     static uint32_t last_flag_set_time = 0;
@@ -19,6 +56,9 @@ void guiTask(void *parameter) {
         lastTick = now;
         lv_timer_handler();
         ui_tick();
+
+        // Update espnow indicator color based on connection state
+        updateEspnowIndicatorColor();
 
         // Check for screen changes and reset countdown if screen changed
         lv_obj_t* current_screen = lv_scr_act();

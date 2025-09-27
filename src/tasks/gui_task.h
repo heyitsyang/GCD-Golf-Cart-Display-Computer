@@ -5,5 +5,6 @@
 
 void guiTask(void *parameter);
 void handleInactivityCountdown(uint32_t now);
+void updateEspnowIndicatorColor();
 
 #endif // GUI_TASK_H

@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "types.h"
 #include "communication/espnow_handler.h"
+#include "get_set_vars.h"
 
 void espnowTask(void *parameter) {
     espnow_recv_item_t recv_item;
@@ -12,16 +13,29 @@ void espnowTask(void *parameter) {
     // Queue is created in main.cpp
     
     while (true) {
-        // Update ESP-NOW connection status
-        bool current_espnow_connected = espnow_enabled && espNow.isInitialized() && (espNow.getPeerCount() > 0);
-        if (current_espnow_connected != espnow_connected) {
-            espnow_connected = current_espnow_connected;
-            Serial.printf("*** ESPNOW_CONNECTED STATE CHANGE: %s ***\n",
-                         espnow_connected ? "CONNECTED" : "DISCONNECTED");
-            Serial.printf("    espnow_enabled: %s\n", espnow_enabled ? "true" : "false");
-            Serial.printf("    initialized: %s\n", espNow.isInitialized() ? "true" : "false");
-            Serial.printf("    peer count: %d\n", espNow.getPeerCount());
-            Serial.printf("    status: %s\n", espNow.getStatus().c_str());
+        // Check for peer timeouts
+        if (espnow_enabled && espNow.isInitialized() && espnow_connected) {
+            uint32_t now = millis();
+            bool any_peer_online = false;
+            bool has_communicated_peers = false;
+
+            for (int i = 0; i < espNow.getPeerCount(); i++) {
+                espnow_peer_info_t* peer = espNow.getPeerInfo(i);
+                if (peer && peer->last_seen > 0) {
+                    has_communicated_peers = true;
+                    if (now - peer->last_seen < ESPNOW_PEER_TIMEOUT) {
+                        any_peer_online = true;
+                        break;
+                    }
+                }
+            }
+
+            // Disconnect if peers have timed out
+            if (has_communicated_peers && !any_peer_online) {
+                espnow_connected = false;
+                set_var_espnow_connected(false);
+                Serial.printf("*** ESP-NOW connection timeout ***\n");
+            }
         }
 
         // Check if ESP-NOW should be enabled/disabled
@@ -43,8 +57,7 @@ void espnowTask(void *parameter) {
                     }
                     espnow_status = espNow.getStatus();
 
-                    // Update connection status after peer setup
-                    espnow_connected = espNow.getPeerCount() > 0;
+                    // Connection status is set when data is received from peers
                 } else {
                     espnow_status = "Init failed";
                     Serial.println("ESP-NOW Task: Initialization failed");
@@ -53,6 +66,7 @@ void espnowTask(void *parameter) {
                 espNow.deinit();
                 espnow_status = "Disabled";
                 espnow_connected = false;
+                set_var_espnow_connected(false);  // Update UI variable
                 Serial.println("ESP-NOW disabled");
             }
         }
