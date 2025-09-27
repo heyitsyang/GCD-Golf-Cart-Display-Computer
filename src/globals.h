@@ -84,6 +84,18 @@ extern bool espnow_enabled;
 extern bool old_espnow_enabled;
 extern int espnow_peer_count;
 
+// Golf cart interface variables for incoming data
+extern int modeHeadLights;
+extern int outdoorLuminosity;
+extern float airTemperature;
+extern float battVoltage;
+extern float fuelLevel;
+extern structMsgFromGci dataFromGci;
+
+// Golf cart interface variables for outbound data
+extern int cmdToGci;
+extern structMsgToGci dataToGci;
+
 // All EEZ Studio variables are defined in get_set_vars.h
 // Include it here so all files can access them
 #include "get_set_vars.h"

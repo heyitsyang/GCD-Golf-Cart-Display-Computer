@@ -68,12 +68,15 @@ bool ESPNowHandler::addPeer(const uint8_t *mac_addr, const char* name) {
         return true;
     }
     
-    // Add to ESP-NOW
+    // Remove peer first if it exists (ESP-NOW might have auto-added it)
+    esp_now_del_peer(mac_addr);
+
+    // Add to ESP-NOW with correct settings
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac_addr, 6);
     peerInfo.channel = ESPNOW_CHANNEL;
     peerInfo.encrypt = false;
-    
+
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {
         Serial.println("ESP-NOW: Failed to add peer");
         return false;
@@ -183,12 +186,42 @@ bool ESPNowHandler::sendTextMessage(const uint8_t *mac_addr, const String& text)
 }
 
 bool ESPNowHandler::broadcast(espnow_msg_type_t type, const uint8_t *data, size_t len) {
-    uint8_t broadcastAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    return sendMessage(broadcastAddress, type, data, len);
+    if (peer_count == 0) {
+        return false; // No peers to send to
+    }
+
+    bool success = true;
+    for (int i = 0; i < peer_count; i++) {
+        // Verify peer is still registered in ESP-NOW before sending
+        if (esp_now_is_peer_exist(peers[i].mac_addr)) {
+            if (!sendRawData(peers[i].mac_addr, data, len)) {
+                success = false;
+            }
+        } else {
+            Serial.printf("ESP-NOW: Peer not in ESP-NOW list: %02X:%02X:%02X:%02X:%02X:%02X\n",
+                         peers[i].mac_addr[0], peers[i].mac_addr[1], peers[i].mac_addr[2],
+                         peers[i].mac_addr[3], peers[i].mac_addr[4], peers[i].mac_addr[5]);
+            success = false;
+        }
+    }
+    return success;
 }
 
 bool ESPNowHandler::broadcastText(const String& text) {
     return broadcast(ESPNOW_MSG_TEXT, (uint8_t*)text.c_str(), text.length());
+}
+
+bool ESPNowHandler::sendGolfCartCommand(const uint8_t *mac_addr, int cmdNumber) {
+    if (!initialized) {
+        return false;
+    }
+
+    // Prepare command data in golf cart format
+    dataToGci.cmdNumber = cmdNumber;
+    cmdToGci = cmdNumber;  // Update global variable
+
+    // Send raw struct data (no wrapper)
+    return sendRawData(mac_addr, (uint8_t*)&dataToGci, sizeof(structMsgToGci));
 }
 
 bool ESPNowHandler::sendRawData(const uint8_t *mac_addr, const uint8_t *data, size_t len) {
@@ -279,6 +312,45 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
     }
 }
 
+// Handle raw golf cart interface data
+void handleRawGolfCartData(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    // Copy received data to global golf cart variables
+    memcpy(&dataFromGci, data, sizeof(structMsgFromGci));
+
+    // Update individual variables for compatibility
+    modeHeadLights = dataFromGci.modeLights;
+    outdoorLuminosity = dataFromGci.outdoorLum;
+    airTemperature = dataFromGci.airTemp;
+    battVoltage = dataFromGci.battVolts;
+    fuelLevel = dataFromGci.fuel;
+
+    // Log received data
+    char mac_str[18];
+    sprintf(mac_str, "%02X:%02X:%02X:%02X:%02X:%02X",
+            mac_addr[0], mac_addr[1], mac_addr[2],
+            mac_addr[3], mac_addr[4], mac_addr[5]);
+
+    Serial.printf("Golf Cart Data from %s: Lights=%d, Lum=%d, Temp=%.1f, Batt=%.2f, Fuel=%.1f\n",
+                  mac_str, modeHeadLights, outdoorLuminosity, airTemperature, battVoltage, fuelLevel);
+}
+
+// Handle raw golf cart command data
+void handleRawGolfCartCommand(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    structMsgToGci receivedCmd;
+    memcpy(&receivedCmd, data, sizeof(structMsgToGci));
+
+    // Log received command
+    char mac_str[18];
+    sprintf(mac_str, "%02X:%02X:%02X:%02X:%02X:%02X",
+            mac_addr[0], mac_addr[1], mac_addr[2],
+            mac_addr[3], mac_addr[4], mac_addr[5]);
+
+    Serial.printf("Golf Cart Command from %s: cmd=%d\n", mac_str, receivedCmd.cmdNumber);
+
+    // Process the command if needed
+    // (Add command processing logic here based on your needs)
+}
+
 // Callback functions
 void espnowOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
     #if DEBUG_ESPNOW == 1
@@ -291,16 +363,31 @@ void espnowOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 }
 
 void espnowOnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    // Check if this is a raw golf cart telemetry message (from golf cart internal)
+    if (data_len == sizeof(structMsgFromGci)) {
+        // Handle raw golf cart interface data
+        handleRawGolfCartData(mac_addr, data, data_len);
+        return;
+    }
+
+    // Check if this is a raw golf cart command message (from another display)
+    if (data_len == sizeof(structMsgToGci)) {
+        // Handle raw golf cart command data
+        handleRawGolfCartCommand(mac_addr, data, data_len);
+        return;
+    }
+
+    // Handle wrapped ESP-NOW messages (existing protocol)
     espnow_recv_item_t item;
     memcpy(item.mac_addr, mac_addr, 6);
-    
+
     // Safely copy message data
     size_t copy_len = min(data_len, (int)sizeof(espnow_message_t));
     memcpy(&item.message, data, copy_len);
-    
+
     // Try to get RSSI (this is approximate)
     item.rssi = -50; // Default value if RSSI not available
-    
+
     // Queue for processing
     if (espnowRecvQueue != NULL) {
         xQueueSend(espnowRecvQueue, &item, 0);

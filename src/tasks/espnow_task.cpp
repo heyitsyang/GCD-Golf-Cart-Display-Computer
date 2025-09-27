@@ -9,8 +9,7 @@ void espnowTask(void *parameter) {
     uint32_t lastHeartbeat = 0;
     uint32_t lastGPSSend = 0;
     
-    // Create receive queue
-    espnowRecvQueue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_recv_item_t));
+    // Queue is created in main.cpp
     
     while (true) {
         // Update ESP-NOW connection status
@@ -26,7 +25,9 @@ void espnowTask(void *parameter) {
         }
 
         // Check if ESP-NOW should be enabled/disabled
-        if (espnow_enabled != old_espnow_enabled) {
+        static bool first_run = true;
+        if (espnow_enabled != old_espnow_enabled || first_run) {
+            first_run = false;
             old_espnow_enabled = espnow_enabled;
             
             if (espnow_enabled) {
@@ -81,18 +82,18 @@ void espnowTask(void *parameter) {
                 if (xSemaphoreTake(gpsMutex, pdMS_TO_TICKS(100))) {
                     if (latitude.length() > 0 && longitude.length() > 0) {
                         lastGPSSend = now;
-                        
+
                         // Pack GPS data as JSON-like string
-                        String gpsData = "{\"lat\":\"" + latitude + 
-                                       "\",\"lon\":\"" + longitude + 
-                                       "\",\"alt\":\"" + altitude + 
-                                       "\",\"spd\":" + String(avg_speed_calc) +  // Use float version for accuracy 
-                                       ",\"hdg\":\"" + heading + 
+                        String gpsData = "{\"lat\":\"" + latitude +
+                                       "\",\"lon\":\"" + longitude +
+                                       "\",\"alt\":\"" + altitude +
+                                       "\",\"spd\":" + String(avg_speed_calc) +  // Use float version for accuracy
+                                       ",\"hdg\":\"" + heading +
                                        "\",\"sats\":\"" + sats_hdop + "\"}";
-                        
-                        espNow.broadcast(ESPNOW_MSG_GPS_DATA, 
+
+                        espNow.broadcast(ESPNOW_MSG_GPS_DATA,
                                        (uint8_t*)gpsData.c_str(), gpsData.length());
-                        
+
                         #if DEBUG_ESPNOW == 1
                         Serial.println("ESP-NOW: GPS data sent");
                         #endif

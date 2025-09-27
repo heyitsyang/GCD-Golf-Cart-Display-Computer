@@ -70,4 +70,17 @@ typedef struct {
     int last_rssi;
 } espnow_peer_info_t;
 
+// Golf cart interface message structures
+typedef struct struct_msg_from_gci {
+    int modeLights;
+    int outdoorLum;
+    float airTemp;
+    float battVolts;
+    float fuel;
+} structMsgFromGci;
+
+typedef struct struct_msg_to_gci {
+    int cmdNumber;
+} structMsgToGci;
+
 #endif // TYPES_H

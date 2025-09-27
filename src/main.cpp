@@ -125,7 +125,7 @@ void setup() {
     displayMutex = xSemaphoreCreateMutex();
     eepromWriteQueue = xQueueCreate(10, sizeof(eepromWriteItem_t));
     meshtasticCallbackQueue = xQueueCreate(5, sizeof(meshtasticCallbackItem_t));
-    // Note: espnowRecvQueue is created in espnowTask
+    espnowRecvQueue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_recv_item_t));
     
     // Create all FreeRTOS tasks (including ESP-NOW)
     createAllTasks();

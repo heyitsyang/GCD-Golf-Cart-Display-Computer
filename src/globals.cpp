@@ -78,8 +78,20 @@ uint32_t lastTouchActivity = 0;
 
 // ESP-NOW variables
 bool espnow_enabled = true;
-bool old_espnow_enabled = true;
+bool old_espnow_enabled = false;
 int espnow_peer_count = 0;
 
-// Note: All EEZ Studio shared variables (cur_date, version, etc.) 
+// Golf cart interface variables for incoming data
+int modeHeadLights = -99;
+int outdoorLuminosity = -99;
+float airTemperature = -99;
+float battVoltage = -99;
+float fuelLevel = -99;
+structMsgFromGci dataFromGci;
+
+// Golf cart interface variables for outbound data
+int cmdToGci;
+structMsgToGci dataToGci;
+
+// Note: All EEZ Studio shared variables (cur_date, version, etc.)
 // are defined in get_set_vars.cpp via get_set_vars.h

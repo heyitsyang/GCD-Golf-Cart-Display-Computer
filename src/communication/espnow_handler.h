@@ -19,11 +19,14 @@ public:
     espnow_peer_info_t* getPeerInfo(int index);
     
     // Message sending
-    bool sendMessage(const uint8_t *mac_addr, espnow_msg_type_t type, 
+    bool sendMessage(const uint8_t *mac_addr, espnow_msg_type_t type,
                      const uint8_t *data, size_t len);
     bool sendTextMessage(const uint8_t *mac_addr, const String& text);
     bool broadcast(espnow_msg_type_t type, const uint8_t *data, size_t len);
     bool broadcastText(const String& text);
+
+    // Golf cart interface - raw message sending
+    bool sendGolfCartCommand(const uint8_t *mac_addr, int cmdNumber);
     
     // Status
     bool isInitialized() { return initialized; }
@@ -47,6 +50,10 @@ private:
 
 // Global instance
 extern ESPNowHandler espNow;
+
+// Golf cart interface handlers
+void handleRawGolfCartData(const uint8_t *mac_addr, const uint8_t *data, int data_len);
+void handleRawGolfCartCommand(const uint8_t *mac_addr, const uint8_t *data, int data_len);
 
 // Callback functions
 void espnowOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
