@@ -43,6 +43,7 @@ bool espnow_connected = false;
 int32_t screen_inactivity_countdown = 0;
 bool flip_screen = false;
 int32_t speaker_volume = 10;
+bool reset_preferences = false;
 
 // Static buffers for C string returns
 static char temp_buffer[256];
@@ -358,6 +359,14 @@ int32_t get_var_speaker_volume() {
 
 void set_var_speaker_volume(int32_t value) {
     speaker_volume = value;
+}
+
+bool get_var_reset_preferences() {
+    return reset_preferences;
+}
+
+void set_var_reset_preferences(bool value) {
+    reset_preferences = value;
 }
 
 } // extern "C"

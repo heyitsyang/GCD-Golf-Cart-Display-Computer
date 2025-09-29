@@ -57,9 +57,16 @@
  *****************/
 
 void setup() {
-    // Initialize Serial/GPS (UART0 split design)
-    Serial.begin(GPS_BAUD, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-    Serial.print("\ngpsSerial started at 9600 baud rate");
+    // Initialize Serial for debug output only (TX on pin 1)
+    Serial.begin(GPS_BAUD, SERIAL_8N1, 3, 1);  // RX=3 (GPS), TX=1 (debug)
+    Serial.print("\nSerial initialized - GPS RX on pin 3, Debug TX on pin 1");
+    Serial.print(" at ");
+    Serial.print(GPS_BAUD);
+    Serial.println(" baud");
+
+    // Disable Serial RX to prevent conflicts
+    Serial.end();
+    Serial.begin(GPS_BAUD, SERIAL_8N1, 3, 1);
     
     // Print version
     version = String('v') + String(VERSION);
@@ -90,8 +97,7 @@ void setup() {
     // Initialize speaker
     initSpeaker();
 
-    // Single startup beep
-    delay(1000);  // Let system settle
+    // Startup beep
     beep(1, BEEP_FREQUENCY_HZ, BEEP_DURATION_MS, 200);
 
     // Initialize LVGL
@@ -125,6 +131,7 @@ void setup() {
     manual_reboot = false;
     new_rx_data_flag = false;
     mesh_serial_enabled = true;
+    reset_preferences = false;
     
     // Create synchronization objects
     gpsMutex = xSemaphoreCreateMutex();

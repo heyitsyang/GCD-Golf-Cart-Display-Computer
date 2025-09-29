@@ -125,6 +125,9 @@ void set_var_flip_screen(bool value);
 int32_t get_var_speaker_volume();
 void set_var_speaker_volume(int32_t value);
 
+bool get_var_reset_preferences();
+void set_var_reset_preferences(bool value);
+
 
 #ifdef __cplusplus
 }
@@ -173,6 +176,7 @@ extern bool espnow_connected;
 extern int32_t screen_inactivity_countdown;
 extern bool flip_screen;
 extern int32_t speaker_volume;
+extern bool reset_preferences;
 
 
 #endif // __cplusplus

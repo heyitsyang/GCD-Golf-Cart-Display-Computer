@@ -29,15 +29,12 @@ void updateEspnowIndicatorColor() {
 
     // Initialize or update when state changes
     if (!initialized || current_state != last_espnow_connected_state) {
-        Serial.printf("DEBUG: ESP-NOW connection state changed to: %s\n", current_state ? "CONNECTED" : "DISCONNECTED");
         if (current_state) {
             // Connected - apply green color (#00ff2d)
             lv_obj_set_style_text_color(objects.espnow_indicator, lv_color_hex(0xff00ff2d), LV_PART_MAIN | LV_STATE_DEFAULT);
-            Serial.println("DEBUG: Applied GREEN color to espnow_indicator");
         } else {
             // Disconnected - apply red color (#ff0000)
             lv_obj_set_style_text_color(objects.espnow_indicator, lv_color_hex(0xffff0000), LV_PART_MAIN | LV_STATE_DEFAULT);
-            Serial.println("DEBUG: Applied RED color to espnow_indicator");
         }
         last_espnow_connected_state = current_state;
         initialized = true;
@@ -65,7 +62,6 @@ void guiTask(void *parameter) {
         if (current_screen != previous_screen) {
             // Check if we're leaving the Now Playing screen
             if (previous_screen == objects.now_playing && current_screen != objects.now_playing) {
-                Serial.println("GUI: Leaving Now Playing screen, calling onNowPlayingScreenExit");
                 onNowPlayingScreenExit();
             }
 
@@ -73,7 +69,6 @@ void guiTask(void *parameter) {
             // Reset countdown when entering a new screen (except splash)
             if (current_screen != objects.splash) {
                 set_var_screen_inactivity_countdown(SCREEN_INACTIVITY_TIMEOUT_MS);
-                Serial.println("GUI: Screen changed, resetting inactivity countdown");
             }
         }
 
@@ -91,7 +86,6 @@ void guiTask(void *parameter) {
             if ((now - last_flag_set_time) >= NEW_RX_DATA_FLAG_RESET_TIME) {
                 new_rx_data_flag = false;
                 last_flag_set_time = 0;
-                Serial.println("GUI: Auto-reset new_rx_data_flag");
             }
         } else {
             // Reset timer when flag is not set
@@ -122,7 +116,6 @@ void handleInactivityCountdown(uint32_t now) {
         int32_t remaining = get_var_screen_inactivity_countdown() - 100;
         if (remaining <= 0) {
             remaining = 0;
-            Serial.println("DEBUG: screen_inactivity_countdown = 0 (timeout reached)");
         }
         set_var_screen_inactivity_countdown(remaining);
     }

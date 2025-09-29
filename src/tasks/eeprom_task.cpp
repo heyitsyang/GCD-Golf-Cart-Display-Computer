@@ -20,7 +20,7 @@ void eepromTask(void *parameter) {
                         
                     case EEPROM_INT:
                         prefs.putInt(item.key, item.value.intVal);
-                        Serial.print("< ");
+                        Serial.print("> ");
                         Serial.print(item.key);
                         Serial.print(" saved to eeprom: ");
                         Serial.println(item.value.intVal);

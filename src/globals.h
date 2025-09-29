@@ -98,8 +98,7 @@ extern int cmdToGci;
 extern structMsgToGci dataToGci;
 
 // Speaker
-extern int speaker_volume;
-extern int old_speaker_volume;
+extern int32_t old_speaker_volume;
 
 // All EEZ Studio variables are defined in get_set_vars.h
 // Include it here so all files can access them

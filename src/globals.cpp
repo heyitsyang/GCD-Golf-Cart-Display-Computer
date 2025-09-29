@@ -65,7 +65,7 @@ float avg_speed_calc = 0.0;  // Float version for GPS calculations
 // Old tracking variables
 String old_espnow_mac_addr;
 bool old_flip_screen = false;
-int old_speaker_volume = 10;
+int32_t old_speaker_volume = 10;
 
 // Now playing variables
 String live_venue_event_data = "";

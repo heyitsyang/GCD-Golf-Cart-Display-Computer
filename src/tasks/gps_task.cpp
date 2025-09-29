@@ -7,11 +7,14 @@
 
 void gpsTask(void *parameter) {
     time_t sunrise_t, sunset_t;
-    
+
+    Serial.println("GPS Task started");
+
     while (true) {
         unsigned long currentGPSms = millis();
         int elapsed_gps_read = currentGPSms - previousGPSms;
-        
+
+
         if (elapsed_gps_read >= GPS_READ_INTERVAL) {
             if (xSemaphoreTake(gpsMutex, portMAX_DELAY)) {
                 previousGPSms = currentGPSms;

@@ -11,6 +11,7 @@ static TimerHandle_t beepTimer = NULL;
 static uint32_t currentBeepFrequency = BEEP_FREQUENCY_HZ;
 static uint32_t currentBeepDuration = BEEP_DURATION_MS;
 static uint32_t currentBeepPause = 200;
+static int32_t currentBeepVolume = 10;  // Local copy for timer callback
 
 
 // Global display handle
@@ -144,13 +145,13 @@ void beepTimerCallback(TimerHandle_t xTimer) {
     } else {
         // Turn on beep if we haven't reached target count
         if (beepCount < targetBeeps) {
-            // Check volume - mute if volume is 0
-            if (speaker_volume <= 0) {
+            // Check volume - mute if volume is 0 (use local copy to avoid race conditions)
+            if (currentBeepVolume <= 0) {
                 ledcWrite(SPEAKER_LEDC_CHANNEL, 0);
             } else {
                 // Calculate duty cycle based on volume (0-100% -> 0%-100%)
                 uint32_t maxDuty = (1 << SPEAKER_LEDC_TIMER_BIT) / 2; // 50% max duty cycle
-                uint32_t volumeDuty = (maxDuty * speaker_volume) / 100;
+                uint32_t volumeDuty = (maxDuty * currentBeepVolume) / 100;
                 ledcWrite(SPEAKER_LEDC_CHANNEL, volumeDuty);
             }
             beepOn = true;
@@ -192,9 +193,10 @@ void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs)
 #endif
     }
 
-    // Update timing parameters
+    // Update timing parameters and copy current volume for timer callback
     currentBeepDuration = duration;
     currentBeepPause = pauseMs;
+    currentBeepVolume = speaker_volume;  // Safe copy for timer callback
 
     // Stop any ongoing beep sequence
     xTimerStop(beepTimer, 0);

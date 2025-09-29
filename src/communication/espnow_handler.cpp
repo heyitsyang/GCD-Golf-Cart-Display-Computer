@@ -226,7 +226,7 @@ bool ESPNowHandler::sendRawData(const uint8_t *mac_addr, const uint8_t *data, si
         if (result == ESP_OK) {
             return true;
         }
-        delay(ESPNOW_SEND_RETRY_DELAY);
+        vTaskDelay(pdMS_TO_TICKS(ESPNOW_SEND_RETRY_DELAY));
     }
     return false;
 }
