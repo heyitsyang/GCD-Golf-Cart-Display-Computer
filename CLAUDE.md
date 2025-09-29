@@ -138,3 +138,4 @@ Contains essential configuration files:
 - `lib/meshtastic-arduino_src/`: Meshtastic protocol implementation copied from github.com/meshtastic/Meshtastic-arduino
 - `lib/meshtastic-custimizarions/`: Customizations of lib/meshtastic-arduino_src code
 - # ok, we'll implement option 3, but remember the optiona and this point in out code devleopment so I can ask you to convert to option 1 later if necessary
+- the code is manually reverted back to before the calibration function was attempted
