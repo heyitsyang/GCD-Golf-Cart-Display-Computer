@@ -122,7 +122,8 @@ void set_var_screen_inactivity_countdown(int32_t value);
 bool get_var_flip_screen();
 void set_var_flip_screen(bool value);
 
-
+int32_t get_var_speaker_volume();
+void set_var_speaker_volume(int32_t value);
 
 
 #ifdef __cplusplus
@@ -171,6 +172,7 @@ extern bool mesh_serial_enabled;
 extern bool espnow_connected;
 extern int32_t screen_inactivity_countdown;
 extern bool flip_screen;
+extern int32_t speaker_volume;
 
 
 #endif // __cplusplus

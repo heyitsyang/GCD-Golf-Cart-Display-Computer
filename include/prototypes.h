@@ -36,3 +36,7 @@ void text_message_callback(uint32_t from, uint32_t to, uint8_t channel, const ch
 
 // Parsing functions prototypes
 int parseWeatherData(char* input);
+
+// Speaker/beep function prototypes
+void initSpeaker();
+void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs);

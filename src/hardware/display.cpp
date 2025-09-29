@@ -3,6 +3,16 @@
 #include "globals.h"
 #include "get_set_vars.h"
 
+// Beep control variables
+static int beepCount = 0;
+static int targetBeeps = 0;
+static bool beepOn = false;
+static TimerHandle_t beepTimer = NULL;
+static uint32_t currentBeepFrequency = BEEP_FREQUENCY_HZ;
+static uint32_t currentBeepDuration = BEEP_DURATION_MS;
+static uint32_t currentBeepPause = 200;
+
+
 // Global display handle
 static lv_display_t *display_handle = nullptr;
 
@@ -113,3 +123,89 @@ void my_print(lv_log_level_t level, const char *buf) {
     Serial.flush();
 }
 #endif
+
+// Beep timer callback function
+void beepTimerCallback(TimerHandle_t xTimer) {
+    if (beepOn) {
+        // Turn off beep
+        ledcWrite(SPEAKER_LEDC_CHANNEL, 0);
+        beepOn = false;
+        beepCount++;
+
+        if (beepCount < targetBeeps) {
+            // Schedule next beep after pause
+            xTimerChangePeriod(beepTimer, pdMS_TO_TICKS(currentBeepPause), 0);
+        } else {
+            // All beeps completed, stop timer
+            xTimerStop(beepTimer, 0);
+            beepCount = 0;
+            targetBeeps = 0;
+        }
+    } else {
+        // Turn on beep if we haven't reached target count
+        if (beepCount < targetBeeps) {
+            // Check volume - mute if volume is 0
+            if (speaker_volume <= 0) {
+                ledcWrite(SPEAKER_LEDC_CHANNEL, 0);
+            } else {
+                // Calculate duty cycle based on volume (0-100% -> 0%-100%)
+                uint32_t maxDuty = (1 << SPEAKER_LEDC_TIMER_BIT) / 2; // 50% max duty cycle
+                uint32_t volumeDuty = (maxDuty * speaker_volume) / 100;
+                ledcWrite(SPEAKER_LEDC_CHANNEL, volumeDuty);
+            }
+            beepOn = true;
+
+            // Schedule beep off after beep duration
+            xTimerChangePeriod(beepTimer, pdMS_TO_TICKS(currentBeepDuration), 0);
+        }
+    }
+}
+
+void initSpeaker() {
+    // Initialize LEDC for speaker
+#if ESP_IDF_VERSION_MAJOR == 5
+    ledcAttach(SPEAKER_PIN, BEEP_FREQUENCY_HZ, SPEAKER_LEDC_TIMER_BIT);
+#else
+    ledcSetup(SPEAKER_LEDC_CHANNEL, BEEP_FREQUENCY_HZ, SPEAKER_LEDC_TIMER_BIT);
+    ledcAttachPin(SPEAKER_PIN, SPEAKER_LEDC_CHANNEL);
+#endif
+
+    // Create beep timer
+    beepTimer = xTimerCreate("BeepTimer", pdMS_TO_TICKS(BEEP_DURATION_MS),
+                             pdFALSE, NULL, beepTimerCallback);
+
+    Serial.println("Speaker initialized");
+}
+
+void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs) {
+    if (numBeeps <= 0 || beepTimer == NULL) {
+        return;
+    }
+
+    // Update frequency if different
+    if (frequency != currentBeepFrequency) {
+        currentBeepFrequency = frequency;
+#if ESP_IDF_VERSION_MAJOR == 5
+        ledcChangeFrequency(SPEAKER_PIN, frequency, SPEAKER_LEDC_TIMER_BIT);
+#else
+        ledcSetup(SPEAKER_LEDC_CHANNEL, frequency, SPEAKER_LEDC_TIMER_BIT);
+#endif
+    }
+
+    // Update timing parameters
+    currentBeepDuration = duration;
+    currentBeepPause = pauseMs;
+
+    // Stop any ongoing beep sequence
+    xTimerStop(beepTimer, 0);
+    ledcWrite(SPEAKER_LEDC_CHANNEL, 0);
+
+    // Reset counters and start new sequence
+    beepCount = 0;
+    targetBeeps = numBeeps;
+    beepOn = false;
+
+    // Start the beep sequence
+    beepTimerCallback(beepTimer);
+}
+

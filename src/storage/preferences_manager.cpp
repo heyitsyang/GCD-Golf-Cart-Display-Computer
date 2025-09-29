@@ -34,6 +34,12 @@ void loadPreferences() {
     Serial.println(flip_screen ? "true" : "false");
     set_var_flip_screen(flip_screen);
     old_flip_screen = flip_screen;
+
+    speaker_volume = prefs.getInt("speaker_volume", 10);
+    Serial.print("> speaker_volume read from eeprom = ");
+    Serial.println(speaker_volume);
+    set_var_speaker_volume(speaker_volume);
+    old_speaker_volume = speaker_volume;
 }
 
 void queuePreferenceWrite(const char* key, float value) {

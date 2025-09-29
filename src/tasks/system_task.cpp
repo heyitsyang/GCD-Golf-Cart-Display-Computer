@@ -52,10 +52,20 @@ void systemTask(void *parameter) {
             strcpy(item.key, "espnow_mac_addr");
             strcpy(item.value.stringVal, espnow_mac_addr.c_str());
             xQueueSend(eepromWriteQueue, &item, 0);
-            
+
             old_espnow_mac_addr = espnow_mac_addr;
         }
-        
+
+        if (speaker_volume != old_speaker_volume) {
+            eepromWriteItem_t item;
+            item.type = EEPROM_INT;
+            strcpy(item.key, "speaker_volume");
+            item.value.intVal = speaker_volume;
+            xQueueSend(eepromWriteQueue, &item, 0);
+
+            old_speaker_volume = speaker_volume;
+        }
+
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

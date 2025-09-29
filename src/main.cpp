@@ -87,6 +87,13 @@ void setup() {
     // Initialize display and touchscreen
     initTouchscreen();
 
+    // Initialize speaker
+    initSpeaker();
+
+    // Single startup beep
+    delay(1000);  // Let system settle
+    beep(1, BEEP_FREQUENCY_HZ, BEEP_DURATION_MS, 200);
+
     // Initialize LVGL
     String LVGL_Arduino = "LVGL v" + String(lv_version_major()) + "." +
                          String(lv_version_minor()) + "." + String(lv_version_patch());

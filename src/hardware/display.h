@@ -8,6 +8,8 @@
 void initDisplay();
 void initTouchscreen();
 void initBacklight();
+void initSpeaker();
+void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs);
 void setBacklight(uint32_t value);
 void updateDisplayRotation();
 void updateTouchscreenRotation();

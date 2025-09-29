@@ -42,6 +42,7 @@ bool mesh_serial_enabled = true;
 bool espnow_connected = false;
 int32_t screen_inactivity_countdown = 0;
 bool flip_screen = false;
+int32_t speaker_volume = 10;
 
 // Static buffers for C string returns
 static char temp_buffer[256];
@@ -349,6 +350,14 @@ void set_var_flip_screen(bool value) {
         // Queue the preference write to save to EEPROM
         queuePreferenceWrite("flip_screen", value);
     }
+}
+
+int32_t get_var_speaker_volume() {
+    return speaker_volume;
+}
+
+void set_var_speaker_volume(int32_t value) {
+    speaker_volume = value;
 }
 
 } // extern "C"

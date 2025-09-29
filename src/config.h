@@ -7,6 +7,14 @@
 #define MT_DEBUGGING 0
 #define DEBUG_ESPNOW 0
 
+// Speaker pin & default settings
+#define SPEAKER_PIN 26
+#define BEEP_FREQUENCY_HZ 2500
+#define BEEP_DURATION_MS 100
+#define BEEP_SPACING_MS BEEP_DURATION/2
+#define SPEAKER_VOLUME 20
+
+
 // Touch Screen pins
 #define XPT2046_IRQ 36
 #define XPT2046_MOSI 32
@@ -32,6 +40,10 @@
 #define LEDC_BASE_FREQ 5000
 #define LEDC_TIMER_12_BIT 12
 #define MAX_BACKLIGHT_VALUE 255
+
+// Speaker LEDC configuration
+#define SPEAKER_LEDC_CHANNEL 1
+#define SPEAKER_LEDC_TIMER_BIT 8
 
 // LVGL buffer configuration
 #define NUM_BUFS 2
