@@ -3,9 +3,15 @@
 #include "globals.h"
 #include "types.h"
 #include "hardware/display.h"
+#include "storage/preferences_manager.h"
 
 void systemTask(void *parameter) {
     while (true) {
+        // Handle preferences reset
+        if (reset_preferences == true) {
+            clearAllPreferences();
+        }
+
         // Handle manual reboot
         if (manual_reboot == true) {
             ESP.restart();

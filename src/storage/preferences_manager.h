@@ -5,6 +5,7 @@
 
 void initPreferences();
 void loadPreferences();
+void clearAllPreferences();
 void queuePreferenceWrite(const char* key, float value);
 void queuePreferenceWrite(const char* key, int value);
 void queuePreferenceWrite(const char* key, const String& value);

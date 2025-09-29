@@ -73,3 +73,10 @@ void queuePreferenceWrite(const char* key, bool value) {
     item.value.boolVal = value;
     xQueueSend(eepromWriteQueue, &item, 0);
 }
+
+void clearAllPreferences() {
+    Serial.println("Clearing all EEPROM preferences...");
+    prefs.clear();
+    Serial.println("All preferences cleared. Restarting system...");
+    ESP.restart();
+}
