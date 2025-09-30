@@ -49,7 +49,7 @@ void ESPNowHandler::deinit() {
     if (!initialized) {
         return;
     }
-    
+
     esp_now_deinit();
     initialized = false;
     peer_count = 0;
@@ -57,6 +57,12 @@ void ESPNowHandler::deinit() {
     espnow_connected = false;
     set_var_espnow_connected(false);  // Update UI variable
     Serial.println("ESP-NOW deinitialized");
+}
+
+bool ESPNowHandler::restart() {
+    Serial.println("ESP-NOW: Restarting...");
+    deinit();
+    return init();
 }
 
 bool ESPNowHandler::addPeer(const uint8_t *mac_addr, const char* name) {
@@ -328,8 +334,18 @@ void handleRawGolfCartData(const uint8_t *mac_addr, const uint8_t *data, int dat
         }
     }
 
-    // Set connected status when we receive data
-    if (!espnow_connected) {
+    // Only set connected status if this MAC is in our peer list
+    bool is_configured_peer = false;
+    for (int i = 0; i < espNow.getPeerCount(); i++) {
+        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
+        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
+            is_configured_peer = true;
+            break;
+        }
+    }
+
+    // Set connected status when we receive data from a configured peer
+    if (is_configured_peer && !espnow_connected) {
         espnow_connected = true;
         set_var_espnow_connected(true);
         Serial.printf("*** ESP-NOW connection established ***\n");
@@ -368,8 +384,18 @@ void handleRawGolfCartCommand(const uint8_t *mac_addr, const uint8_t *data, int 
         }
     }
 
-    // Set connected status when we receive data
-    if (!espnow_connected) {
+    // Only set connected status if this MAC is in our peer list
+    bool is_configured_peer = false;
+    for (int i = 0; i < espNow.getPeerCount(); i++) {
+        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
+        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
+            is_configured_peer = true;
+            break;
+        }
+    }
+
+    // Set connected status when we receive data from a configured peer
+    if (is_configured_peer && !espnow_connected) {
         espnow_connected = true;
         set_var_espnow_connected(true);
         Serial.printf("*** ESP-NOW connection established ***\n");
@@ -402,6 +428,20 @@ void espnowOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 }
 
 void espnowOnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    // First check if this MAC address is in our configured peer list
+    bool is_configured_peer = false;
+    for (int i = 0; i < espNow.getPeerCount(); i++) {
+        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
+        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
+            is_configured_peer = true;
+            break;
+        }
+    }
+
+    // If no peers are configured, or this sender is not a configured peer, ignore the data
+    if (espNow.getPeerCount() == 0 || !is_configured_peer) {
+        return; // Silently drop data from unconfigured peers
+    }
     // Check if this is a raw golf cart telemetry message (from golf cart internal)
     if (data_len == sizeof(structMsgFromGci)) {
         // Handle raw golf cart interface data

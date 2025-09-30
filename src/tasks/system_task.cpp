@@ -9,6 +9,7 @@ void systemTask(void *parameter) {
     while (true) {
         // Handle preferences reset
         if (reset_preferences == true) {
+            reset_preferences = false;  // Reset flag before clearing to prevent restart loop
             clearAllPreferences();
         }
 

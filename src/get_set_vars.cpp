@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include "storage/preferences_manager.h"
 #include "hardware/display.h"
+#include "communication/espnow_handler.h"
+#include "globals.h"
 
 // String variable definitions
 String cur_date;
@@ -168,7 +170,37 @@ const char* get_var_espnow_mac_addr() {
 }
 
 void set_var_espnow_mac_addr(const char* value) {
-    espnow_mac_addr = String(value);
+    String new_mac = String(value);
+
+    if (espnow_mac_addr != new_mac) {
+        Serial.print("ESP-NOW MAC address changed from ");
+        Serial.print(espnow_mac_addr);
+        Serial.print(" to ");
+        Serial.println(new_mac);
+
+        espnow_mac_addr = new_mac;
+
+        // Restart ESP-NOW if it's currently enabled and initialized
+        if (espnow_enabled && espNow.isInitialized()) {
+            Serial.println("Restarting ESP-NOW with new peer MAC address...");
+
+            if (espNow.restart()) {
+                // Add the new peer if it's valid
+                if (espnow_mac_addr != "NONE" && espnow_mac_addr.length() == 17) {
+                    if (espNow.addPeerFromString(espnow_mac_addr, "New Peer")) {
+                        Serial.println("ESP-NOW: New peer added successfully");
+                    } else {
+                        Serial.println("ESP-NOW: Failed to add new peer");
+                    }
+                }
+            } else {
+                Serial.println("ESP-NOW: Restart failed");
+            }
+        }
+
+        // Queue the preference write to save to EEPROM
+        queuePreferenceWrite("espnow_mac_addr", espnow_mac_addr);
+    }
 }
 
 bool get_var_mesh_serial_enabled() {

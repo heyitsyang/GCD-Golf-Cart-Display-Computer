@@ -32,6 +32,9 @@ public:
     bool isInitialized() { return initialized; }
     String getMyMacAddress();
     String getStatus() { return status; }
+
+    // Management
+    bool restart();
     
     // Message handling
     void processReceivedMessage(espnow_recv_item_t &item);
