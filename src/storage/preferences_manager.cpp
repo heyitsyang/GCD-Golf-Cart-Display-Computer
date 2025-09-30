@@ -13,17 +13,17 @@ void loadPreferences() {
     Serial.print("> max_hdop read from eeprom = ");
     Serial.println(max_hdop);
     old_max_hdop = max_hdop;
-    
+
     day_backlight = prefs.getInt("day_backlight", 10);
     Serial.print("> day_backlight read from eeprom = ");
     Serial.println(day_backlight);
     old_day_backlight = day_backlight;
-    
+
     night_backlight = prefs.getInt("night_backlight", 5);
     Serial.print("> night_backlight read from eeprom = ");
     Serial.println(night_backlight);
     old_night_backlight = night_backlight;
-    
+
     espnow_mac_addr = prefs.getString("espnow_mac_addr", "NONE");
     Serial.print("> espnow_mac_addr read from eeprom = ");
     Serial.println(espnow_mac_addr);
@@ -40,6 +40,29 @@ void loadPreferences() {
     Serial.println(speaker_volume);
     set_var_speaker_volume(speaker_volume);
     old_speaker_volume = speaker_volume;
+
+    // Load touchscreen calibration coefficients if available
+    touch_alpha_x = prefs.getFloat("touch_alpha_x", 0.0);
+    touch_beta_x = prefs.getFloat("touch_beta_x", 0.0);
+    touch_delta_x = prefs.getFloat("touch_delta_x", 0.0);
+    touch_alpha_y = prefs.getFloat("touch_alpha_y", 0.0);
+    touch_beta_y = prefs.getFloat("touch_beta_y", 0.0);
+    touch_delta_y = prefs.getFloat("touch_delta_y", 0.0);
+
+    // Check if calibration coefficients are valid (not all zeros)
+    if (touch_alpha_x != 0.0 || touch_beta_x != 0.0 || touch_alpha_y != 0.0 || touch_beta_y != 0.0) {
+        use_touch_calibration = true;
+        Serial.println("> Touchscreen calibration coefficients loaded from EEPROM:");
+        Serial.print("  alpha_x = "); Serial.println(touch_alpha_x, 6);
+        Serial.print("  beta_x = "); Serial.println(touch_beta_x, 6);
+        Serial.print("  delta_x = "); Serial.println(touch_delta_x, 6);
+        Serial.print("  alpha_y = "); Serial.println(touch_alpha_y, 6);
+        Serial.print("  beta_y = "); Serial.println(touch_beta_y, 6);
+        Serial.print("  delta_y = "); Serial.println(touch_delta_y, 6);
+    } else {
+        use_touch_calibration = false;
+        Serial.println("> No touchscreen calibration found in EEPROM, using default auto-calibration");
+    }
 }
 
 void queuePreferenceWrite(const char* key, float value) {

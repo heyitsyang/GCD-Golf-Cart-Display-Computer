@@ -29,6 +29,15 @@ lv_indev_t *indev;
 uint8_t *draw_buf;
 uint32_t lastTick = 0;
 
+// Touchscreen calibration coefficients (default to 0, loaded from EEPROM if available)
+float touch_alpha_x = 0.0;
+float touch_beta_x = 0.0;
+float touch_delta_x = 0.0;
+float touch_alpha_y = 0.0;
+float touch_beta_y = 0.0;
+float touch_delta_y = 0.0;
+bool use_touch_calibration = false;  // Set to true when coefficients loaded from EEPROM
+
 // GPS objects
 HardwareSerial &gpsSerial = Serial;
 NMEAGPS gps;

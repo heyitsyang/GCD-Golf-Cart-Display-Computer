@@ -39,6 +39,12 @@ extern lv_indev_t *indev;
 extern uint8_t *draw_buf;
 extern uint32_t lastTick;
 
+// Touchscreen calibration coefficients (loaded from EEPROM if available)
+// If not available, falls back to existing auto-calibration using map() function
+extern float touch_alpha_x, touch_beta_x, touch_delta_x;
+extern float touch_alpha_y, touch_beta_y, touch_delta_y;
+extern bool use_touch_calibration;  // true if calibration coefficients loaded from EEPROM
+
 // GPS objects
 extern HardwareSerial &gpsSerial;
 extern NMEAGPS gps;

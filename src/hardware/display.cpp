@@ -95,17 +95,30 @@ void my_touchpad_read(lv_indev_t *indev, lv_indev_data_t *data) {
 
         TS_Point p = touchscreen.getPoint();
 
-        // Auto calibration
-        if (p.x < touchScreenMinimumX) touchScreenMinimumX = p.x;
-        if (p.x > touchScreenMaximumX) touchScreenMaximumX = p.x;
-        if (p.y < touchScreenMinimumY) touchScreenMinimumY = p.y;
-        if (p.y > touchScreenMaximumY) touchScreenMaximumY = p.y;
+        if (use_touch_calibration) {
+            // Use calibration coefficients from EEPROM with -90 degree rotation adjustment
+            // Calibration was done on 240x320 portrait screen
+            // Calculate calibrated position in portrait orientation
+            int cal_x = (int)(touch_alpha_x * p.x + touch_beta_x * p.y + touch_delta_x);
+            int cal_y = (int)(-touch_alpha_y * p.x - touch_beta_y * p.y + (240 - touch_delta_y));
 
-        // Map to pixel position
-        data->point.x = map(p.x, touchScreenMinimumX, touchScreenMaximumX, 1, TFT_WIDTH);
-        data->point.y = map(p.y, touchScreenMinimumY, touchScreenMaximumY, 1, TFT_HEIGHT);
+            // Apply -90 degree rotation for landscape: new_x = y, new_y = x (inverted Y)
+            data->point.x = cal_y;
+            data->point.y = cal_x;
+        } else {
+            // Fall back to auto calibration using map()
+            if (p.x < touchScreenMinimumX) touchScreenMinimumX = p.x;
+            if (p.x > touchScreenMaximumX) touchScreenMaximumX = p.x;
+            if (p.y < touchScreenMinimumY) touchScreenMinimumY = p.y;
+            if (p.y > touchScreenMaximumY) touchScreenMaximumY = p.y;
+
+            // Map to pixel position
+            data->point.x = map(p.x, touchScreenMinimumX, touchScreenMaximumX, 1, TFT_WIDTH);
+            data->point.y = map(p.y, touchScreenMinimumY, touchScreenMaximumY, 1, TFT_HEIGHT);
+        }
+
         data->state = LV_INDEV_STATE_PRESSED;
-        
+
 #if DEBUG_TOUCH_SCREEN == 1
         Serial.print("Touch x ");
         Serial.print(data->point.x);
