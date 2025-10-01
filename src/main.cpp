@@ -132,11 +132,12 @@ void setup() {
     new_rx_data_flag = false;
     mesh_serial_enabled = true;
     reset_preferences = false;
-    
+
     // Create synchronization objects
     gpsMutex = xSemaphoreCreateMutex();
     eepromMutex = xSemaphoreCreateMutex();
     displayMutex = xSemaphoreCreateMutex();
+    hotPacketMutex = xSemaphoreCreateMutex();  // Protects weather and venue/event data
     eepromWriteQueue = xQueueCreate(10, sizeof(eepromWriteItem_t));
     meshtasticCallbackQueue = xQueueCreate(5, sizeof(meshtasticCallbackItem_t));
     espnowRecvQueue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_recv_item_t));

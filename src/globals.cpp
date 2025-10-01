@@ -14,6 +14,7 @@ TaskHandle_t espnowTaskHandle = NULL;
 SemaphoreHandle_t gpsMutex;
 SemaphoreHandle_t eepromMutex;
 SemaphoreHandle_t displayMutex;
+SemaphoreHandle_t hotPacketMutex;  // Protects weather and venue/event data
 QueueHandle_t eepromWriteQueue;
 QueueHandle_t meshtasticCallbackQueue;
 QueueHandle_t espnowRecvQueue;

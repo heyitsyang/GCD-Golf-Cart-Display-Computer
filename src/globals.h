@@ -27,6 +27,7 @@ extern TaskHandle_t espnowTaskHandle;
 extern SemaphoreHandle_t gpsMutex;
 extern SemaphoreHandle_t eepromMutex;
 extern SemaphoreHandle_t displayMutex;
+extern SemaphoreHandle_t hotPacketMutex;  // Protects weather and venue/event data
 extern QueueHandle_t eepromWriteQueue;
 extern QueueHandle_t meshtasticCallbackQueue;
 extern QueueHandle_t espnowRecvQueue;

@@ -39,13 +39,28 @@ void processHotPacket(const char* text) {
             wx_rcv_time = cur_date + "  " + hhmm_str + am_pm_str;
             parseWeatherData((char*)text);
             break;
-            
+
         case HOT_PACKET_VENUE_EVENT:
             Serial.println("Venue/Event packet received");
-            np_rcv_time = cur_date + "  " + hhmm_str + am_pm_str;
-            live_venue_event_data = String(&text[HOT_PKT_HEADER_OFFSET]);
-            Serial.print("Stored venue/event data: ");
-            Serial.println(live_venue_event_data);
+            // Validate packet has enough data
+            if (strlen(text) > HOT_PKT_HEADER_OFFSET) {
+                // Take mutex before modifying venue/event data
+                bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(100)) == pdTRUE);
+
+                if (haveMutex || hotPacketMutex == NULL) {
+                    np_rcv_time = cur_date + "  " + hhmm_str + am_pm_str;
+                    live_venue_event_data = String(&text[HOT_PKT_HEADER_OFFSET]);
+
+                    if (haveMutex) xSemaphoreGive(hotPacketMutex);
+
+                    Serial.print("Stored venue/event data: ");
+                    Serial.println(live_venue_event_data);
+                } else {
+                    Serial.println("Failed to acquire hotPacket mutex for venue data");
+                }
+            } else {
+                Serial.println("Venue/Event packet too short");
+            }
             break;
             
         default:
@@ -56,59 +71,133 @@ void processHotPacket(const char* text) {
 }
 
 int parseWeatherData(char* input) {
+    if (!input) return 0;
+
     int ptr, len;
     len = strlen(input);
-    
-    if (!input) return 0;
-    
+
+    // Validate minimum packet size
+    if (len < HOT_PKT_HEADER_OFFSET + 1) {
+        Serial.println("Weather packet too short");
+        return 0;
+    }
+
     // Replace delimiters with null terminators
     for (ptr = 0; ptr < len; ptr++) {
         if ((input[ptr] == '#') || (input[ptr] == ',')) {
             input[ptr] = '\0';
         }
     }
-    
+
     ptr = HOT_PKT_HEADER_OFFSET;
-    cur_temp = String(&input[ptr]);
-    ptr = ptr + strlen(&input[ptr]) + 1;
-    
-    fcast_hr1 = String(&input[ptr]);
-    ptr = ptr + fcast_hr1.length() + 1;
-    fcast_glyph1 = String(&input[ptr]);
-    ptr = ptr + fcast_glyph1.length() + 1;
-    fcast_precip1 = String(&input[ptr]);
-    int precip1_len = fcast_precip1.length();
-    if (fcast_precip1 == "0.0") fcast_precip1 = "";
-    ptr = ptr + precip1_len + 1;
 
-    fcast_hr2 = String(&input[ptr]);
-    ptr = ptr + fcast_hr2.length() + 1;
-    fcast_glyph2 = String(&input[ptr]);
-    ptr = ptr + fcast_glyph2.length() + 1;
-    fcast_precip2 = String(&input[ptr]);
-    int precip2_len = fcast_precip2.length();
-    if (fcast_precip2 == "0.0") fcast_precip2 = "";
-    ptr = ptr + precip2_len + 1;
+    // Take mutex before modifying weather variables (if initialized)
+    bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(100)) == pdTRUE);
 
-    fcast_hr3 = String(&input[ptr]);
-    ptr = ptr + fcast_hr3.length() + 1;
-    fcast_glyph3 = String(&input[ptr]);
-    ptr = ptr + fcast_glyph3.length() + 1;
-    fcast_precip3 = String(&input[ptr]);
-    int precip3_len = fcast_precip3.length();
-    if (fcast_precip3 == "0.0") fcast_precip3 = "";
-    ptr = ptr + precip3_len + 1;
+    if (haveMutex || hotPacketMutex == NULL) {
+        // Parse cur_temp
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        cur_temp = String(&input[ptr]);
+        ptr = ptr + strlen(&input[ptr]) + 1;
 
-    fcast_hr4 = String(&input[ptr]);
-    ptr = ptr + fcast_hr4.length() + 1;
-    fcast_glyph4 = String(&input[ptr]);
-    ptr = ptr + fcast_glyph4.length() + 1;
-    fcast_precip4 = String(&input[ptr]);
-    int precip4_len = fcast_precip4.length();
-    if (fcast_precip4 == "0.0") fcast_precip4 = "";
-    ptr = ptr + precip4_len + 1;
-    
-    return 1;
+        // Parse forecast hour 1
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_hr1 = String(&input[ptr]);
+        ptr = ptr + fcast_hr1.length() + 1;
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_glyph1 = String(&input[ptr]);
+        ptr = ptr + fcast_glyph1.length() + 1;
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_precip1 = String(&input[ptr]);
+        int precip1_len = fcast_precip1.length();
+        if (fcast_precip1 == "0.0") fcast_precip1 = "";
+        ptr = ptr + precip1_len + 1;
+
+        // Parse forecast hour 2
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_hr2 = String(&input[ptr]);
+        ptr = ptr + fcast_hr2.length() + 1;
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_glyph2 = String(&input[ptr]);
+        ptr = ptr + fcast_glyph2.length() + 1;
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_precip2 = String(&input[ptr]);
+        int precip2_len = fcast_precip2.length();
+        if (fcast_precip2 == "0.0") fcast_precip2 = "";
+        ptr = ptr + precip2_len + 1;
+
+        // Parse forecast hour 3
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_hr3 = String(&input[ptr]);
+        ptr = ptr + fcast_hr3.length() + 1;
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_glyph3 = String(&input[ptr]);
+        ptr = ptr + fcast_glyph3.length() + 1;
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_precip3 = String(&input[ptr]);
+        int precip3_len = fcast_precip3.length();
+        if (fcast_precip3 == "0.0") fcast_precip3 = "";
+        ptr = ptr + precip3_len + 1;
+
+        // Parse forecast hour 4
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_hr4 = String(&input[ptr]);
+        ptr = ptr + fcast_hr4.length() + 1;
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_glyph4 = String(&input[ptr]);
+        ptr = ptr + fcast_glyph4.length() + 1;
+        if (ptr >= len) {
+            if (haveMutex) xSemaphoreGive(hotPacketMutex);
+            return 0;
+        }
+        fcast_precip4 = String(&input[ptr]);
+        int precip4_len = fcast_precip4.length();
+        if (fcast_precip4 == "0.0") fcast_precip4 = "";
+        ptr = ptr + precip4_len + 1;
+
+        if (haveMutex) xSemaphoreGive(hotPacketMutex);
+        Serial.println("Weather data parsed successfully");
+        return 1;
+    } else {
+        Serial.println("Failed to acquire hotPacket mutex for weather data");
+        return 0;
+    }
 }
 
 void parseVenueEventData(const char* input) {
