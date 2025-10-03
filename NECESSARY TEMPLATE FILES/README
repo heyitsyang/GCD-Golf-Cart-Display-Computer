@@ -1,0 +1,11 @@
+The problem:  
+LVGL and TFT_eSPI library refreshes will overwrite lv_conf.h and User_Setup.h files customized for the Cheap Yellow Display (or whatever display you are using)
+
+The alleged feature in PlatformIO to run scripts pre-build doesn't seem to work as it should - any pre-build scripts will loop endlessy.
+
+The workaround:
+To prevent this and to be sure that the customized files are restored, the files will be copied to the proper places via the copy_cyd_configs.py script by PlatformIO before a build only if the destination copy of lv_conf.h does not exist in .pio/libdeps/cyd.  Both files will be copied immediately after .pio/libdeps/cyd/lv_conf.h is deleted.
+
+Workflow:
+1.  Refresh LVGL, TFT_eSPI libraries or make any edits to lv_conf.h or User_Setup.h
+2.  Delete .pio/libdeps/cyd/lv.conf to trigger the copy
