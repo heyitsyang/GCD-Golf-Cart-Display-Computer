@@ -120,9 +120,15 @@ extern "C" void action_display_now_playing(lv_event_t *e) {
 
     const char* dataToDisplay;
 
-    if (live_venue_event_data.length() > 0) {
-        dataToDisplay = live_venue_event_data.c_str();
+    // Read from active buffer (no mutex needed - double buffering ensures lock-free reads)
+    int activeBuffer = hotPacketActiveBuffer;  // Snapshot current buffer
+    if (hotPacketBuffer_live_venue_event_data[activeBuffer].length() > 0) {
+        dataToDisplay = hotPacketBuffer_live_venue_event_data[activeBuffer].c_str();
         Serial.println("Using live venue/event data from Meshtastic");
+    } else if (live_venue_event_data.length() > 0) {
+        // Fallback to legacy variable
+        dataToDisplay = live_venue_event_data.c_str();
+        Serial.println("Using legacy venue/event data from Meshtastic");
     } else {
         dataToDisplay = "Sawgrass,NA#Spanish Springs,NA#Lake Sumter,NA#Brownwood,NA#Sawgrass,NA#";
         Serial.println("Using default data - no live Meshtastic data available");
@@ -148,7 +154,13 @@ void checkAndUpdateNowPlayingScreen() {
 
     // Check if the data has actually changed
     const char* currentData;
-    if (live_venue_event_data.length() > 0) {
+
+    // Read from active buffer (no mutex needed - double buffering ensures lock-free reads)
+    int activeBuffer = hotPacketActiveBuffer;  // Snapshot current buffer
+    if (hotPacketBuffer_live_venue_event_data[activeBuffer].length() > 0) {
+        currentData = hotPacketBuffer_live_venue_event_data[activeBuffer].c_str();
+    } else if (live_venue_event_data.length() > 0) {
+        // Fallback to legacy variable
         currentData = live_venue_event_data.c_str();
     } else {
         currentData = "Sawgrass,NA#Spanish Springs,NA#Lake Sumter,NA#Brownwood,NA#Sawgrass,NA#";

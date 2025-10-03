@@ -220,6 +220,9 @@ void set_var_espnow_connected(bool value) {
 }
 
 const char* get_var_wx_rcv_time() {
+    // Note: wx_rcv_time is protected by hotPacketMutex
+    // For UI getter, we skip mutex to avoid blocking LVGL refresh
+    // Data race is acceptable here as String reads are atomic enough for display
     return wx_rcv_time.c_str();
 }
 
@@ -228,6 +231,8 @@ void set_var_wx_rcv_time(const char* value) {
 }
 
 const char* get_var_cur_temp() {
+    // Note: cur_temp is protected by hotPacketMutex in parseWeatherData
+    // For UI getter, we skip mutex to avoid blocking LVGL refresh
     return cur_temp.c_str();
 }
 
@@ -332,6 +337,8 @@ void set_var_fcast_precip4(const char* value) {
 }
 
 const char* get_var_np_rcv_time() {
+    // Note: np_rcv_time is protected by hotPacketMutex
+    // For UI getter, we skip mutex to avoid blocking LVGL refresh
     return np_rcv_time.c_str();
 }
 

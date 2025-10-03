@@ -27,10 +27,33 @@ extern TaskHandle_t espnowTaskHandle;
 extern SemaphoreHandle_t gpsMutex;
 extern SemaphoreHandle_t eepromMutex;
 extern SemaphoreHandle_t displayMutex;
-extern SemaphoreHandle_t hotPacketMutex;  // Protects weather and venue/event data
+extern SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping (not data reads)
 extern QueueHandle_t eepromWriteQueue;
 extern QueueHandle_t meshtasticCallbackQueue;
 extern QueueHandle_t espnowRecvQueue;
+
+// Double buffering for hot packet data (eliminates blocking reads)
+// Parser writes to back buffer, swaps atomically, GUI reads from front buffer
+// Front buffer = hotPacketBuffer_xxx[hotPacketActiveBuffer] (current data for GUI reads)
+// Back buffer = hotPacketBuffer_xxx[1 - hotPacketActiveBuffer] (next data being written by parser)
+// Only the buffer pointer swap is protected by mutex (~10ms), not the data reads/writes
+extern volatile int hotPacketActiveBuffer;  // 0 or 1, atomic swap under mutex
+extern String hotPacketBuffer_wx_rcv_time[2];
+extern String hotPacketBuffer_cur_temp[2];
+extern String hotPacketBuffer_fcast_hr1[2];
+extern String hotPacketBuffer_fcast_glyph1[2];
+extern String hotPacketBuffer_fcast_precip1[2];
+extern String hotPacketBuffer_fcast_hr2[2];
+extern String hotPacketBuffer_fcast_glyph2[2];
+extern String hotPacketBuffer_fcast_precip2[2];
+extern String hotPacketBuffer_fcast_hr3[2];
+extern String hotPacketBuffer_fcast_glyph3[2];
+extern String hotPacketBuffer_fcast_precip3[2];
+extern String hotPacketBuffer_fcast_hr4[2];
+extern String hotPacketBuffer_fcast_glyph4[2];
+extern String hotPacketBuffer_fcast_precip4[2];
+extern String hotPacketBuffer_np_rcv_time[2];
+extern String hotPacketBuffer_live_venue_event_data[2];
 
 // Display objects
 extern SPIClass touchscreenSpi;

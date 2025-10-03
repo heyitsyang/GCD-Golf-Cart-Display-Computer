@@ -14,10 +14,29 @@ TaskHandle_t espnowTaskHandle = NULL;
 SemaphoreHandle_t gpsMutex;
 SemaphoreHandle_t eepromMutex;
 SemaphoreHandle_t displayMutex;
-SemaphoreHandle_t hotPacketMutex;  // Protects weather and venue/event data
+SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping (not data reads)
 QueueHandle_t eepromWriteQueue;
 QueueHandle_t meshtasticCallbackQueue;
 QueueHandle_t espnowRecvQueue;
+
+// Double buffering for hot packet data (eliminates blocking reads)
+volatile int hotPacketActiveBuffer = 0;  // 0 or 1
+String hotPacketBuffer_wx_rcv_time[2];
+String hotPacketBuffer_cur_temp[2];
+String hotPacketBuffer_fcast_hr1[2];
+String hotPacketBuffer_fcast_glyph1[2];
+String hotPacketBuffer_fcast_precip1[2];
+String hotPacketBuffer_fcast_hr2[2];
+String hotPacketBuffer_fcast_glyph2[2];
+String hotPacketBuffer_fcast_precip2[2];
+String hotPacketBuffer_fcast_hr3[2];
+String hotPacketBuffer_fcast_glyph3[2];
+String hotPacketBuffer_fcast_precip3[2];
+String hotPacketBuffer_fcast_hr4[2];
+String hotPacketBuffer_fcast_glyph4[2];
+String hotPacketBuffer_fcast_precip4[2];
+String hotPacketBuffer_np_rcv_time[2];
+String hotPacketBuffer_live_venue_event_data[2];
 
 // Display objects
 SPIClass touchscreenSpi = SPIClass(VSPI);
