@@ -26,7 +26,7 @@ public:
     bool broadcastText(const String& text);
 
     // Golf cart interface - raw message sending
-    bool sendGolfCartCommand(const uint8_t *mac_addr, int cmdNumber);
+    bool sendGolfCartCommand(const uint8_t *mac_addr, gci_command_t cmdNumber, const void *payload = nullptr, size_t payloadSize = 0);
     
     // Status
     bool isInitialized() { return initialized; }
@@ -48,15 +48,13 @@ private:
     
     uint16_t getNextMessageId() { return next_msg_id++; }
     bool sendRawData(const uint8_t *mac_addr, const uint8_t *data, size_t len);
+
+public:  // Make public so espnow_task can use it
     bool macStringToBytes(const String& mac_str, uint8_t* mac_bytes);
 };
 
 // Global instance
 extern ESPNowHandler espNow;
-
-// Golf cart interface handlers
-void handleRawGolfCartData(const uint8_t *mac_addr, const uint8_t *data, int data_len);
-void handleRawGolfCartCommand(const uint8_t *mac_addr, const uint8_t *data, int data_len);
 
 // Callback functions
 void espnowOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);

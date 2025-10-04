@@ -9,9 +9,12 @@ void espnowTask(void *parameter) {
     espnow_recv_item_t recv_item;
     uint32_t lastHeartbeat = 0;
     uint32_t lastGPSSend = 0;
-    
+    static bool lastPairState = false;
+    uint32_t pairingStartTime = 0;
+    const uint32_t PAIRING_TIMEOUT_MS = 5000;  // Keep pairing window open for 5 seconds
+
     // Queue is created in main.cpp
-    
+
     while (true) {
         // Check for peer timeouts
         if (espnow_enabled && espNow.isInitialized() && espnow_connected) {
@@ -48,7 +51,7 @@ void espnowTask(void *parameter) {
                 // Initialize ESP-NOW
                 if (espNow.init()) {
                     espnow_status = "Initializing...";
-                    
+
                     // Add saved peer if exists
                     if (espnow_mac_addr != "NONE" && espnow_mac_addr.length() == 17) {
                         if (espNow.addPeerFromString(espnow_mac_addr, "Saved Peer")) {
@@ -73,15 +76,70 @@ void espnowTask(void *parameter) {
         
         // Only process if enabled and initialized
         if (espnow_enabled && espNow.isInitialized()) {
+            // Check for GCI pairing request
+            if (espnow_pair_gci && !lastPairState) {
+                lastPairState = true;
+                pairingStartTime = millis();
+
+                // Clear any existing peers to start fresh pairing
+                int peerCount = espNow.getPeerCount();
+                for (int i = peerCount - 1; i >= 0; i--) {
+                    espnow_peer_info_t* peer = espNow.getPeerInfo(i);
+                    if (peer) {
+                        espNow.removePeer(peer->mac_addr);
+                    }
+                }
+                Serial.println("ESP-NOW: Cleared all peers for fresh pairing");
+
+                // Prepare RAW pairing command (no wrapper for initial pairing)
+                structMsgToGci cmdData;
+                cmdData.cmdNumber = GCI_CMD_ADD_PEER;
+
+                // Get our MAC address directly (avoid String allocation)
+                uint8_t myMacBytes[6];
+                esp_read_mac(myMacBytes, ESP_MAC_WIFI_STA);
+                memcpy(cmdData.macAddr, myMacBytes, 6);
+
+                // Temporarily add broadcast peer for RAW pairing
+                uint8_t broadcastAddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+                espNow.addPeer(broadcastAddr, "Broadcast-Temp");
+
+                // Broadcast RAW command to reach virgin GCI devices
+                if (esp_now_send(broadcastAddr, (uint8_t*)&cmdData, sizeof(cmdData)) == ESP_OK) {
+                    Serial.printf("ESP-NOW: RAW pairing command broadcast with MAC %02X:%02X:%02X:%02X:%02X:%02X\n",
+                                 myMacBytes[0], myMacBytes[1], myMacBytes[2],
+                                 myMacBytes[3], myMacBytes[4], myMacBytes[5]);
+                    Serial.println("ESP-NOW: Waiting for GCI to pair and switch to wrapped mode...");
+                } else {
+                    Serial.println("ESP-NOW: Failed to broadcast RAW pairing command");
+                }
+
+                // Remove broadcast peer immediately after sending
+                espNow.removePeer(broadcastAddr);
+
+                // Note: espnow_pair_gci stays true to keep pairing window open for ACK
+            } else if (!espnow_pair_gci && lastPairState) {
+                lastPairState = false;
+            }
+
+            // Check for pairing timeout - close the pairing window after timeout
+            if (espnow_pair_gci && pairingStartTime > 0 &&
+                (millis() - pairingStartTime) > PAIRING_TIMEOUT_MS) {
+                Serial.println("ESP-NOW: Pairing timeout - closing pairing window");
+                espnow_pair_gci = false;
+                set_var_espnow_pair_gci(false);
+                pairingStartTime = 0;
+            }
+
             // Process received messages
             if (xQueueReceive(espnowRecvQueue, &recv_item, pdMS_TO_TICKS(10))) {
                 espNow.processReceivedMessage(recv_item);
             }
-            
+
             uint32_t now = millis();
-            
-            // Send periodic heartbeat
-            if (now - lastHeartbeat > ESPNOW_HEARTBEAT_INTERVAL) {
+
+            // Send periodic heartbeat (only if we have peers)
+            if (espNow.getPeerCount() > 0 && now - lastHeartbeat > ESPNOW_HEARTBEAT_INTERVAL) {
                 lastHeartbeat = now;
                 uint8_t heartbeatData[4];
                 memcpy(heartbeatData, &now, 4);

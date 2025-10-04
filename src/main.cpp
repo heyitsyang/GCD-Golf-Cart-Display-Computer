@@ -132,6 +132,7 @@ void setup() {
     new_rx_data_flag = false;
     mesh_serial_enabled = true;
     reset_preferences = false;
+    espnow_pair_gci = false;
 
     // Create synchronization objects
     gpsMutex = xSemaphoreCreateMutex();

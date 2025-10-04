@@ -48,13 +48,17 @@ typedef enum {
 } espnow_msg_type_t;
 
 // ESP-NOW message structure
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t type;
     uint32_t timestamp;
     uint16_t msg_id;
-    uint8_t data[ESPNOW_MAX_DATA_LEN];
     uint16_t data_len;
+    uint8_t data[ESPNOW_MAX_PAYLOAD];
 } espnow_message_t;
+
+// Calculate actual packet size for sending (header + payload)
+#define ESPNOW_PACKET_HEADER_SIZE 9  // type(1) + timestamp(4) + msg_id(2) + data_len(2)
+#define ESPNOW_PACKET_SIZE(data_len) (ESPNOW_PACKET_HEADER_SIZE + (data_len))
 
 // ESP-NOW queue item for received messages
 typedef struct {
@@ -72,6 +76,15 @@ typedef struct {
     int last_rssi;
 } espnow_peer_info_t;
 
+// Golf cart command codes
+typedef enum {
+    GCI_CMD_NONE = 0,
+    GCI_CMD_ADD_PEER = 1,     // Add GCD MAC to GCI peer list
+    GCI_CMD_REMOVE_PEER = 2,  // Future: remove peer
+    GCI_CMD_REBOOT = 3,       // Future: reboot GCI
+    // Add more commands as needed
+} gci_command_t;
+
 // Golf cart interface message structures
 typedef struct struct_msg_from_gci {
     int modeLights;
@@ -83,6 +96,7 @@ typedef struct struct_msg_from_gci {
 
 typedef struct struct_msg_to_gci {
     int cmdNumber;
+    uint8_t macAddr[6];  // For pairing command and future use
 } structMsgToGci;
 
 #endif // TYPES_H

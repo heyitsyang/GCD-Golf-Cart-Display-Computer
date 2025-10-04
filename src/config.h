@@ -67,7 +67,7 @@
 // ESP-NOW configuration
 #define ESPNOW_CHANNEL 1
 #define ESPNOW_MAX_PEER_NUM 6
-#define ESPNOW_MAX_DATA_LEN 250
+#define ESPNOW_MAX_PAYLOAD 240  // Max payload after wrapper overhead subtracted (ESP-NOW limit: 250 bytes, wrapper: 9 bytes, payload: 241 bytes)
 #define ESPNOW_QUEUE_SIZE 10
 #define ESPNOW_SEND_RETRY_COUNT 3
 #define ESPNOW_SEND_RETRY_DELAY 100

@@ -128,6 +128,8 @@ void set_var_speaker_volume(int32_t value);
 bool get_var_reset_preferences();
 void set_var_reset_preferences(bool value);
 
+bool get_var_espnow_pair_gci();
+void set_var_espnow_pair_gci(bool value);
 
 #ifdef __cplusplus
 }
@@ -177,6 +179,7 @@ extern int32_t screen_inactivity_countdown;
 extern bool flip_screen;
 extern int32_t speaker_volume;
 extern bool reset_preferences;
+extern bool espnow_pair_gci;
 
 
 #endif // __cplusplus

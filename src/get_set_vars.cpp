@@ -42,6 +42,7 @@ bool manual_reboot = false;
 bool new_rx_data_flag = false;
 bool mesh_serial_enabled = true;
 bool espnow_connected = false;
+bool espnow_pair_gci = false;
 int32_t screen_inactivity_countdown = 0;
 bool flip_screen = false;
 int32_t speaker_volume = 10;
@@ -231,9 +232,19 @@ void set_var_wx_rcv_time(const char* value) {
 }
 
 const char* get_var_cur_temp() {
-    // Note: cur_temp is protected by hotPacketMutex in parseWeatherData
-    // For UI getter, we skip mutex to avoid blocking LVGL refresh
-    return cur_temp.c_str();
+    // Prefer ESP-NOW air temperature if available, fallback to Meshtastic weather data
+    static String tempStr;
+
+    if (airTemperature != -99) {
+        // ESP-NOW temperature is available (has real-time data)
+        tempStr = String((int)round(airTemperature));
+        return tempStr.c_str();
+    } else {
+        // Fallback to Meshtastic weather data
+        // Note: cur_temp is protected by hotPacketMutex in parseWeatherData
+        // For UI getter, we skip mutex to avoid blocking LVGL refresh
+        return cur_temp.c_str();
+    }
 }
 
 void set_var_cur_temp(const char* value) {
@@ -406,6 +417,14 @@ bool get_var_reset_preferences() {
 
 void set_var_reset_preferences(bool value) {
     reset_preferences = value;
+}
+
+bool get_var_espnow_pair_gci() {
+    return espnow_pair_gci;
+}
+
+void set_var_espnow_pair_gci(bool value) {
+    espnow_pair_gci = value;
 }
 
 } // extern "C"

@@ -168,18 +168,21 @@ espnow_peer_info_t* ESPNowHandler::getPeerInfo(int index) {
 
 bool ESPNowHandler::sendMessage(const uint8_t *mac_addr, espnow_msg_type_t type,
                                 const uint8_t *data, size_t len) {
-    if (!initialized || len > ESPNOW_MAX_DATA_LEN - sizeof(espnow_message_t)) {
+    if (!initialized || len > ESPNOW_MAX_PAYLOAD) {
         return false;
     }
-    
+
     espnow_message_t msg;
     msg.type = type;
     msg.timestamp = millis();
     msg.msg_id = getNextMessageId();
     msg.data_len = len;
-    memcpy(msg.data, data, len);
-    
-    return sendRawData(mac_addr, (uint8_t*)&msg, sizeof(msg));
+    if (len > 0) {
+        memcpy(msg.data, data, len);
+    }
+
+    // Send only header + actual payload (not full 249-byte structure)
+    return sendRawData(mac_addr, (uint8_t*)&msg, ESPNOW_PACKET_SIZE(len));
 }
 
 bool ESPNowHandler::sendTextMessage(const uint8_t *mac_addr, const String& text) {
@@ -196,7 +199,8 @@ bool ESPNowHandler::broadcast(espnow_msg_type_t type, const uint8_t *data, size_
     for (int i = 0; i < peer_count; i++) {
         // Verify peer is still registered in ESP-NOW before sending
         if (esp_now_is_peer_exist(peers[i].mac_addr)) {
-            if (!sendRawData(peers[i].mac_addr, data, len)) {
+            // Use sendMessage to wrap data in espnow_message_t
+            if (!sendMessage(peers[i].mac_addr, type, data, len)) {
                 success = false;
             }
         } else {
@@ -213,7 +217,7 @@ bool ESPNowHandler::broadcastText(const String& text) {
     return broadcast(ESPNOW_MSG_TEXT, (uint8_t*)text.c_str(), text.length());
 }
 
-bool ESPNowHandler::sendGolfCartCommand(const uint8_t *mac_addr, int cmdNumber) {
+bool ESPNowHandler::sendGolfCartCommand(const uint8_t *mac_addr, gci_command_t cmdNumber, const void *payload, size_t payloadSize) {
     if (!initialized) {
         return false;
     }
@@ -221,6 +225,19 @@ bool ESPNowHandler::sendGolfCartCommand(const uint8_t *mac_addr, int cmdNumber) 
     // Prepare command data in golf cart format
     dataToGci.cmdNumber = cmdNumber;
     cmdToGci = cmdNumber;  // Update global variable
+
+    // Copy payload if provided (up to available space in macAddr field)
+    if (payload != nullptr && payloadSize > 0) {
+        size_t copySize = min(payloadSize, sizeof(dataToGci.macAddr));
+        memcpy(dataToGci.macAddr, payload, copySize);
+
+        // Clear remaining bytes if payload is smaller than field
+        if (copySize < sizeof(dataToGci.macAddr)) {
+            memset(&dataToGci.macAddr[copySize], 0, sizeof(dataToGci.macAddr) - copySize);
+        }
+    } else {
+        memset(dataToGci.macAddr, 0, sizeof(dataToGci.macAddr));  // Clear if no payload
+    }
 
     // Send raw struct data (no wrapper)
     return sendRawData(mac_addr, (uint8_t*)&dataToGci, sizeof(structMsgToGci));
@@ -301,6 +318,19 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
         case ESPNOW_MSG_TELEMETRY: {
             Serial.print("ESP-NOW Telemetry from ");
             Serial.println(mac_str);
+
+            // Extract telemetry data from message
+            memcpy(&dataFromGci, item.message.data, sizeof(structMsgFromGci));
+
+            // Update individual variables for compatibility
+            modeHeadLights = dataFromGci.modeLights;
+            outdoorLuminosity = dataFromGci.outdoorLum;
+            airTemperature = dataFromGci.airTemp;
+            battVoltage = dataFromGci.battVolts;
+            fuelLevel = dataFromGci.fuel;
+
+            Serial.printf("Telemetry: Lights=%d, Lum=%d, Temp=%.1f, Batt=%.2f, Fuel=%.1f\n",
+                         modeHeadLights, outdoorLuminosity, airTemperature, battVoltage, fuelLevel);
             break;
         }
         
@@ -310,7 +340,29 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             // Handle commands
             break;
         }
-        
+
+        case ESPNOW_MSG_ACK: {
+            Serial.printf("ESP-NOW ACK from %s - GCI paired successfully!\n", mac_str);
+
+            // Add GCI as peer if not already added
+            if (!isPeerRegistered(item.mac_addr)) {
+                if (addPeer(item.mac_addr, "GCI")) {
+                    Serial.println("Added GCI to peer list - communication established");
+
+                    // Save peer MAC to EEPROM for persistence across reboots
+                    espnow_mac_addr = String(mac_str);
+                    Serial.printf("Saved GCI MAC to EEPROM: %s\n", mac_str);
+
+                    // Close the pairing window now that peer is added
+                    espnow_pair_gci = false;
+                    set_var_espnow_pair_gci(false);
+                } else {
+                    Serial.println("Failed to add GCI as peer");
+                }
+            }
+            break;
+        }
+
         case ESPNOW_MSG_HEARTBEAT: {
             #if DEBUG_ESPNOW == 1
             Serial.print("ESP-NOW Heartbeat from ");
@@ -319,101 +371,6 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             break;
         }
     }
-}
-
-// Handle raw golf cart interface data
-void handleRawGolfCartData(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-    // Update peer info for timeout tracking
-    for (int i = 0; i < espNow.getPeerCount(); i++) {
-        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
-        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
-            peer->is_online = true;
-            peer->last_seen = millis();
-            peer->last_rssi = -50;
-            break;
-        }
-    }
-
-    // Only set connected status if this MAC is in our peer list
-    bool is_configured_peer = false;
-    for (int i = 0; i < espNow.getPeerCount(); i++) {
-        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
-        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
-            is_configured_peer = true;
-            break;
-        }
-    }
-
-    // Set connected status when we receive data from a configured peer
-    if (is_configured_peer && !espnow_connected) {
-        espnow_connected = true;
-        set_var_espnow_connected(true);
-        Serial.printf("*** ESP-NOW connection established ***\n");
-    }
-
-    // Copy received data to global golf cart variables
-    memcpy(&dataFromGci, data, sizeof(structMsgFromGci));
-
-    // Update individual variables for compatibility
-    modeHeadLights = dataFromGci.modeLights;
-    outdoorLuminosity = dataFromGci.outdoorLum;
-    airTemperature = dataFromGci.airTemp;
-    battVoltage = dataFromGci.battVolts;
-    fuelLevel = dataFromGci.fuel;
-
-    // Log received data
-    char mac_str[18];
-    sprintf(mac_str, "%02X:%02X:%02X:%02X:%02X:%02X",
-            mac_addr[0], mac_addr[1], mac_addr[2],
-            mac_addr[3], mac_addr[4], mac_addr[5]);
-
-    Serial.printf("Golf Cart Data from %s: Lights=%d, Lum=%d, Temp=%.1f, Batt=%.2f, Fuel=%.1f\n",
-                  mac_str, modeHeadLights, outdoorLuminosity, airTemperature, battVoltage, fuelLevel);
-}
-
-// Handle raw golf cart command data
-void handleRawGolfCartCommand(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-    // Update peer info for timeout tracking
-    for (int i = 0; i < espNow.getPeerCount(); i++) {
-        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
-        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
-            peer->is_online = true;
-            peer->last_seen = millis();
-            peer->last_rssi = -50;
-            break;
-        }
-    }
-
-    // Only set connected status if this MAC is in our peer list
-    bool is_configured_peer = false;
-    for (int i = 0; i < espNow.getPeerCount(); i++) {
-        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
-        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
-            is_configured_peer = true;
-            break;
-        }
-    }
-
-    // Set connected status when we receive data from a configured peer
-    if (is_configured_peer && !espnow_connected) {
-        espnow_connected = true;
-        set_var_espnow_connected(true);
-        Serial.printf("*** ESP-NOW connection established ***\n");
-    }
-
-    structMsgToGci receivedCmd;
-    memcpy(&receivedCmd, data, sizeof(structMsgToGci));
-
-    // Log received command
-    char mac_str[18];
-    sprintf(mac_str, "%02X:%02X:%02X:%02X:%02X:%02X",
-            mac_addr[0], mac_addr[1], mac_addr[2],
-            mac_addr[3], mac_addr[4], mac_addr[5]);
-
-    Serial.printf("Golf Cart Command from %s: cmd=%d\n", mac_str, receivedCmd.cmdNumber);
-
-    // Process the command if needed
-    // (Add command processing logic here based on your needs)
 }
 
 // Callback functions
@@ -428,47 +385,44 @@ void espnowOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 }
 
 void espnowOnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-    // First check if this MAC address is in our configured peer list
-    bool is_configured_peer = false;
-    for (int i = 0; i < espNow.getPeerCount(); i++) {
-        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
-        if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
-            is_configured_peer = true;
-            break;
+    // Accept wrapped messages (header is 9 bytes minimum)
+    if (data_len >= ESPNOW_PACKET_HEADER_SIZE) {
+        // Filter wrapped messages - only accept from registered peers
+        bool is_known_peer = false;
+        for (int i = 0; i < espNow.getPeerCount(); i++) {
+            espnow_peer_info_t* peer = espNow.getPeerInfo(i);
+            if (peer && memcmp(peer->mac_addr, mac_addr, 6) == 0) {
+                is_known_peer = true;
+                break;
+            }
         }
-    }
 
-    // If no peers are configured, or this sender is not a configured peer, ignore the data
-    if (espNow.getPeerCount() == 0 || !is_configured_peer) {
-        return; // Silently drop data from unconfigured peers
-    }
-    // Check if this is a raw golf cart telemetry message (from golf cart internal)
-    if (data_len == sizeof(structMsgFromGci)) {
-        // Handle raw golf cart interface data
-        handleRawGolfCartData(mac_addr, data, data_len);
-        return;
-    }
+        if (!is_known_peer) {
+            // Special case: Accept ACK messages from unknown peers during pairing window
+            // (espnow_pair_gci will be true for a short time after pairing is initiated)
+            espnow_message_t* msg = (espnow_message_t*)data;
+            if (msg->type == ESPNOW_MSG_ACK && espnow_pair_gci) {
+                // This is an ACK response to our pairing request - allow it
+                Serial.println("ESP-NOW: Accepting ACK from unknown peer during pairing");
+            } else {
+                Serial.println("ESP-NOW: Ignoring message from unknown peer");
+                return;
+            }
+        }
 
-    // Check if this is a raw golf cart command message (from another display)
-    if (data_len == sizeof(structMsgToGci)) {
-        // Handle raw golf cart command data
-        handleRawGolfCartCommand(mac_addr, data, data_len);
-        return;
-    }
+        espnow_recv_item_t item;
+        memcpy(item.mac_addr, mac_addr, 6);
 
-    // Handle wrapped ESP-NOW messages (existing protocol)
-    espnow_recv_item_t item;
-    memcpy(item.mac_addr, mac_addr, 6);
+        // Copy the received data (variable size, not full structure)
+        memcpy(&item.message, data, data_len);
+        item.rssi = -50; // Default value if RSSI not available
 
-    // Safely copy message data
-    size_t copy_len = min(data_len, (int)sizeof(espnow_message_t));
-    memcpy(&item.message, data, copy_len);
-
-    // Try to get RSSI (this is approximate)
-    item.rssi = -50; // Default value if RSSI not available
-
-    // Queue for processing
-    if (espnowRecvQueue != NULL) {
-        xQueueSend(espnowRecvQueue, &item, 0);
+        // Queue for processing
+        if (espnowRecvQueue != NULL) {
+            xQueueSend(espnowRecvQueue, &item, 0);
+        }
+    } else {
+        // Too small to be a valid wrapped message
+        Serial.printf("ESP-NOW: Received message too small: %d bytes\n", data_len);
     }
 }
