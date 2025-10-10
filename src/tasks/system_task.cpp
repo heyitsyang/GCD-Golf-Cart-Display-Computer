@@ -73,6 +73,16 @@ void systemTask(void *parameter) {
             old_speaker_volume = speaker_volume;
         }
 
+        if (temperature_adj != old_temperature_adj) {
+            eepromWriteItem_t item;
+            item.type = EEPROM_FLOAT;
+            strcpy(item.key, "temperature_adj");
+            item.value.floatVal = temperature_adj;
+            xQueueSend(eepromWriteQueue, &item, 0);
+
+            old_temperature_adj = temperature_adj;
+        }
+
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }

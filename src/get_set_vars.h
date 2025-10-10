@@ -131,6 +131,9 @@ void set_var_reset_preferences(bool value);
 bool get_var_espnow_pair_gci();
 void set_var_espnow_pair_gci(bool value);
 
+float get_var_temperature_adj();
+void set_var_temperature_adj(float value);
+
 #ifdef __cplusplus
 }
 #endif
@@ -180,6 +183,7 @@ extern bool flip_screen;
 extern int32_t speaker_volume;
 extern bool reset_preferences;
 extern bool espnow_pair_gci;
+extern float temperature_adj;
 
 
 #endif // __cplusplus

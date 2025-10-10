@@ -41,6 +41,12 @@ void loadPreferences() {
     set_var_speaker_volume(speaker_volume);
     old_speaker_volume = speaker_volume;
 
+    temperature_adj = prefs.getFloat("temperature_adj", 0.0);
+    Serial.print("> temperature_adj read from eeprom = ");
+    Serial.println(temperature_adj);
+    set_var_temperature_adj(temperature_adj);
+    old_temperature_adj = temperature_adj;
+
     // Load touchscreen calibration coefficients if available
     touch_alpha_x = prefs.getFloat("touch_alpha_x", 0.0);
     touch_beta_x = prefs.getFloat("touch_beta_x", 0.0);

@@ -35,7 +35,7 @@ String espnow_last_received;
 
 // Numeric variable definitions
 int32_t avg_speed = 0;
-float max_hdop = 2.5;
+float max_hdop = 3;
 int32_t day_backlight = 10;
 int32_t night_backlight = 5;
 bool manual_reboot = false;
@@ -47,6 +47,7 @@ int32_t screen_inactivity_countdown = 0;
 bool flip_screen = false;
 int32_t speaker_volume = 10;
 bool reset_preferences = false;
+float temperature_adj = 0;
 
 // Static buffers for C string returns
 static char temp_buffer[256];
@@ -425,6 +426,14 @@ bool get_var_espnow_pair_gci() {
 
 void set_var_espnow_pair_gci(bool value) {
     espnow_pair_gci = value;
+}
+
+float get_var_temperature_adj() {
+    return temperature_adj;
+}
+
+void set_var_temperature_adj(float value) {
+    temperature_adj = value;
 }
 
 } // extern "C"
