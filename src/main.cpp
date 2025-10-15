@@ -1,13 +1,13 @@
 /********************************************************************************************
-*    CYD-EEZ-LVGL Template - RTOS Version (Modularized with ESP-NOW)                        *
-*                                                                                            *
+*    Golf Cart Display (GCD) - RTOS Version (Modularized with ESP-NOW)                      *
+*                                                                                           *
 *    Refactored to use FreeRTOS tasks for better concurrent processing                      *
 *    Maintains original UART0 split configuration (RX=GPS, TX=Debug)                        *
 *    Dedicated Meshtastic callback task to prevent stack overflow                           *
 *    CONVERTED TO USE NEOGPS LIBRARY FOR GNSS COMPATIBILITY                                 *
-*    MODULARIZED for better maintainability and organization                               *
+*    MODULARIZED for better maintainability and organization                                *
 *    INTEGRATED ESP-NOW for direct device-to-device communication                           *
-*                                                                                            *
+*                                                                                           *
 ********************************************************************************************/
 
 #include <Arduino.h>
