@@ -462,7 +462,7 @@ void setup() {
   lv_obj_t * done_label = lv_label_create(lv_screen_active());
 
   if (verification_passed) {
-    lv_label_set_text(done_label, "Coefficients saved to EEPROM\nand verified.\n\nWe're all done!");
+    lv_label_set_text(done_label, "Coefficients saved to EEPROM\nand verified.\n\n"Calibration complete - all done!");
   } else {
     lv_label_set_text(done_label, "EEPROM VERIFICATION FAILED");
     // Make text red for failure
