@@ -19,15 +19,19 @@ String wx_rcv_time;
 String cur_temp;
 String fcast_hr1;
 String fcast_glyph1;
+String fcast_temp1;
 String fcast_precip1;
 String fcast_hr2;
 String fcast_glyph2;
+String fcast_temp2;
 String fcast_precip2;
 String fcast_hr3;
 String fcast_glyph3;
+String fcast_temp3;
 String fcast_precip3;
 String fcast_hr4;
 String fcast_glyph4;
+String fcast_temp4;
 String fcast_precip4;
 String np_rcv_time;
 String espnow_status;
@@ -268,6 +272,14 @@ void set_var_fcast_glyph1(const char* value) {
     fcast_glyph1 = String(value);
 }
 
+const char* get_var_fcast_temp1() {
+    return fcast_temp1.c_str();
+}
+
+void set_var_fcast_temp1(const char* value) {
+    fcast_temp1 = String(value);
+}
+
 const char* get_var_fcast_precip1() {
     return fcast_precip1.c_str();
 }
@@ -290,6 +302,14 @@ const char* get_var_fcast_glyph2() {
 
 void set_var_fcast_glyph2(const char* value) {
     fcast_glyph2 = String(value);
+}
+
+const char* get_var_fcast_temp2() {
+    return fcast_temp2.c_str();
+}
+
+void set_var_fcast_temp2(const char* value) {
+    fcast_temp2 = String(value);
 }
 
 const char* get_var_fcast_precip2() {
@@ -316,6 +336,14 @@ void set_var_fcast_glyph3(const char* value) {
     fcast_glyph3 = String(value);
 }
 
+const char* get_var_fcast_temp3() {
+    return fcast_temp3.c_str();
+}
+
+void set_var_fcast_temp3(const char* value) {
+    fcast_temp3 = String(value);
+}
+
 const char* get_var_fcast_precip3() {
     return fcast_precip3.c_str();
 }
@@ -338,6 +366,14 @@ const char* get_var_fcast_glyph4() {
 
 void set_var_fcast_glyph4(const char* value) {
     fcast_glyph4 = String(value);
+}
+
+const char* get_var_fcast_temp4() {
+    return fcast_temp4.c_str();
+}
+
+void set_var_fcast_temp4(const char* value) {
+    fcast_temp4 = String(value);
 }
 
 const char* get_var_fcast_precip4() {

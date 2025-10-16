@@ -77,6 +77,9 @@ void set_var_fcast_hr1(const char* value);
 const char* get_var_fcast_glyph1();
 void set_var_fcast_glyph1(const char* value);
 
+const char* get_var_fcast_temp1();
+void set_var_fcast_temp1(const char* value);
+
 const char* get_var_fcast_precip1();
 void set_var_fcast_precip1(const char* value);
 
@@ -85,6 +88,9 @@ void set_var_fcast_hr2(const char* value);
 
 const char* get_var_fcast_glyph2();
 void set_var_fcast_glyph2(const char* value);
+
+const char* get_var_fcast_temp2();
+void set_var_fcast_temp2(const char* value);
 
 const char* get_var_fcast_precip2();
 void set_var_fcast_precip2(const char* value);
@@ -95,6 +101,9 @@ void set_var_fcast_hr3(const char* value);
 const char* get_var_fcast_glyph3();
 void set_var_fcast_glyph3(const char* value);
 
+const char* get_var_fcast_temp3();
+void set_var_fcast_temp3(const char* value);
+
 const char* get_var_fcast_precip3();
 void set_var_fcast_precip3(const char* value);
 
@@ -103,6 +112,9 @@ void set_var_fcast_hr4(const char* value);
 
 const char* get_var_fcast_glyph4();
 void set_var_fcast_glyph4(const char* value);
+
+const char* get_var_fcast_temp4();
+void set_var_fcast_temp4(const char* value);
 
 const char* get_var_fcast_precip4();
 void set_var_fcast_precip4(const char* value);
@@ -155,15 +167,19 @@ extern String wx_rcv_time;
 extern String cur_temp;
 extern String fcast_hr1;
 extern String fcast_glyph1;
+extern String fcast_temp1;
 extern String fcast_precip1;
 extern String fcast_hr2;
 extern String fcast_glyph2;
+extern String fcast_temp2;
 extern String fcast_precip2;
 extern String fcast_hr3;
 extern String fcast_glyph3;
+extern String fcast_temp3;
 extern String fcast_precip3;
 extern String fcast_hr4;
 extern String fcast_glyph4;
+extern String fcast_temp4;
 extern String fcast_precip4;
 extern String np_rcv_time;
 extern String espnow_status;
