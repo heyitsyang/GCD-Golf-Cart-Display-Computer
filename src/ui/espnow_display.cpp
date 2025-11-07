@@ -28,7 +28,7 @@ static void add_peer_btn_cb(lv_event_t* e) {
         String mac_str = String(text);
         if (espNow.addPeerFromString(mac_str, "New Peer")) {
             // Save to EEPROM
-            espnow_mac_addr = mac_str;
+            espnow_gci_mac_addr = mac_str;
             lv_obj_del(modal);
         }
     }

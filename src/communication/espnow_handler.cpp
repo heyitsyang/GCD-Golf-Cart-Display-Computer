@@ -348,18 +348,25 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             if (!isPeerRegistered(item.mac_addr)) {
                 if (addPeer(item.mac_addr, "GCI")) {
                     Serial.println("Added GCI to peer list - communication established");
-
-                    // Save peer MAC to EEPROM for persistence across reboots
-                    espnow_mac_addr = String(mac_str);
-                    Serial.printf("Saved GCI MAC to EEPROM: %s\n", mac_str);
-
-                    // Close the pairing window now that peer is added
-                    espnow_pair_gci = false;
-                    set_var_espnow_pair_gci(false);
                 } else {
                     Serial.println("Failed to add GCI as peer");
                 }
+            } else {
+                Serial.println("GCI already registered as peer");
             }
+
+            // Save peer MAC to EEPROM when ACK is received during pairing
+            // Update variable directly without triggering ESP-NOW restart
+            if (espnow_gci_mac_addr != String(mac_str)) {
+                espnow_gci_mac_addr = String(mac_str);
+                Serial.printf("Saved GCI MAC address: %s\n", mac_str);
+                // Variable change will be detected by system_task and saved to EEPROM
+            }
+
+            // Close the pairing window now that peer is added
+            espnow_pair_gci = false;
+            set_var_espnow_pair_gci(false);
+
             break;
         }
 

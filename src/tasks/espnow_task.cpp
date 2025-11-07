@@ -11,7 +11,11 @@ void espnowTask(void *parameter) {
     uint32_t lastGPSSend = 0;
     static bool lastPairState = false;
     uint32_t pairingStartTime = 0;
-    const uint32_t PAIRING_TIMEOUT_MS = 5000;  // Keep pairing window open for 5 seconds
+    const uint32_t PAIRING_TIMEOUT_MS = 6000;  // Keep pairing window open for 6 seconds
+
+    // Variables to save pre-pairing state
+    String saved_mac_addr = "";
+    bool pairing_succeeded = false;
 
     // Queue is created in main.cpp
 
@@ -53,8 +57,8 @@ void espnowTask(void *parameter) {
                     espnow_status = "Initializing...";
 
                     // Add saved peer if exists
-                    if (espnow_mac_addr != "NONE" && espnow_mac_addr.length() == 17) {
-                        if (espNow.addPeerFromString(espnow_mac_addr, "Saved Peer")) {
+                    if (espnow_gci_mac_addr != "NONE" && espnow_gci_mac_addr.length() == 17) {
+                        if (espNow.addPeerFromString(espnow_gci_mac_addr, "Saved Peer")) {
                             Serial.println("ESP-NOW: Restored saved peer");
                         }
                     }
@@ -80,6 +84,11 @@ void espnowTask(void *parameter) {
             if (espnow_pair_gci && !lastPairState) {
                 lastPairState = true;
                 pairingStartTime = millis();
+                pairing_succeeded = false;
+
+                // Save current MAC address before clearing peers
+                saved_mac_addr = espnow_gci_mac_addr;
+                Serial.printf("ESP-NOW: Starting pairing (saved MAC: %s)\n", saved_mac_addr.c_str());
 
                 // Clear any existing peers to start fresh pairing
                 int peerCount = espNow.getPeerCount();
@@ -125,7 +134,25 @@ void espnowTask(void *parameter) {
             // Check for pairing timeout - close the pairing window after timeout
             if (espnow_pair_gci && pairingStartTime > 0 &&
                 (millis() - pairingStartTime) > PAIRING_TIMEOUT_MS) {
-                Serial.println("ESP-NOW: Pairing timeout - closing pairing window");
+                Serial.println("ESP-NOW: Pairing timeout");
+
+                // Check if pairing succeeded (MAC changed from saved value)
+                if (espnow_gci_mac_addr != saved_mac_addr) {
+                    Serial.printf("ESP-NOW: Pairing succeeded - new MAC: %s\n", espnow_gci_mac_addr.c_str());
+                    pairing_succeeded = true;
+                } else {
+                    Serial.println("ESP-NOW: Pairing failed - restoring previous state");
+
+                    // Restore saved peer if it was valid
+                    if (saved_mac_addr != "NONE" && saved_mac_addr.length() == 17) {
+                        if (espNow.addPeerFromString(saved_mac_addr, "Restored Peer")) {
+                            Serial.printf("ESP-NOW: Restored previous peer: %s\n", saved_mac_addr.c_str());
+                        } else {
+                            Serial.println("ESP-NOW: Failed to restore previous peer");
+                        }
+                    }
+                }
+
                 espnow_pair_gci = false;
                 set_var_espnow_pair_gci(false);
                 pairingStartTime = 0;

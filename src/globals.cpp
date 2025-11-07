@@ -96,7 +96,7 @@ float accumDistance;
 float avg_speed_calc = 0.0;  // Float version for GPS calculations
 
 // Old tracking variables
-String old_espnow_mac_addr;
+String old_espnow_gci_mac_addr;
 bool old_flip_screen = false;
 int32_t old_speaker_volume = 10;
 float old_temperature_adj = 0.0;

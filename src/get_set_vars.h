@@ -56,8 +56,8 @@ void set_var_manual_reboot(bool value);
 bool get_var_new_rx_data_flag();
 void set_var_new_rx_data_flag(bool value);
 
-const char* get_var_espnow_mac_addr();
-void set_var_espnow_mac_addr(const char* value);
+const char* get_var_espnow_gci_mac_addr();
+void set_var_espnow_gci_mac_addr(const char* value);
 
 bool get_var_mesh_serial_enabled();
 void set_var_mesh_serial_enabled(bool value);
@@ -162,7 +162,7 @@ extern String am_pm_str;
 extern String sats_hdop;
 extern String version;
 extern String cyd_mac_addr;
-extern String espnow_mac_addr;
+extern String espnow_gci_mac_addr;
 extern String wx_rcv_time;
 extern String cur_temp;
 extern String fcast_hr1;

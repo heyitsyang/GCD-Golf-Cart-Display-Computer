@@ -100,7 +100,7 @@ extern float accumDistance;
 extern float avg_speed_calc;  // Float version for GPS calculations
 
 // Old tracking variables (NOT in get_set_vars.h)
-extern String old_espnow_mac_addr;
+extern String old_espnow_gci_mac_addr;
 extern bool old_flip_screen;
 extern float old_temperature_adj;
 

@@ -24,10 +24,10 @@ void loadPreferences() {
     Serial.println(night_backlight);
     old_night_backlight = night_backlight;
 
-    espnow_mac_addr = prefs.getString("espnow_mac_addr", "NONE");
-    Serial.print("> espnow_mac_addr read from eeprom = ");
-    Serial.println(espnow_mac_addr);
-    old_espnow_mac_addr = espnow_mac_addr;
+    espnow_gci_mac_addr = prefs.getString("espnow_gci_mac_addr", "NONE");
+    Serial.print("> espnow_gci_mac_addr read from eeprom = ");
+    Serial.println(espnow_gci_mac_addr);
+    old_espnow_gci_mac_addr = espnow_gci_mac_addr;
 
     flip_screen = prefs.getBool("flip_screen", false);
     Serial.print("> flip_screen read from eeprom = ");

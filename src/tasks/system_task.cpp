@@ -53,14 +53,14 @@ void systemTask(void *parameter) {
             old_max_hdop = max_hdop;
         }
         
-        if (espnow_mac_addr != old_espnow_mac_addr) {
+        if (espnow_gci_mac_addr != old_espnow_gci_mac_addr) {
             eepromWriteItem_t item;
             item.type = EEPROM_STRING;
-            strcpy(item.key, "espnow_mac_addr");
-            strcpy(item.value.stringVal, espnow_mac_addr.c_str());
+            strcpy(item.key, "espnow_gci_mac_addr");
+            strcpy(item.value.stringVal, espnow_gci_mac_addr.c_str());
             xQueueSend(eepromWriteQueue, &item, 0);
 
-            old_espnow_mac_addr = espnow_mac_addr;
+            old_espnow_gci_mac_addr = espnow_gci_mac_addr;
         }
 
         if (speaker_volume != old_speaker_volume) {

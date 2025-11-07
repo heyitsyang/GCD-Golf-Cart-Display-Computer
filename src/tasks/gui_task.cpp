@@ -41,6 +41,39 @@ void updateEspnowIndicatorColor() {
     }
 }
 
+void updateEspnowGciMacColor() {
+    static bool last_espnow_connected_state = false;
+    static bool initialized = false;
+
+    // Only update if we're on the settings2 screen that has obj5 (GCI MAC address label)
+    lv_obj_t* current_screen = lv_scr_act();
+    if (current_screen == nullptr || current_screen != objects.settings2) {
+        // Reset initialization when not on settings2 screen
+        initialized = false;
+        return;
+    }
+
+    // Check if obj5 exists and is valid
+    if (objects.obj5 == nullptr) {
+        return;
+    }
+
+    bool current_state = get_var_espnow_connected();
+
+    // Initialize or update when state changes
+    if (!initialized || current_state != last_espnow_connected_state) {
+        if (current_state) {
+            // Connected - apply green color (#00ff2d)
+            lv_obj_set_style_text_color(objects.obj5, lv_color_hex(0xff00ff2d), LV_PART_MAIN | LV_STATE_DEFAULT);
+        } else {
+            // Disconnected - apply red color (#ff0000)
+            lv_obj_set_style_text_color(objects.obj5, lv_color_hex(0xffff0000), LV_PART_MAIN | LV_STATE_DEFAULT);
+        }
+        last_espnow_connected_state = current_state;
+        initialized = true;
+    }
+}
+
 void guiTask(void *parameter) {
     static uint32_t last_flag_set_time = 0;
     static uint32_t last_inactivity_check = 0;
@@ -56,6 +89,9 @@ void guiTask(void *parameter) {
 
         // Update espnow indicator color based on connection state
         updateEspnowIndicatorColor();
+
+        // Update espnow GCI MAC address color on Settings2 screen
+        updateEspnowGciMacColor();
 
         // Check for screen changes and reset countdown if screen changed
         lv_obj_t* current_screen = lv_scr_act();

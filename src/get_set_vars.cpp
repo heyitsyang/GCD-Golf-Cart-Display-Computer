@@ -14,7 +14,7 @@ String am_pm_str;
 String sats_hdop;
 String version;
 String cyd_mac_addr;
-String espnow_mac_addr;
+String espnow_gci_mac_addr;
 String wx_rcv_time;
 String cur_temp;
 String fcast_hr1;
@@ -171,20 +171,20 @@ void set_var_new_rx_data_flag(bool value) {
     new_rx_data_flag = value;
 }
 
-const char* get_var_espnow_mac_addr() {
-    return espnow_mac_addr.c_str();
+const char* get_var_espnow_gci_mac_addr() {
+    return espnow_gci_mac_addr.c_str();
 }
 
-void set_var_espnow_mac_addr(const char* value) {
+void set_var_espnow_gci_mac_addr(const char* value) {
     String new_mac = String(value);
 
-    if (espnow_mac_addr != new_mac) {
-        Serial.print("ESP-NOW MAC address changed from ");
-        Serial.print(espnow_mac_addr);
+    if (espnow_gci_mac_addr != new_mac) {
+        Serial.print("ESP-NOW GCI MAC address changed from ");
+        Serial.print(espnow_gci_mac_addr);
         Serial.print(" to ");
         Serial.println(new_mac);
 
-        espnow_mac_addr = new_mac;
+        espnow_gci_mac_addr = new_mac;
 
         // Restart ESP-NOW if it's currently enabled and initialized
         if (espnow_enabled && espNow.isInitialized()) {
@@ -192,8 +192,8 @@ void set_var_espnow_mac_addr(const char* value) {
 
             if (espNow.restart()) {
                 // Add the new peer if it's valid
-                if (espnow_mac_addr != "NONE" && espnow_mac_addr.length() == 17) {
-                    if (espNow.addPeerFromString(espnow_mac_addr, "New Peer")) {
+                if (espnow_gci_mac_addr != "NONE" && espnow_gci_mac_addr.length() == 17) {
+                    if (espNow.addPeerFromString(espnow_gci_mac_addr, "New Peer")) {
                         Serial.println("ESP-NOW: New peer added successfully");
                     } else {
                         Serial.println("ESP-NOW: Failed to add new peer");
@@ -205,7 +205,7 @@ void set_var_espnow_mac_addr(const char* value) {
         }
 
         // Queue the preference write to save to EEPROM
-        queuePreferenceWrite("espnow_mac_addr", espnow_mac_addr);
+        queuePreferenceWrite("espnow_gci_mac_addr", espnow_gci_mac_addr);
     }
 }
 

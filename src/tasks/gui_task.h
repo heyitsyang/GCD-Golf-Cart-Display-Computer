@@ -6,5 +6,6 @@
 void guiTask(void *parameter);
 void handleInactivityCountdown(uint32_t now);
 void updateEspnowIndicatorColor();
+void updateEspnowGciMacColor();
 
 #endif // GUI_TASK_H
