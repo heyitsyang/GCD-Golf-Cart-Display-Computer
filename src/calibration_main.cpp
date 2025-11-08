@@ -360,7 +360,7 @@ void show_save_confirmation(void) {
   lv_obj_set_style_bg_opa(bg, LV_OPA_80, 0);
 
   lv_obj_t * instruction_label = lv_label_create(bg);
-  lv_label_set_text(instruction_label, "Press anywhere to save\nto EEPROM or reboot to\nstart over");
+  lv_label_set_text(instruction_label, "Press anywhere to save\nto EEPROM or reboot manually to\nstart over");
   lv_obj_center(instruction_label);
 
   static lv_style_t style_instruction;
@@ -462,7 +462,7 @@ void setup() {
   lv_obj_t * done_label = lv_label_create(lv_screen_active());
 
   if (verification_passed) {
-    lv_label_set_text(done_label, "Coefficients saved to EEPROM\nand verified.\n\n"Calibration complete - all done!");
+    lv_label_set_text(done_label, "Coefficients saved to EEPROM\nand verified.\n\nCalibration complete - all done!");
   } else {
     lv_label_set_text(done_label, "EEPROM VERIFICATION FAILED");
     // Make text red for failure
