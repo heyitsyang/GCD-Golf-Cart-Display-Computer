@@ -96,6 +96,7 @@ extern String latitude, longitude, altitude;
 extern float hdop, old_max_hdop;
 extern int old_day_backlight, old_night_backlight;
 extern unsigned long previousGPSms;
+extern unsigned long lastGpsTimeUpdate;  // Tracks when GPS time was last received
 extern float accumDistance;
 extern float avg_speed_calc;  // Float version for GPS calculations
 

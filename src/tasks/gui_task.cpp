@@ -74,9 +74,35 @@ void updateEspnowGciMacColor() {
     }
 }
 
+void checkGpsTimeStale() {
+    static bool timeWasStale = false;
+    const unsigned long GPS_TIME_TIMEOUT = MAX_GPS_TIME_STALENESS_SECS * 1000UL;  // Convert seconds to milliseconds
+
+    // Check if GPS time is stale (no update for more than MAX_GPS_TIME_STALENESS_SECS seconds)
+    // lastGpsTimeUpdate is 0 at boot until first GPS time is received
+    bool timeIsStale = (lastGpsTimeUpdate == 0) || ((millis() - lastGpsTimeUpdate) > GPS_TIME_TIMEOUT);
+
+    // Only update display if staleness state changed
+    if (timeIsStale != timeWasStale) {
+        if (xSemaphoreTake(gpsMutex, portMAX_DELAY)) {
+            if (timeIsStale) {
+                // GPS time is stale - show blank clock and "NO GPS"
+                cur_date = String("NO GPS");
+                hhmm_str = String("");
+                hhmmss_str = String("");
+                am_pm_str = String("");
+            }
+            // Note: When GPS time becomes valid again, gps_task will update these strings
+            xSemaphoreGive(gpsMutex);
+        }
+        timeWasStale = timeIsStale;
+    }
+}
+
 void guiTask(void *parameter) {
     static uint32_t last_flag_set_time = 0;
     static uint32_t last_inactivity_check = 0;
+    static uint32_t last_gps_time_check = 0;
     static lv_obj_t* previous_screen = nullptr;
 
     while (true) {
@@ -92,6 +118,12 @@ void guiTask(void *parameter) {
 
         // Update espnow GCI MAC address color on Settings2 screen
         updateEspnowGciMacColor();
+
+        // Check GPS time staleness (every 1 second)
+        if ((now - last_gps_time_check) >= 1000) {
+            checkGpsTimeStale();
+            last_gps_time_check = now;
+        }
 
         // Check for screen changes and reset countdown if screen changed
         lv_obj_t* current_screen = lv_scr_act();

@@ -43,10 +43,10 @@ void gpsTask(void *parameter) {
                 
                 // Update time from GPS
                 if (foundValidTime) {
-                    setTime(latestValidFix.dateTime.hours, latestValidFix.dateTime.minutes, 
-                           latestValidFix.dateTime.seconds, latestValidFix.dateTime.date, 
+                    setTime(latestValidFix.dateTime.hours, latestValidFix.dateTime.minutes,
+                           latestValidFix.dateTime.seconds, latestValidFix.dateTime.date,
                            latestValidFix.dateTime.month, latestValidFix.dateTime.full_year());
-                    
+
                     utcTime = now();
                     localTime = myTZ.toLocal(utcTime, &tcr);
                     localYear = year(localTime);
@@ -56,14 +56,17 @@ void gpsTask(void *parameter) {
                     localMinute = minute(localTime);
                     localSecond = second(localTime);
                     localDayOfWeek = weekday(localTime);
-                    
+
                     // Update display strings
-                    cur_date = String(getDayAbbr(localDayOfWeek)) + ", " + 
+                    cur_date = String(getDayAbbr(localDayOfWeek)) + ", " +
                               String(getMonthAbbr(localMonth)) + " " + String(localDay);
                     hhmm_str = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute));
-                    hhmmss_str = String(make12hr(localHour)) + ":" + 
+                    hhmmss_str = String(make12hr(localHour)) + ":" +
                                 String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
                     am_pm_str = am_pm(localHour);
+
+                    // Record when GPS time was last updated
+                    lastGpsTimeUpdate = millis();
                 }
                 
                 // Update location data

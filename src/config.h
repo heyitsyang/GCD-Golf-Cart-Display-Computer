@@ -63,6 +63,7 @@
 #define GPS_TX_PIN 01
 #define GPS_BAUD 9600
 #define GPS_READ_INTERVAL 15000
+#define MAX_GPS_TIME_STALENESS_SECS 60  // Show "NO GPS" if no time update for this many seconds
 
 // ESP-NOW configuration
 #define ESPNOW_CHANNEL 1
