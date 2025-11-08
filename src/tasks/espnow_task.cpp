@@ -59,7 +59,7 @@ void espnowTask(void *parameter) {
                     // Add saved peer if exists
                     if (espnow_gci_mac_addr != "NONE" && espnow_gci_mac_addr.length() == 17) {
                         if (espNow.addPeerFromString(espnow_gci_mac_addr, "Saved Peer")) {
-                            Serial.println("ESP-NOW: Restored saved peer");
+                            Serial.printf("ESP-NOW: Restored saved peer: %s\n", espnow_gci_mac_addr.c_str());
                         }
                     }
                     espnow_status = espNow.getStatus();
@@ -88,7 +88,6 @@ void espnowTask(void *parameter) {
 
                 // Save current MAC address before clearing peers
                 saved_mac_addr = espnow_gci_mac_addr;
-                Serial.printf("ESP-NOW: Starting pairing (saved MAC: %s)\n", saved_mac_addr.c_str());
 
                 // Clear any existing peers to start fresh pairing
                 int peerCount = espNow.getPeerCount();
@@ -98,7 +97,6 @@ void espnowTask(void *parameter) {
                         espNow.removePeer(peer->mac_addr);
                     }
                 }
-                Serial.println("ESP-NOW: Cleared all peers for fresh pairing");
 
                 // Prepare RAW pairing command (no wrapper for initial pairing)
                 structMsgToGci cmdData;
@@ -115,12 +113,9 @@ void espnowTask(void *parameter) {
 
                 // Broadcast RAW command to reach virgin GCI devices
                 if (esp_now_send(broadcastAddr, (uint8_t*)&cmdData, sizeof(cmdData)) == ESP_OK) {
-                    Serial.printf("ESP-NOW: RAW pairing command broadcast with MAC %02X:%02X:%02X:%02X:%02X:%02X\n",
-                                 myMacBytes[0], myMacBytes[1], myMacBytes[2],
-                                 myMacBytes[3], myMacBytes[4], myMacBytes[5]);
-                    Serial.println("ESP-NOW: Waiting for GCI to pair and switch to wrapped mode...");
+                    Serial.println("ESP-NOW: Pairing command broadcast, waiting for response...");
                 } else {
-                    Serial.println("ESP-NOW: Failed to broadcast RAW pairing command");
+                    Serial.println("ESP-NOW: Failed to broadcast pairing command");
                 }
 
                 // Remove broadcast peer immediately after sending
@@ -134,22 +129,19 @@ void espnowTask(void *parameter) {
             // Check for pairing timeout - close the pairing window after timeout
             if (espnow_pair_gci && pairingStartTime > 0 &&
                 (millis() - pairingStartTime) > PAIRING_TIMEOUT_MS) {
-                Serial.println("ESP-NOW: Pairing timeout");
 
                 // Check if pairing succeeded (MAC changed from saved value)
                 if (espnow_gci_mac_addr != saved_mac_addr) {
-                    Serial.printf("ESP-NOW: Pairing succeeded - new MAC: %s\n", espnow_gci_mac_addr.c_str());
+                    Serial.printf("ESP-NOW: Pairing succeeded with %s\n", espnow_gci_mac_addr.c_str());
                     pairing_succeeded = true;
                 } else {
-                    Serial.println("ESP-NOW: Pairing failed - restoring previous state");
-
                     // Restore saved peer if it was valid
                     if (saved_mac_addr != "NONE" && saved_mac_addr.length() == 17) {
                         if (espNow.addPeerFromString(saved_mac_addr, "Restored Peer")) {
-                            Serial.printf("ESP-NOW: Restored previous peer: %s\n", saved_mac_addr.c_str());
-                        } else {
-                            Serial.println("ESP-NOW: Failed to restore previous peer");
+                            Serial.printf("ESP-NOW: Pairing timeout - restored previous peer\n");
                         }
+                    } else {
+                        Serial.println("ESP-NOW: Pairing timeout - no device found");
                     }
                 }
 

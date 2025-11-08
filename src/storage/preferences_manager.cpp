@@ -6,6 +6,10 @@
 void initPreferences() {
     prefs.begin("eeprom", false);
     Serial.println("Preferences initialized");
+
+    // Check NVS stats
+    size_t usedEntries = prefs.freeEntries();
+    Serial.printf("NVS Free Entries: %d\n", usedEntries);
 }
 
 void loadPreferences() {
@@ -24,7 +28,8 @@ void loadPreferences() {
     Serial.println(night_backlight);
     old_night_backlight = night_backlight;
 
-    espnow_gci_mac_addr = prefs.getString("espnow_gci_mac_addr", "NONE");
+    // Key name must be 15 chars or less for NVS - use "gci_mac" (7 chars)
+    espnow_gci_mac_addr = prefs.getString("gci_mac", "NONE");
     Serial.print("> espnow_gci_mac_addr read from eeprom = ");
     Serial.println(espnow_gci_mac_addr);
     old_espnow_gci_mac_addr = espnow_gci_mac_addr;

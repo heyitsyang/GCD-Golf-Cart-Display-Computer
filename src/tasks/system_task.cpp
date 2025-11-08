@@ -56,7 +56,7 @@ void systemTask(void *parameter) {
         if (espnow_gci_mac_addr != old_espnow_gci_mac_addr) {
             eepromWriteItem_t item;
             item.type = EEPROM_STRING;
-            strcpy(item.key, "espnow_gci_mac_addr");
+            strcpy(item.key, "gci_mac");  // Shortened key for NVS 15-char limit
             strcpy(item.value.stringVal, espnow_gci_mac_addr.c_str());
             xQueueSend(eepromWriteQueue, &item, 0);
 

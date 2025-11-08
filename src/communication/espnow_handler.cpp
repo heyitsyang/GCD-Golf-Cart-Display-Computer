@@ -346,20 +346,15 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
 
             // Add GCI as peer if not already added
             if (!isPeerRegistered(item.mac_addr)) {
-                if (addPeer(item.mac_addr, "GCI")) {
-                    Serial.println("Added GCI to peer list - communication established");
-                } else {
+                if (!addPeer(item.mac_addr, "GCI")) {
                     Serial.println("Failed to add GCI as peer");
                 }
-            } else {
-                Serial.println("GCI already registered as peer");
             }
 
             // Save peer MAC to EEPROM when ACK is received during pairing
             // Update variable directly without triggering ESP-NOW restart
             if (espnow_gci_mac_addr != String(mac_str)) {
                 espnow_gci_mac_addr = String(mac_str);
-                Serial.printf("Saved GCI MAC address: %s\n", mac_str);
                 // Variable change will be detected by system_task and saved to EEPROM
             }
 
@@ -410,9 +405,7 @@ void espnowOnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len
             espnow_message_t* msg = (espnow_message_t*)data;
             if (msg->type == ESPNOW_MSG_ACK && espnow_pair_gci) {
                 // This is an ACK response to our pairing request - allow it
-                Serial.println("ESP-NOW: Accepting ACK from unknown peer during pairing");
             } else {
-                Serial.println("ESP-NOW: Ignoring message from unknown peer");
                 return;
             }
         }
