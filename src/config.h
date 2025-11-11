@@ -14,6 +14,8 @@
 #define BEEP_SPACING_MS BEEP_DURATION/2
 #define SPEAKER_VOLUME 20
 
+// Sleep pin (sleeps when LOW)
+#define SLEEP_PIN 35
 
 // Touch Screen pins
 #define XPT2046_IRQ 36
@@ -35,7 +37,7 @@
 #define TFT_HEIGHT 320
 
 // Backlight configuration
-#define TFT_BACKLIGHT_PIN 21
+#define TFT_BACKLIGHT_PIN 21  //used internally to CYD PCB
 #define LEDC_CHANNEL_0 0
 #define LEDC_BASE_FREQ 5000
 #define LEDC_TIMER_12_BIT 12
@@ -86,6 +88,9 @@
 // Inactivity timeout configuration
 #define SCREEN_INACTIVITY_TIMEOUT_MS (1 * 60 * 1000)  // 1 minutes
 //#define SCREEN_INACTIVITY_TIMEOUT_MS (10 * 1000)  // 10 secs for debugging
+
+// Sleep configuration
+#define SLEEP_CHECK_INTERVAL_MS 100  // How often system task checks SLEEP_PIN (ms)
 
 // Task Stack Sizes (in bytes)
 #define GPS_TASK_STACK_SIZE 4096

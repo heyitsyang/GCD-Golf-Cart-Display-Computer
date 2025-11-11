@@ -46,6 +46,7 @@
 
 // Utils
 #include "utils/time_utils.h"
+#include "utils/sleep_manager.h"
 
 // Function prototypes
 #include "prototypes.h"
@@ -96,6 +97,9 @@ void setup() {
 
     // Initialize speaker
     initSpeaker();
+
+    // Initialize sleep pin
+    initSleepPin();
 
     // Startup beep
     beep(1, BEEP_FREQUENCY_HZ, BEEP_DURATION_MS, 200);

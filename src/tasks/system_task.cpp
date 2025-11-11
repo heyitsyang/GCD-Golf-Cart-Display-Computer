@@ -4,9 +4,16 @@
 #include "types.h"
 #include "hardware/display.h"
 #include "storage/preferences_manager.h"
+#include "utils/sleep_manager.h"
 
 void systemTask(void *parameter) {
     while (true) {
+        // Check sleep pin status (highest priority - check first)
+        if (shouldEnterSleep()) {
+            enterDeepSleep();
+            // Device will reboot from setup() on wake - code never returns here
+        }
+
         // Handle preferences reset
         if (reset_preferences == true) {
             reset_preferences = false;  // Reset flag before clearing to prevent restart loop
@@ -83,6 +90,6 @@ void systemTask(void *parameter) {
             old_temperature_adj = temperature_adj;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));  // Check sleep pin frequently (was 1000ms)
     }
 }

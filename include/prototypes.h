@@ -40,3 +40,8 @@ int parseWeatherData(char* input);
 // Speaker/beep function prototypes
 void initSpeaker();
 void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs);
+
+// Sleep manager function prototypes
+void initSleepPin();
+bool shouldEnterSleep();
+void enterDeepSleep();
