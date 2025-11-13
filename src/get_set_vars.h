@@ -146,6 +146,9 @@ void set_var_espnow_pair_gci(bool value);
 float get_var_temperature_adj();
 void set_var_temperature_adj(float value);
 
+bool get_var_reboot_meshtastic();
+void set_var_reboot_meshtastic(bool value);
+
 #ifdef __cplusplus
 }
 #endif
@@ -200,6 +203,7 @@ extern int32_t speaker_volume;
 extern bool reset_preferences;
 extern bool espnow_pair_gci;
 extern float temperature_adj;
+extern bool reboot_meshtastic;
 
 
 #endif // __cplusplus

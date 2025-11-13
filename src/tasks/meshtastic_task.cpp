@@ -2,8 +2,12 @@
 #include "config.h"
 #include "globals.h"
 #include "Meshtastic.h"
+#include "communication/meshtastic_admin.h"
+#include "get_set_vars.h"
 
   void meshtasticTask(void *parameter) {
+      static bool old_reboot_meshtastic = false;
+
       while (true) {
           uint32_t now = millis();
 
@@ -18,6 +22,23 @@
                   Serial.println("Meshtastic serial enabled");
               }
           }
+
+          // Handle Meshtastic reboot trigger
+          if (reboot_meshtastic && !old_reboot_meshtastic) {
+              Serial.println("\n=== Meshtastic Reboot Triggered ===");
+              if (mesh_serial_enabled) {
+                  if (mt_send_admin_reboot(0)) {  // 0 = immediate reboot
+                      Serial.println("Reboot command sent successfully");
+                  } else {
+                      Serial.println("Failed to send reboot command");
+                  }
+              } else {
+                  Serial.println("Cannot reboot: Meshtastic serial is disabled");
+              }
+              // Reset the trigger
+              reboot_meshtastic = false;
+          }
+          old_reboot_meshtastic = reboot_meshtastic;
 
           // Call mt_loop if mesh_serial_enabled is enabled
           bool can_send = false;

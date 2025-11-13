@@ -52,6 +52,7 @@ bool flip_screen = false;
 int32_t speaker_volume = 10;
 bool reset_preferences = false;
 float temperature_adj = 0;
+bool reboot_meshtastic = false;
 
 // Static buffers for C string returns
 static char temp_buffer[256];
@@ -470,6 +471,14 @@ float get_var_temperature_adj() {
 
 void set_var_temperature_adj(float value) {
     temperature_adj = value;
+}
+
+bool get_var_reboot_meshtastic() {
+    return reboot_meshtastic;
+}
+
+void set_var_reboot_meshtastic(bool value) {
+    reboot_meshtastic = value;
 }
 
 } // extern "C"
