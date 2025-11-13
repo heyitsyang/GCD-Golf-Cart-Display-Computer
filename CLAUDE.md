@@ -24,6 +24,52 @@ pio device monitor
 - Monitor port and upload port are set in `platformio.ini` (currently COM12)
 - Adjust these settings based on your development environment
 
+## Development Rules
+
+**CRITICAL: These rules must be followed in all development work on this project.**
+
+### 1. Meshtastic Library Integrity
+- **NEVER modify files in `lib/meshtastic-arduino_src/`**: This folder must remain pristine to allow transparent updates from the upstream GitHub repository (https://github.com/meshtastic/Meshtastic-arduino).
+- **All Meshtastic customizations go in `lib/meshtastic_customizations/`**: ESP32-specific implementations and extensions belong here.
+- **Project-specific Meshtastic extensions go in `src/communication/`**: Custom admin commands, protocol extensions, etc. should be implemented in the main src tree, not in the library folders.
+- See `lib/meshtastic_customizations/README.md` for the automated update process.
+
+### 2. UART0 Split Architecture
+- **UART0 is split**: GPS RX on pin 3, Debug TX on pin 1. This is a unidirectional split configuration.
+- **Never use UART0 for full-duplex communication**: The GPS only transmits to us (we receive), and we only transmit debug output.
+- **Variable naming reflects the split**: `gpsSerial` refers to UART0 RX (GPS input), `Serial` refers to UART0 TX (debug output). Note: `MT_SERIAL_*` constants refer to Meshtastic's serial connection on UART2, which is separate.
+- **Debug output goes to Serial (UART0 TX)**: Use `Serial.println()` for debug messages.
+- **GPS input comes from gpsSerial (UART0 RX)**: Read GPS data using `gpsSerial.read()` or similar.
+
+### 3. ESP32 Memory Constraints
+- **CRITICAL: Flash/Program Space is the primary constraint**: OTA functionality has already been sacrificed to allocate more program space. Every byte of code matters.
+  - Avoid adding large libraries or dependencies
+  - Be mindful of string literals and constant data in flash
+  - Consider code size impact when adding features
+  - Check available flash space after builds
+- **Limited RAM**: The ESP32 has only 320KB RAM. Be mindful of:
+  - Task stack sizes (carefully tuned in `src/config.h`)
+  - Global variable usage
+  - String buffer allocations
+  - LVGL display buffers
+- **Test memory-intensive changes**: Use `ESP.getFreeHeap()` to monitor available RAM during development.
+
+### 4. FreeRTOS Synchronization
+- **Always use mutexes for shared data**: Check `src/globals.h` for existing mutexes (`gpsMutex`, `eepromMutex`, `displayMutex`, `hotPacketMutex`).
+- **Follow the locking pattern**:
+  ```cpp
+  if (xSemaphoreTake(mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+      // Access shared data
+      xSemaphoreGive(mutex);
+  }
+  ```
+- **Use queues for task communication**: See `eepromWriteQueue`, `meshtasticCallbackQueue`, `espnowRecvQueue`.
+
+### 5. EEZ Studio Integration
+- **UI variables must be registered**: Add getter/setter functions in `src/get_set_vars.h` and `src/get_set_vars.cpp`.
+- **Follow the existing pattern**: Boolean, integer, float, and string types all have specific patterns.
+- **Preferences persistence**: Use `queuePreferenceWrite()` in setters when values should persist across reboots.
+
 ## Architecture Overview
 
 ### Core Design Principles
@@ -136,6 +182,4 @@ Contains essential configuration files:
 - `src/prototypes.h`: Function declarations for cross-module communication
 - `src/version.h`: Auto-generated version information
 - `lib/meshtastic-arduino_src/`: Meshtastic protocol implementation copied from github.com/meshtastic/Meshtastic-arduino
-- `lib/meshtastic-custimizarions/`: Customizations of lib/meshtastic-arduino_src code
-- # ok, we'll implement option 3, but remember the optiona and this point in out code devleopment so I can ask you to convert to option 1 later if necessary
-- the code is manually reverted back to before the calibration function was attempted
+- `lib/meshtastic_customizations/`: Customizations of lib/meshtastic-arduino_src code
