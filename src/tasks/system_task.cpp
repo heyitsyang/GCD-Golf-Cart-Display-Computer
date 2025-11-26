@@ -5,9 +5,15 @@
 #include "hardware/display.h"
 #include "storage/preferences_manager.h"
 #include "utils/sleep_manager.h"
+#include "communication/meshtastic_admin.h"
 
 void systemTask(void *parameter) {
     while (true) {
+        // Initialize GPS config on boot (once Meshtastic is connected)
+        // DISABLED: Causes reboot loop due to callback context issues
+        // TODO: Need to implement this using a queue-based approach instead
+        // initGpsConfigOnBoot();
+
         // Check sleep pin status (highest priority - check first)
         if (shouldEnterSleep()) {
             enterDeepSleep();
@@ -48,16 +54,6 @@ void systemTask(void *parameter) {
             xQueueSend(eepromWriteQueue, &item, 0);
             
             old_night_backlight = night_backlight;
-        }
-        
-        if (max_hdop != old_max_hdop) {
-            eepromWriteItem_t item;
-            item.type = EEPROM_FLOAT;
-            strcpy(item.key, "max_hdop");
-            item.value.floatVal = max_hdop;
-            xQueueSend(eepromWriteQueue, &item, 0);
-            
-            old_max_hdop = max_hdop;
         }
         
         if (espnow_gci_mac_addr != old_espnow_gci_mac_addr) {

@@ -35,9 +35,6 @@ void set_var_sats_hdop(const char* value);
 int32_t get_var_avg_speed();
 void set_var_avg_speed(int32_t value);
 
-float get_var_max_hdop();
-void set_var_max_hdop(float value);
-
 const char* get_var_version();
 void set_var_version(const char* value);
 
@@ -190,7 +187,6 @@ extern String espnow_last_received;
 
 // Numeric variables
 extern int32_t avg_speed;
-extern float max_hdop;
 extern int32_t day_backlight;
 extern int32_t night_backlight;
 extern bool manual_reboot;

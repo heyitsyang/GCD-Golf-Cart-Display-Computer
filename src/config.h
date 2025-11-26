@@ -64,8 +64,8 @@
 #define GPS_RX_PIN 03
 #define GPS_TX_PIN 01
 #define GPS_BAUD 9600
-#define GPS_READ_INTERVAL 15000
 #define MAX_GPS_TIME_STALENESS_SECS 60  // Show "NO GPS" if no time update for this many seconds
+#define MIN_SPEED_FILTER_MPH 2.5        // Speeds below this are treated as 0 to filter GPS dither
 
 // ESP-NOW configuration
 #define ESPNOW_CHANNEL 1

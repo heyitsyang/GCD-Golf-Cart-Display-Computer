@@ -13,11 +13,6 @@ void initPreferences() {
 }
 
 void loadPreferences() {
-    max_hdop = prefs.getFloat("max_hdop", 2.5);
-    Serial.print("> max_hdop read from eeprom = ");
-    Serial.println(max_hdop);
-    old_max_hdop = max_hdop;
-
     day_backlight = prefs.getInt("day_backlight", 10);
     Serial.print("> day_backlight read from eeprom = ");
     Serial.println(day_backlight);

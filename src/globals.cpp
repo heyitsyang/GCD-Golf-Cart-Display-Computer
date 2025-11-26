@@ -18,6 +18,7 @@ SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping (not d
 QueueHandle_t eepromWriteQueue;
 QueueHandle_t meshtasticCallbackQueue;
 QueueHandle_t espnowRecvQueue;
+QueueHandle_t gpsConfigCallbackQueue;
 
 // Double buffering for hot packet data (eliminates blocking reads)
 volatile int hotPacketActiveBuffer = 0;  // 0 or 1
@@ -66,8 +67,6 @@ bool use_touch_calibration = false;  // Set to true when coefficients loaded fro
 HardwareSerial &gpsSerial = Serial;
 NMEAGPS gps;
 gps_fix fix;
-movingAvg avgAzimuthDeg(8);
-movingAvg avgSpeed(10);
 
 // Time zone definitions
 TimeChangeRule mySTD = {"EST", First, Sun, Nov, 2, -300};
@@ -89,9 +88,8 @@ int localHour, localMinute, localSecond, localDayOfWeek;
 String latitude;
 String longitude;
 String altitude;
-float hdop, old_max_hdop;
+float hdop;
 int old_day_backlight, old_night_backlight;
-unsigned long previousGPSms = 0;
 unsigned long lastGpsTimeUpdate = 0;  // Tracks when GPS time was last received
 float accumDistance;
 float avg_speed_calc = 0.0;  // Float version for GPS calculations

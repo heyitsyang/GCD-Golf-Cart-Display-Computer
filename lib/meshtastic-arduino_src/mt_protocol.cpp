@@ -1,4 +1,5 @@
 #include "mt_internals.h"
+#include "../meshtastic_customizations/config_callback.h"
 
 // Magic number at the start of all MT packets
 #define MT_MAGIC_0 0x94
@@ -190,6 +191,8 @@ bool handle_config_tag(meshtastic_Config *config) {
       d("Config:position_tag:  broadcast_smart_min_interval_secs: %d\r\n", config->payload_variant.position.broadcast_smart_minimum_interval_secs);
       d("Config:position_tag:  gps_en_gpio: %d\r\n", config->payload_variant.position.gps_en_gpio);
       d("Config:position_tag:  gps_mode %d\r\n", config->payload_variant.position.gps_mode);
+      // Call custom position config callback
+      handlePositionConfigResponse(&config->payload_variant.position);
       break;
 
     case meshtastic_Config_power_tag: 

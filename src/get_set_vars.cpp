@@ -39,7 +39,6 @@ String espnow_last_received;
 
 // Numeric variable definitions
 int32_t avg_speed = 0;
-float max_hdop = 3;
 int32_t day_backlight = 10;
 int32_t night_backlight = 5;
 bool manual_reboot = false;
@@ -114,14 +113,6 @@ int32_t get_var_avg_speed() {
 
 void set_var_avg_speed(int32_t value) {
     avg_speed = value;
-}
-
-float get_var_max_hdop() {
-    return max_hdop;
-}
-
-void set_var_max_hdop(float value) {
-    max_hdop = value;
 }
 
 const char* get_var_version() {

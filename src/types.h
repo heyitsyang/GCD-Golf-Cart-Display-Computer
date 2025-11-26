@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "config.h"
+#include "meshtastic/config.pb.h"
 
 // EEPROM Write Queue Item
 typedef enum {
@@ -30,6 +31,11 @@ typedef struct {
     uint8_t channel;
     char text[MAX_MESHTASTIC_PAYLOAD];
 } meshtasticCallbackItem_t;
+
+// GPS Config callback item (for position config responses)
+typedef struct {
+    meshtastic_Config_PositionConfig config;
+} gpsConfigCallbackItem_t;
 
 // Hot Packet Types
 enum HotPacketType {

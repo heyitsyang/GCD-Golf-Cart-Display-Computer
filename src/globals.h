@@ -8,7 +8,6 @@
 #include <XPT2046_Touchscreen.h>
 #include <NMEAGPS.h>
 #include <Timezone.h>
-#include <movingAvg.h>
 #include <Preferences.h>
 #include <JC_Sunrise.h>
 #include <lvgl.h>
@@ -31,6 +30,7 @@ extern SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping
 extern QueueHandle_t eepromWriteQueue;
 extern QueueHandle_t meshtasticCallbackQueue;
 extern QueueHandle_t espnowRecvQueue;
+extern QueueHandle_t gpsConfigCallbackQueue;
 
 // Double buffering for hot packet data (eliminates blocking reads)
 // Parser writes to back buffer, swaps atomically, GUI reads from front buffer
@@ -77,8 +77,6 @@ extern bool use_touch_calibration;  // true if calibration coefficients loaded f
 extern HardwareSerial &gpsSerial;
 extern NMEAGPS gps;
 extern gps_fix fix;
-extern movingAvg avgAzimuthDeg;
-extern movingAvg avgSpeed;
 
 // Time objects
 extern Timezone myTZ;
@@ -93,9 +91,8 @@ extern Preferences prefs;
 extern int localYear, localMonth, localDay, old_localDay;
 extern int localHour, localMinute, localSecond, localDayOfWeek;
 extern String latitude, longitude, altitude;
-extern float hdop, old_max_hdop;
+extern float hdop;
 extern int old_day_backlight, old_night_backlight;
-extern unsigned long previousGPSms;
 extern unsigned long lastGpsTimeUpdate;  // Tracks when GPS time was last received
 extern float accumDistance;
 extern float avg_speed_calc;  // Float version for GPS calculations

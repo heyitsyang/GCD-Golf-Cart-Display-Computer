@@ -81,10 +81,6 @@ void setup() {
     // Initialize storage and load preferences
     initPreferences();
     loadPreferences();
-    
-    // Initialize GPS
-    avgAzimuthDeg.begin();
-    avgSpeed.begin();
 
     // Initialize display
     initDisplay();
@@ -146,6 +142,7 @@ void setup() {
     eepromWriteQueue = xQueueCreate(10, sizeof(eepromWriteItem_t));
     meshtasticCallbackQueue = xQueueCreate(5, sizeof(meshtasticCallbackItem_t));
     espnowRecvQueue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_recv_item_t));
+    gpsConfigCallbackQueue = xQueueCreate(2, sizeof(gpsConfigCallbackItem_t));
     
     // Create all FreeRTOS tasks (including ESP-NOW)
     createAllTasks();
