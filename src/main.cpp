@@ -32,6 +32,7 @@
 #include "Meshtastic.h"
 #include "communication/hot_packet_parser.h"
 #include "communication/espnow_handler.h"
+#include "communication/meshtastic_admin.h"
 
 
 // Tasks
@@ -126,6 +127,7 @@ void setup() {
     randomSeed(micros());
     mt_request_node_report(connected_callback);
     set_text_message_callback(text_message_callback);
+    set_portnum_callback(admin_portnum_callback);
     
     // Initialize application variables
     manual_reboot = false;

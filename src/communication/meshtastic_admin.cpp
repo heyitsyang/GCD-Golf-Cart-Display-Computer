@@ -5,6 +5,7 @@
 #include "meshtastic/config.pb.h"
 #include "meshtastic/portnums.pb.h"
 #include "pb_encode.h"
+#include "pb_decode.h"
 #include "globals.h"
 
 // External declarations from mt_protocol.cpp in meshtastic library
@@ -17,12 +18,13 @@ extern bool _mt_send_toRadio(meshtastic_ToRadio toRadio);
 static const GpsConfigSettings desiredGpsConfig = {
     .gps_mode = meshtastic_Config_PositionConfig_GpsMode_ENABLED,
     .fixed_position = false,
-    .gps_update_interval = 5
+    .gps_update_interval = 8
 };
 
 // State tracking for GPS config initialization
 static bool gpsConfigInitialized = false;
-static bool gpsConfigRequestSent = false;
+static uint8_t configUpdateRetries = 0;
+static const uint8_t MAX_RETRIES = 100;  // 10 seconds at 100ms intervals
 
 // Helper function to send admin messages
 static bool sendAdminMessage(meshtastic_AdminMessage *adminMsg) {
@@ -65,43 +67,30 @@ bool mt_send_admin_reboot(int32_t seconds) {
     return sendAdminMessage(&adminMsg);
 }
 
-bool mt_request_position_config() {
-    meshtastic_AdminMessage adminMsg = meshtastic_AdminMessage_init_default;
-    adminMsg.which_payload_variant = meshtastic_AdminMessage_get_config_request_tag;
-    adminMsg.get_config_request = meshtastic_AdminMessage_ConfigType_POSITION_CONFIG;
-
-    Serial.println("Requesting position config from Meshtastic radio");
-
-    return sendAdminMessage(&adminMsg);
-}
-
 bool mt_set_position_config(const meshtastic_Config_PositionConfig *config) {
     meshtastic_AdminMessage adminMsg = meshtastic_AdminMessage_init_default;
     adminMsg.which_payload_variant = meshtastic_AdminMessage_set_config_tag;
     adminMsg.set_config.which_payload_variant = meshtastic_Config_position_tag;
     adminMsg.set_config.payload_variant.position = *config;
 
-    Serial.println("Setting position config on Meshtastic radio");
-
     return sendAdminMessage(&adminMsg);
 }
 
-// Callback for handling config responses (called from customization layer)
-// NOTE: This is called from mt_protocol.cpp context - MUST be minimal and fast!
-// Uses queue pattern like text_message_callback to avoid issues
-void handlePositionConfigResponse(meshtastic_Config_PositionConfig *config) {
-    if (!gpsConfigInitialized && gpsConfigRequestSent && config != nullptr) {
-        // Create item on stack (safe in callback context)
-        gpsConfigCallbackItem_t item;
-        item.config = *config;  // Copy struct to stack
+// Admin portnum callback to handle ADMIN_APP messages
+// Note: Currently unused - kept for future expansion of admin message handling
+void admin_portnum_callback(uint32_t from, uint32_t to, uint8_t channel,
+                           meshtastic_PortNum port, meshtastic_Data_payload_t *payload) {
+    // Placeholder for future admin message handling
+}
 
-        // Put in queue (non-blocking)
-        xQueueSend(gpsConfigCallbackQueue, &item, 0);
-    }
+// Callback from mt_protocol.cpp when FromRadio.config (position) is received
+// Note: Currently unused - GCM firmware doesn't send position config during node report
+void handlePositionConfigResponse(meshtastic_Config_PositionConfig *config) {
+    // Placeholder - would be called if GCM sent position config during node report
 }
 
 void initGpsConfigOnBoot() {
-    // Only run once
+    // Only run once successfully
     if (gpsConfigInitialized) {
         return;
     }
@@ -111,45 +100,30 @@ void initGpsConfigOnBoot() {
         return;
     }
 
-    // Step 1: Request current config (only once)
-    if (!gpsConfigRequestSent) {
-        Serial.println("\n=== GPS Config Init: Requesting current config ===");
-        if (mt_request_position_config()) {
-            gpsConfigRequestSent = true;
-        } else {
-            Serial.println("Failed to send config request, will retry");
+    // Connection established - send desired GPS config
+    // We cannot read current config (GCM doesn't send it), so we just write our desired settings
+    // This is idempotent - Meshtastic firmware handles repeated identical writes gracefully
+
+    // Create a full position config with desired values
+    meshtastic_Config_PositionConfig config = meshtastic_Config_PositionConfig_init_default;
+    config.gps_mode = desiredGpsConfig.gps_mode;
+    config.fixed_position = desiredGpsConfig.fixed_position;
+    config.gps_update_interval = desiredGpsConfig.gps_update_interval;
+
+    // Send the config - retry with limit
+    if (configUpdateRetries >= MAX_RETRIES) {
+        Serial.println("GPS Config Init: Failed after max retries - giving up");
+        gpsConfigInitialized = true;  // Give up and don't retry forever
+        return;
+    }
+
+    if (mt_set_position_config(&config)) {
+        Serial.println("GPS Config Init: Complete");
+        gpsConfigInitialized = true;
+    } else {
+        configUpdateRetries++;
+        if (configUpdateRetries == 1) {
+            Serial.println("GPS Config Init: Sending config to Meshtastic radio...");
         }
-        return;
     }
-
-    // Step 2: Wait for response
-    if (!configReceived) {
-        return;
-    }
-
-    // Step 3: Compare and update if needed
-    bool needsUpdate = false;
-
-    if (receivedGpsMode != desiredGpsConfig.gps_mode) {
-        needsUpdate = true;
-    }
-
-    if (receivedFixedPosition != desiredGpsConfig.fixed_position) {
-        needsUpdate = true;
-    }
-
-    if (receivedGpsUpdateInterval != desiredGpsConfig.gps_update_interval) {
-        needsUpdate = true;
-    }
-
-    if (needsUpdate) {
-        // Update only the fields we care about in the full config, preserve others
-        fullConfig.gps_mode = desiredGpsConfig.gps_mode;
-        fullConfig.fixed_position = desiredGpsConfig.fixed_position;
-        fullConfig.gps_update_interval = desiredGpsConfig.gps_update_interval;
-
-        mt_set_position_config(&fullConfig);
-    }
-
-    gpsConfigInitialized = true;
 }

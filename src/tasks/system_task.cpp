@@ -9,10 +9,8 @@
 
 void systemTask(void *parameter) {
     while (true) {
-        // Initialize GPS config on boot (once Meshtastic is connected)
-        // DISABLED: Causes reboot loop due to callback context issues
-        // TODO: Need to implement this using a queue-based approach instead
-        // initGpsConfigOnBoot();
+        // Initialize GPS config after Meshtastic connection (polled approach to avoid stack overflow in callback)
+        initGpsConfigOnBoot();
 
         // Check sleep pin status (highest priority - check first)
         if (shouldEnterSleep()) {

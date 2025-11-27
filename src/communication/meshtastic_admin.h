@@ -4,16 +4,13 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include "meshtastic/config.pb.h"
+#include "meshtastic/mesh.pb.h"
+#include "meshtastic/portnums.pb.h"
 
 // Send an admin command to reboot the Meshtastic radio
 // seconds: number of seconds until reboot (0 = immediate, <0 = cancel reboot)
 // Returns true if the command was sent successfully, false otherwise
 bool mt_send_admin_reboot(int32_t seconds = 0);
-
-// Request the current position configuration from the Meshtastic radio
-// The response will be received via the config callback
-// Returns true if the request was sent successfully, false otherwise
-bool mt_request_position_config();
 
 // Set the position configuration on the Meshtastic radio
 // config: the position configuration to set
@@ -27,8 +24,21 @@ struct GpsConfigSettings {
     uint32_t gps_update_interval;
 };
 
-// Initialize GPS configuration on boot (waits for Meshtastic connection)
-// This function checks the current GPS config and updates it only if needed
+// Initialize GPS configuration on boot
+// Sends desired GPS config to the Meshtastic radio
+// Called by system task every 100ms, runs once after connection is established
+// Uses polling to avoid stack overflow that would occur if called from connection callback
 void initGpsConfigOnBoot();
+
+// Admin portnum callback to handle ADMIN_APP messages
+// Note: Currently a placeholder - kept for future admin message handling
+// Must be registered with set_portnum_callback() in setup
+void admin_portnum_callback(uint32_t from, uint32_t to, uint8_t channel,
+                           meshtastic_PortNum port, meshtastic_Data_payload_t *payload);
+
+// Callback from mt_protocol.cpp when FromRadio.config (position) is received
+// Note: Currently unused - GCM firmware doesn't send position config during node report
+// Required by config_callback.h interface
+void handlePositionConfigResponse(meshtastic_Config_PositionConfig *config);
 
 #endif // MESHTASTIC_ADMIN_H
