@@ -14,12 +14,21 @@ void initSleepPin() {
     Serial.print("Sleep pin (GPIO ");
     Serial.print(SLEEP_PIN);
     Serial.println(") initialized as INPUT_PULLUP");
+#ifdef DEMO_MODE
+    Serial.println("*** DEMO MODE: Sleep functionality DISABLED ***");
+#else
     Serial.println("Device will enter deep sleep when pin is LOW, reboot when HIGH");
+#endif
 }
 
 bool shouldEnterSleep() {
+#ifdef DEMO_MODE
+    // Demo mode: never enter sleep, ignore SLEEP_PIN
+    return false;
+#else
     // Return true if SLEEP_PIN is LOW (pulled to ground)
     return digitalRead(SLEEP_PIN) == LOW;
+#endif
 }
 
 void enterDeepSleep() {

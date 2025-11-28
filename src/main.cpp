@@ -118,6 +118,9 @@ void setup() {
     np_rcv_time = String("        NO DATA YET");
     espnow_status = "Not initialized";
     espnow_last_received = "";
+#ifdef DEMO_MODE
+    heading = String("DEMO");
+#endif
 
     // Initialize UI from EEZ Studio
     ui_init();
