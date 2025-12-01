@@ -54,6 +54,9 @@ XPT2046_Touchscreen touchscreen(XPT2046_CS, XPT2046_IRQ);
 // Preferences object for EEPROM storage (using same namespace as CYD program)
 Preferences prefs;
 
+// Global variable to store flip_screen setting for use in save function
+bool g_flip_screen = false;
+
 #define SCREEN_WIDTH 240
 #define SCREEN_HEIGHT 320
 
@@ -219,39 +222,58 @@ void check_calibration_results(void) {
 }
 
 bool save_calibration_to_eeprom(void) {
-  // Transform coefficients for 180° rotation
-  // Calibration at 90° needs to be transformed to work as if calibrated at 270°
-  // For 180° rotation: negate alphas/betas, transform deltas
-  float transformed_alpha_x = -alphaX;
-  float transformed_beta_x = -betaX;
-  float transformed_delta_x = SCREEN_HEIGHT - deltaX;  // 320 - deltaX
-  float transformed_alpha_y = -alphaY;
-  float transformed_beta_y = -betaY;
-  float transformed_delta_y = SCREEN_WIDTH - deltaY;   // 240 - deltaY
+  float save_alpha_x, save_beta_x, save_delta_x;
+  float save_alpha_y, save_beta_y, save_delta_y;
+
+  // Only transform coefficients when flip_screen=false (calibration at 90°)
+  // When flip_screen=true, calibration is at 270° which matches display.cpp expectations
+  if (!g_flip_screen) {
+    // Transform coefficients for 180° rotation
+    // Calibration at 90° needs to be transformed to work as if calibrated at 270°
+    // For 180° rotation: negate alphas/betas, transform deltas
+    save_alpha_x = -alphaX;
+    save_beta_x = -betaX;
+    save_delta_x = SCREEN_HEIGHT - deltaX;  // 320 - deltaX
+    save_alpha_y = -alphaY;
+    save_beta_y = -betaY;
+    save_delta_y = SCREEN_WIDTH - deltaY;   // 240 - deltaY
+  } else {
+    // No transformation needed - use coefficients directly
+    save_alpha_x = alphaX;
+    save_beta_x = betaX;
+    save_delta_x = deltaX;
+    save_alpha_y = alphaY;
+    save_beta_y = betaY;
+    save_delta_y = deltaY;
+  }
 
   // Initialize Preferences with same namespace as CYD program
   prefs.begin("eeprom", false);
 
-  // Write transformed calibration coefficients to EEPROM
-  prefs.putFloat("touch_alpha_x", transformed_alpha_x);
-  prefs.putFloat("touch_beta_x", transformed_beta_x);
-  prefs.putFloat("touch_delta_x", transformed_delta_x);
-  prefs.putFloat("touch_alpha_y", transformed_alpha_y);
-  prefs.putFloat("touch_beta_y", transformed_beta_y);
-  prefs.putFloat("touch_delta_y", transformed_delta_y);
+  // Write calibration coefficients to EEPROM
+  prefs.putFloat("touch_alpha_x", save_alpha_x);
+  prefs.putFloat("touch_beta_x", save_beta_x);
+  prefs.putFloat("touch_delta_x", save_delta_x);
+  prefs.putFloat("touch_alpha_y", save_alpha_y);
+  prefs.putFloat("touch_beta_y", save_beta_y);
+  prefs.putFloat("touch_delta_y", save_delta_y);
 
   prefs.end();
 
   Serial.println();
   Serial.println("******************************************************************");
-  Serial.println("CALIBRATION COEFFICIENTS SAVED TO EEPROM (TRANSFORMED)");
-  Serial.println("The following TRANSFORMED values have been written to EEPROM:");
-  Serial.print("  touch_alpha_x = "); Serial.println(transformed_alpha_x, 6);
-  Serial.print("  touch_beta_x = "); Serial.println(transformed_beta_x, 6);
-  Serial.print("  touch_delta_x = "); Serial.println(transformed_delta_x, 6);
-  Serial.print("  touch_alpha_y = "); Serial.println(transformed_alpha_y, 6);
-  Serial.print("  touch_beta_y = "); Serial.println(transformed_beta_y, 6);
-  Serial.print("  touch_delta_y = "); Serial.println(transformed_delta_y, 6);
+  if (!g_flip_screen) {
+    Serial.println("CALIBRATION COEFFICIENTS SAVED TO EEPROM (TRANSFORMED)");
+  } else {
+    Serial.println("CALIBRATION COEFFICIENTS SAVED TO EEPROM (NO TRANSFORM)");
+  }
+  Serial.println("The following values have been written to EEPROM:");
+  Serial.print("  touch_alpha_x = "); Serial.println(save_alpha_x, 6);
+  Serial.print("  touch_beta_x = "); Serial.println(save_beta_x, 6);
+  Serial.print("  touch_delta_x = "); Serial.println(save_delta_x, 6);
+  Serial.print("  touch_alpha_y = "); Serial.println(save_alpha_y, 6);
+  Serial.print("  touch_beta_y = "); Serial.println(save_beta_y, 6);
+  Serial.print("  touch_delta_y = "); Serial.println(save_delta_y, 6);
   Serial.println("******************************************************************");
   Serial.println();
 
@@ -268,16 +290,16 @@ bool save_calibration_to_eeprom(void) {
 
   prefs.end();
 
-  // Compare with tolerance for floating point comparison (compare with transformed values)
+  // Compare with tolerance for floating point comparison
   float tolerance = 0.0001;
   bool verified = true;
 
-  if (abs(verify_alpha_x - transformed_alpha_x) > tolerance) verified = false;
-  if (abs(verify_beta_x - transformed_beta_x) > tolerance) verified = false;
-  if (abs(verify_delta_x - transformed_delta_x) > tolerance) verified = false;
-  if (abs(verify_alpha_y - transformed_alpha_y) > tolerance) verified = false;
-  if (abs(verify_beta_y - transformed_beta_y) > tolerance) verified = false;
-  if (abs(verify_delta_y - transformed_delta_y) > tolerance) verified = false;
+  if (abs(verify_alpha_x - save_alpha_x) > tolerance) verified = false;
+  if (abs(verify_beta_x - save_beta_x) > tolerance) verified = false;
+  if (abs(verify_delta_x - save_delta_x) > tolerance) verified = false;
+  if (abs(verify_alpha_y - save_alpha_y) > tolerance) verified = false;
+  if (abs(verify_beta_y - save_beta_y) > tolerance) verified = false;
+  if (abs(verify_delta_y - save_delta_y) > tolerance) verified = false;
 
   if (verified) {
     Serial.println("EEPROM VERIFICATION PASSED");
@@ -424,6 +446,14 @@ void setup() {
   Serial.begin(9600);
   Serial.println(LVGL_Arduino);
 
+  // Read flip_screen setting from NVM (same namespace as main program)
+  prefs.begin("eeprom", true); // Read-only mode
+  g_flip_screen = prefs.getBool("flip_screen", false); // Default to false if not set
+  prefs.end();
+
+  Serial.print("flip_screen setting: ");
+  Serial.println(g_flip_screen ? "true" : "false");
+
   // Start LVGL
   lv_init();
   // Register print function for debugging
@@ -441,8 +471,15 @@ void setup() {
   lv_display_t * disp;
   // Initialize the TFT display using the TFT_eSPI library
   disp = lv_tft_espi_create(SCREEN_WIDTH, SCREEN_HEIGHT, draw_buf, sizeof(draw_buf));
-  // Rotate to 90° to make calibration text right-side up
-  lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_90);
+
+  // Match main program display rotation to keep text right-side up
+  // Main program: flip_screen=false→90°, flip_screen=true→270°
+  // Use same rotation so calibration text is right-side up
+  if (g_flip_screen) {
+    lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_270);
+  } else {
+    lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_90);
+  }
 
   lv_display_instruction();
   delay_start = millis();
