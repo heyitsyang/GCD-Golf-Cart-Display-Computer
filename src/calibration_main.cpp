@@ -219,29 +219,39 @@ void check_calibration_results(void) {
 }
 
 bool save_calibration_to_eeprom(void) {
+  // Transform coefficients for 180° rotation
+  // Calibration at 90° needs to be transformed to work as if calibrated at 270°
+  // For 180° rotation: negate alphas/betas, transform deltas
+  float transformed_alpha_x = -alphaX;
+  float transformed_beta_x = -betaX;
+  float transformed_delta_x = SCREEN_HEIGHT - deltaX;  // 320 - deltaX
+  float transformed_alpha_y = -alphaY;
+  float transformed_beta_y = -betaY;
+  float transformed_delta_y = SCREEN_WIDTH - deltaY;   // 240 - deltaY
+
   // Initialize Preferences with same namespace as CYD program
   prefs.begin("eeprom", false);
 
-  // Write calibration coefficients to EEPROM
-  prefs.putFloat("touch_alpha_x", alphaX);
-  prefs.putFloat("touch_beta_x", betaX);
-  prefs.putFloat("touch_delta_x", deltaX);
-  prefs.putFloat("touch_alpha_y", alphaY);
-  prefs.putFloat("touch_beta_y", betaY);
-  prefs.putFloat("touch_delta_y", deltaY);
+  // Write transformed calibration coefficients to EEPROM
+  prefs.putFloat("touch_alpha_x", transformed_alpha_x);
+  prefs.putFloat("touch_beta_x", transformed_beta_x);
+  prefs.putFloat("touch_delta_x", transformed_delta_x);
+  prefs.putFloat("touch_alpha_y", transformed_alpha_y);
+  prefs.putFloat("touch_beta_y", transformed_beta_y);
+  prefs.putFloat("touch_delta_y", transformed_delta_y);
 
   prefs.end();
 
   Serial.println();
   Serial.println("******************************************************************");
-  Serial.println("CALIBRATION COEFFICIENTS SAVED TO EEPROM");
-  Serial.println("The following values have been written to EEPROM:");
-  Serial.print("  touch_alpha_x = "); Serial.println(alphaX, 6);
-  Serial.print("  touch_beta_x = "); Serial.println(betaX, 6);
-  Serial.print("  touch_delta_x = "); Serial.println(deltaX, 6);
-  Serial.print("  touch_alpha_y = "); Serial.println(alphaY, 6);
-  Serial.print("  touch_beta_y = "); Serial.println(betaY, 6);
-  Serial.print("  touch_delta_y = "); Serial.println(deltaY, 6);
+  Serial.println("CALIBRATION COEFFICIENTS SAVED TO EEPROM (TRANSFORMED)");
+  Serial.println("The following TRANSFORMED values have been written to EEPROM:");
+  Serial.print("  touch_alpha_x = "); Serial.println(transformed_alpha_x, 6);
+  Serial.print("  touch_beta_x = "); Serial.println(transformed_beta_x, 6);
+  Serial.print("  touch_delta_x = "); Serial.println(transformed_delta_x, 6);
+  Serial.print("  touch_alpha_y = "); Serial.println(transformed_alpha_y, 6);
+  Serial.print("  touch_beta_y = "); Serial.println(transformed_beta_y, 6);
+  Serial.print("  touch_delta_y = "); Serial.println(transformed_delta_y, 6);
   Serial.println("******************************************************************");
   Serial.println();
 
@@ -258,16 +268,16 @@ bool save_calibration_to_eeprom(void) {
 
   prefs.end();
 
-  // Compare with tolerance for floating point comparison
+  // Compare with tolerance for floating point comparison (compare with transformed values)
   float tolerance = 0.0001;
   bool verified = true;
 
-  if (abs(verify_alpha_x - alphaX) > tolerance) verified = false;
-  if (abs(verify_beta_x - betaX) > tolerance) verified = false;
-  if (abs(verify_delta_x - deltaX) > tolerance) verified = false;
-  if (abs(verify_alpha_y - alphaY) > tolerance) verified = false;
-  if (abs(verify_beta_y - betaY) > tolerance) verified = false;
-  if (abs(verify_delta_y - deltaY) > tolerance) verified = false;
+  if (abs(verify_alpha_x - transformed_alpha_x) > tolerance) verified = false;
+  if (abs(verify_beta_x - transformed_beta_x) > tolerance) verified = false;
+  if (abs(verify_delta_x - transformed_delta_x) > tolerance) verified = false;
+  if (abs(verify_alpha_y - transformed_alpha_y) > tolerance) verified = false;
+  if (abs(verify_beta_y - transformed_beta_y) > tolerance) verified = false;
+  if (abs(verify_delta_y - transformed_delta_y) > tolerance) verified = false;
 
   if (verified) {
     Serial.println("EEPROM VERIFICATION PASSED");
