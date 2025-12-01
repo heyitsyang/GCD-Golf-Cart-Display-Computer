@@ -65,7 +65,13 @@ pio device monitor
   ```
 - **Use queues for task communication**: See `eepromWriteQueue`, `meshtasticCallbackQueue`, `espnowRecvQueue`.
 
-### 5. EEZ Studio Integration
+### 5. Touchscreen Orientation
+- **CRITICAL: Touchscreen rotation is fixed at TOUCH_ROTATION_180**: The touchscreen orientation must NEVER change, regardless of display orientation.
+- **Display rotation is variable**: The display can be rotated between 90° and 270° based on the `flip_screen` setting (see `updateDisplayRotation()` in `src/hardware/display.cpp`).
+- **Touch calibration is orientation-specific**: Calibration coefficients in EEPROM are calculated for `TOUCH_ROTATION_180` and are transformed in software to match the current display orientation.
+- **Never modify `updateTouchscreenRotation()`**: This function always sets rotation to `TOUCH_ROTATION_180`. Any changes will break touch calibration.
+
+### 6. EEZ Studio Integration
 - **UI variables must be registered**: Add getter/setter functions in `src/get_set_vars.h` and `src/get_set_vars.cpp`.
 - **Follow the existing pattern**: Boolean, integer, float, and string types all have specific patterns.
 - **Preferences persistence**: Use `queuePreferenceWrite()` in setters when values should persist across reboots.

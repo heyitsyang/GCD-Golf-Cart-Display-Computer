@@ -38,6 +38,12 @@
 #define XPT2046_CLK 25   // T_CLK
 #define XPT2046_CS 33    // T_CS
 
+// Touch rotation values
+#define TOUCH_ROTATION_0 0
+#define TOUCH_ROTATION_90 1
+#define TOUCH_ROTATION_180 2
+#define TOUCH_ROTATION_270 3
+
 unsigned long delay_start = 0;
 #define DELAY_1S 1000
 #define DELAY_5S 5000
@@ -416,15 +422,17 @@ void setup() {
   // Start the SPI for the touchscreen and init the touchscreen
   touchscreenSPI.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
   touchscreen.begin(touchscreenSPI);
-  // Set the Touchscreen rotation in landscape mode
-  // Note: in some displays, the touchscreen might be upside down, so you might need to set the rotation to 0: touchscreen.setRotation(0);
-  touchscreen.setRotation(2);
+  // CRITICAL: Touchscreen rotation is ALWAYS TOUCH_ROTATION_180 regardless of display orientation
+  // This matches the main program behavior and ensures calibration coefficients work correctly
+  // Touch calibration is done at TOUCH_ROTATION_180 and software handles display rotation
+  touchscreen.setRotation(TOUCH_ROTATION_180);
 
   // Create a display object
   lv_display_t * disp;
   // Initialize the TFT display using the TFT_eSPI library
   disp = lv_tft_espi_create(SCREEN_WIDTH, SCREEN_HEIGHT, draw_buf, sizeof(draw_buf));
-  lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_270);
+  // Rotate to 90° to make calibration text right-side up
+  lv_display_set_rotation(disp, LV_DISPLAY_ROTATION_90);
 
   lv_display_instruction();
   delay_start = millis();
@@ -462,7 +470,7 @@ void setup() {
   lv_obj_t * done_label = lv_label_create(lv_screen_active());
 
   if (verification_passed) {
-    lv_label_set_text(done_label, "Coefficients saved to EEPROM\nand verified.\n\nCalibration complete - all done!");
+    lv_label_set_text(done_label, "Coefficients saved to EEPROM\nand verified.\n\nCalibration complete");
   } else {
     lv_label_set_text(done_label, "EEPROM VERIFICATION FAILED");
     // Make text red for failure
@@ -484,7 +492,7 @@ void setup() {
   lv_tick_inc(10);
 
   if (verification_passed) {
-    Serial.println("Calibration complete - all done!");
+    Serial.println("Calibration complete");
   } else {
     Serial.println("*** CALIBRATION FAILED - VERIFICATION ERROR ***");
   }

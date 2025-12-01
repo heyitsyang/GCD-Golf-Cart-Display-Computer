@@ -34,9 +34,9 @@ void initDisplay() {
 void updateDisplayRotation() {
     if (display_handle != nullptr) {
         if (get_var_flip_screen()) {
-            lv_display_set_rotation(display_handle, LV_DISPLAY_ROTATION_90);
-        } else {
             lv_display_set_rotation(display_handle, LV_DISPLAY_ROTATION_270);
+        } else {
+            lv_display_set_rotation(display_handle, LV_DISPLAY_ROTATION_90);
         }
     }
 }
