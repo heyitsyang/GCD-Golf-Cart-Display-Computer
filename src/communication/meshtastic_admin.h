@@ -30,6 +30,12 @@ struct GpsConfigSettings {
 // Uses polling to avoid stack overflow that would occur if called from connection callback
 void initGpsConfigOnBoot();
 
+// Reset GPS update interval to default before entering sleep mode
+// Sets gps_update_interval to 0 (which resets to default 2 minute interval)
+// Should be called after SLEEP_PIN goes HIGH, before entering deep sleep
+// Returns true if the command was sent successfully, false otherwise
+bool resetGpsIntervalBeforeSleep();
+
 // Admin portnum callback to handle ADMIN_APP messages
 // Note: Currently a placeholder - kept for future admin message handling
 // Must be registered with set_portnum_callback() in setup

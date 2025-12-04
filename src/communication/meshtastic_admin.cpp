@@ -127,3 +127,21 @@ void initGpsConfigOnBoot() {
         }
     }
 }
+
+bool resetGpsIntervalBeforeSleep() {
+    // Create position config with interval set to 0 (default = 2 minutes)
+    meshtastic_Config_PositionConfig config = meshtastic_Config_PositionConfig_init_default;
+    config.gps_mode = desiredGpsConfig.gps_mode;  // Keep GPS enabled
+    config.fixed_position = desiredGpsConfig.fixed_position;  // Keep fixed_position setting
+    config.gps_update_interval = 0;  // 0 = reset to default (2 minutes)
+
+    Serial.println("Resetting GPS update interval to default (2 min) before sleep...");
+
+    if (mt_set_position_config(&config)) {
+        Serial.println("GPS interval reset successful");
+        return true;
+    } else {
+        Serial.println("GPS interval reset failed");
+        return false;
+    }
+}

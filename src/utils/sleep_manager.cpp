@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "hardware/display.h"
 #include "get_set_vars.h"
+#include "communication/meshtastic_admin.h"
 #include <esp_sleep.h>
 #include <driver/rtc_io.h>
 
@@ -33,6 +34,9 @@ bool shouldEnterSleep() {
 
 void enterDeepSleep() {
     Serial.println("SLEEP_PIN is LOW - entering deep sleep mode...");
+
+    // Reset GPS update interval to default (2 minutes) to reduce radio power consumption
+    resetGpsIntervalBeforeSleep();
 
     // Turn off backlight to save power
     setBacklight(0);
