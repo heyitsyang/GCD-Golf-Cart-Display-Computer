@@ -6,11 +6,15 @@
 #include "storage/preferences_manager.h"
 #include "utils/sleep_manager.h"
 #include "communication/meshtastic_admin.h"
+#include "tasks/meshtastic_task.h"
 
 void systemTask(void *parameter) {
     while (true) {
         // Initialize GPS config after Meshtastic connection (polled approach to avoid stack overflow in callback)
         initGpsConfigOnBoot();
+
+        // Send wake notification after Meshtastic connection
+        sendWakeNotificationOnBoot();
 
         // Check sleep pin status (highest priority - check first)
         if (shouldEnterSleep()) {
