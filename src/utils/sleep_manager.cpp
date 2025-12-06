@@ -4,6 +4,7 @@
 #include "hardware/display.h"
 #include "get_set_vars.h"
 #include "communication/meshtastic_admin.h"
+#include "storage/preferences_manager.h"
 #include <esp_sleep.h>
 #include <driver/rtc_io.h>
 
@@ -34,6 +35,12 @@ bool shouldEnterSleep() {
 
 void enterDeepSleep() {
     Serial.println("SLEEP_PIN is LOW - entering deep sleep mode...");
+
+    // Save distance values to EEPROM before sleeping
+    Serial.println("Saving distance values to EEPROM...");
+    queuePreferenceWrite("accumDistance", accumDistance);
+    queuePreferenceWrite("tripDistance", tripDistance);
+    delay(100);  // Give EEPROM task time to process the queue
 
     // Reset GPS update interval to default (2 minutes) to reduce radio power consumption
     resetGpsIntervalBeforeSleep();

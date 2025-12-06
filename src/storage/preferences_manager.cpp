@@ -41,15 +41,17 @@ void loadPreferences() {
     set_var_speaker_volume(speaker_volume);
     old_speaker_volume = speaker_volume;
 
-    odometer = prefs.getInt("odometer", 0);
-    Serial.print("> odometer read from eeprom = ");
-    Serial.println(odometer);
-    set_var_odometer(odometer);
+    accumDistance = prefs.getFloat("accumDistance", 0.0);
+    Serial.print("> accumDistance read from eeprom = ");
+    Serial.println(accumDistance, 3);
+    odometer = String(accumDistance, 1);
+    set_var_odometer(odometer.c_str());
 
-    trip_odometer = prefs.getInt("trip_odometer", 0);
-    Serial.print("> trip_odometer read from eeprom = ");
-    Serial.println(trip_odometer);
-    set_var_trip_odometer(trip_odometer);
+    tripDistance = prefs.getFloat("tripDistance", 0.0);
+    Serial.print("> tripDistance read from eeprom = ");
+    Serial.println(tripDistance, 3);
+    trip_odometer = String(tripDistance, 1);
+    set_var_trip_odometer(trip_odometer.c_str());
 
     hrs_since_svc = prefs.getInt("hrs_since_svc", 0);
     Serial.print("> hrs_since_svc read from eeprom = ");

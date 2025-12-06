@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "utils/time_utils.h"
 #include "hardware/display.h"
+#include "storage/preferences_manager.h"
 #include <TimeLib.h>
 
 // Compass direction lookup table
@@ -25,6 +26,11 @@ static float previousSpeed = 0.0;
 // Previous location for position-based distance calculation
 static NeoGPS::Location_t lastLocation;
 static bool hasLastLocation = false;
+
+// Distance tracking for periodic EEPROM saves
+static float lastSavedAccumDistance = 0.0;
+static float lastSavedTripDistance = 0.0;
+static const float SAVE_INTERVAL_MILES = 0.5;  // Save every 0.5 miles
 
 // Satellite count persistence - filter brief dropouts
 static uint8_t lastValidSatCount = 0;
@@ -206,6 +212,32 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
 
         if (shouldAccumulate) {
             accumDistance += posDistance;
+            tripDistance += posDistance;
+
+            // Rollover at 100,000 miles (display limit is 99999.9)
+            if (accumDistance >= 100000.0) {
+                accumDistance = 0.0;
+                lastSavedAccumDistance = 0.0;
+            }
+            if (tripDistance >= 100000.0) {
+                tripDistance = 0.0;
+                lastSavedTripDistance = 0.0;
+            }
+
+            // Update display strings with 1 decimal place precision
+            odometer = String(accumDistance, 1);
+            trip_odometer = String(tripDistance, 1);
+
+            // Save to EEPROM periodically (every 0.5 miles)
+            if (accumDistance - lastSavedAccumDistance >= SAVE_INTERVAL_MILES) {
+                queuePreferenceWrite("accumDistance", accumDistance);
+                lastSavedAccumDistance = accumDistance;
+            }
+
+            if (tripDistance - lastSavedTripDistance >= SAVE_INTERVAL_MILES) {
+                queuePreferenceWrite("tripDistance", tripDistance);
+                lastSavedTripDistance = tripDistance;
+            }
         }
     }
 

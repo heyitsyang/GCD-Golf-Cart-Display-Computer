@@ -91,7 +91,6 @@ String altitude;
 float hdop;
 int old_day_backlight, old_night_backlight;
 unsigned long lastGpsTimeUpdate = 0;  // Tracks when GPS time was last received
-float accumDistance;
 float avg_speed_calc = 0.0;  // Float version for GPS calculations
 
 // Old tracking variables

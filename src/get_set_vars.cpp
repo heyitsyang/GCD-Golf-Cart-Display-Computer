@@ -49,10 +49,12 @@ bool espnow_pair_gci = false;
 int32_t screen_inactivity_countdown = 0;
 bool flip_screen = false;
 int32_t speaker_volume = 10;
-int32_t odometer = 0;
-int32_t trip_odometer = 0;
+String odometer = "0.0";
+String trip_odometer = "0.0";
 int32_t hrs_since_svc = 0;
 int32_t svc_interval_hrs = 100;
+float accumDistance = 0.0;
+float tripDistance = 0.0;
 bool reset_preferences = false;
 float temperature_adj = 0;
 bool reboot_meshtastic = false;
@@ -444,20 +446,20 @@ void set_var_speaker_volume(int32_t value) {
     speaker_volume = value;
 }
 
-int32_t get_var_odometer() {
-    return odometer;
+const char* get_var_odometer() {
+    return odometer.c_str();
 }
 
-void set_var_odometer(int32_t value) {
-    odometer = value;
+void set_var_odometer(const char* value) {
+    odometer = String(value);
 }
 
-int32_t get_var_trip_odometer() {
-    return trip_odometer;
+const char* get_var_trip_odometer() {
+    return trip_odometer.c_str();
 }
 
-void set_var_trip_odometer(int32_t value) {
-    trip_odometer = value;
+void set_var_trip_odometer(const char* value) {
+    trip_odometer = String(value);
 }
 
 int32_t get_var_hrs_since_svc() {
@@ -474,6 +476,26 @@ int32_t get_var_svc_interval_hrs() {
 
 void set_var_svc_interval_hrs(int32_t value) {
     svc_interval_hrs = value;
+}
+
+float get_var_accumDistance() {
+    return accumDistance;
+}
+
+void set_var_accumDistance(float value) {
+    accumDistance = value;
+    // Update formatted display string
+    odometer = String(accumDistance, 1);
+}
+
+float get_var_tripDistance() {
+    return tripDistance;
+}
+
+void set_var_tripDistance(float value) {
+    tripDistance = value;
+    // Update formatted display string
+    trip_odometer = String(tripDistance, 1);
 }
 
 bool get_var_reset_preferences() {
