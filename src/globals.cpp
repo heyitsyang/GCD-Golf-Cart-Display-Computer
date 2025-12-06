@@ -98,6 +98,7 @@ float avg_speed_calc = 0.0;  // Float version for GPS calculations
 String old_espnow_gci_mac_addr;
 bool old_flip_screen = false;
 int32_t old_speaker_volume = 10;
+int32_t old_svc_interval_hrs = 100;
 float old_temperature_adj = 0.0;
 
 // Now playing variables

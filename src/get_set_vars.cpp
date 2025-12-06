@@ -49,6 +49,10 @@ bool espnow_pair_gci = false;
 int32_t screen_inactivity_countdown = 0;
 bool flip_screen = false;
 int32_t speaker_volume = 10;
+int32_t odometer = 0;
+int32_t trip_odometer = 0;
+int32_t hrs_since_svc = 0;
+int32_t svc_interval_hrs = 100;
 bool reset_preferences = false;
 float temperature_adj = 0;
 bool reboot_meshtastic = false;
@@ -438,6 +442,38 @@ int32_t get_var_speaker_volume() {
 
 void set_var_speaker_volume(int32_t value) {
     speaker_volume = value;
+}
+
+int32_t get_var_odometer() {
+    return odometer;
+}
+
+void set_var_odometer(int32_t value) {
+    odometer = value;
+}
+
+int32_t get_var_trip_odometer() {
+    return trip_odometer;
+}
+
+void set_var_trip_odometer(int32_t value) {
+    trip_odometer = value;
+}
+
+int32_t get_var_hrs_since_svc() {
+    return hrs_since_svc;
+}
+
+void set_var_hrs_since_svc(int32_t value) {
+    hrs_since_svc = value;
+}
+
+int32_t get_var_svc_interval_hrs() {
+    return svc_interval_hrs;
+}
+
+void set_var_svc_interval_hrs(int32_t value) {
+    svc_interval_hrs = value;
 }
 
 bool get_var_reset_preferences() {

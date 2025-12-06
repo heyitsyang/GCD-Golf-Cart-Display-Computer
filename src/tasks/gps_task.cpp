@@ -22,6 +22,10 @@ static const char* headingToCompass(float degrees) {
 // Previous speed for stop detection
 static float previousSpeed = 0.0;
 
+// Previous location for position-based distance calculation
+static NeoGPS::Location_t lastLocation;
+static bool hasLastLocation = false;
+
 // Satellite count persistence - filter brief dropouts
 static uint8_t lastValidSatCount = 0;
 static uint8_t zeroSatConsecutiveCount = 0;
@@ -174,9 +178,40 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
 
     updateBacklight(sunrise_t, sunset_t);
 
-    // Accumulate distance traveled (assumes ~1Hz GPS update rate)
-    float incDistance = avg_speed_calc / 3600.0;  // mph to miles per second
-    accumDistance += incDistance;
+    // Accumulate distance traveled using hybrid position-based calculation
+    if (hasLastLocation) {
+        float posDistance = fix.location.DistanceMiles(lastLocation);
+        float posSpeed = posDistance * 3600.0;  // Convert to mph (assumes ~1Hz)
+
+        bool shouldAccumulate = false;
+
+        // Use GPS Doppler speed as primary gate
+        if (fix.valid.speed) {
+            float dopplerSpeed = fix.speed_mph();
+
+            // Only accumulate when GPS confirms we're moving
+            if (dopplerSpeed > MIN_SPEED_FILTER_MPH) {
+                // Position speed must be reasonable
+                if (posSpeed < 30.0 && posDistance > 0.0005) {  // >2.6 feet minimum
+                    shouldAccumulate = true;
+                }
+            }
+            // If Doppler says stopped, don't accumulate (filters jitter)
+        } else {
+            // No Doppler speed available - use distance threshold only
+            if (posDistance > 0.002 && posSpeed < 30.0) {  // >10 feet minimum
+                shouldAccumulate = true;
+            }
+        }
+
+        if (shouldAccumulate) {
+            accumDistance += posDistance;
+        }
+    }
+
+    // Update last location for next iteration
+    lastLocation = fix.location;
+    hasLastLocation = true;
 
 #if DEBUG_GPS == 1
     Serial.print("\nLAT: ");
@@ -189,6 +224,12 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
     Serial.println(heading);
     Serial.print("Sats/HDOP = ");
     Serial.println(sats_hdop);
+    if (hasLastLocation) {
+        Serial.print("Pos distance (mi) = ");
+        Serial.println(fix.location.DistanceMiles(lastLocation), 6);
+        Serial.print("Accum distance (mi) = ");
+        Serial.println(accumDistance, 3);
+    }
 #endif
 }
 

@@ -78,6 +78,16 @@ void systemTask(void *parameter) {
             old_speaker_volume = speaker_volume;
         }
 
+        if (svc_interval_hrs != old_svc_interval_hrs) {
+            eepromWriteItem_t item;
+            item.type = EEPROM_INT;
+            strcpy(item.key, "svc_interval_hrs");
+            item.value.intVal = svc_interval_hrs;
+            xQueueSend(eepromWriteQueue, &item, 0);
+
+            old_svc_interval_hrs = svc_interval_hrs;
+        }
+
         if (temperature_adj != old_temperature_adj) {
             eepromWriteItem_t item;
             item.type = EEPROM_FLOAT;

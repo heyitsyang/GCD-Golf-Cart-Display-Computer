@@ -134,6 +134,18 @@ void set_var_flip_screen(bool value);
 int32_t get_var_speaker_volume();
 void set_var_speaker_volume(int32_t value);
 
+int32_t get_var_odometer();
+void set_var_odometer(int32_t value);
+
+int32_t get_var_trip_odometer();
+void set_var_trip_odometer(int32_t value);
+
+int32_t get_var_hrs_since_svc();
+void set_var_hrs_since_svc(int32_t value);
+
+int32_t get_var_svc_interval_hrs();
+void set_var_svc_interval_hrs(int32_t value);
+
 bool get_var_reset_preferences();
 void set_var_reset_preferences(bool value);
 
@@ -196,6 +208,10 @@ extern bool espnow_connected;
 extern int32_t screen_inactivity_countdown;
 extern bool flip_screen;
 extern int32_t speaker_volume;
+extern int32_t odometer;
+extern int32_t trip_odometer;
+extern int32_t hrs_since_svc;
+extern int32_t svc_interval_hrs;
 extern bool reset_preferences;
 extern bool espnow_pair_gci;
 extern float temperature_adj;

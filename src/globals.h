@@ -133,6 +133,9 @@ extern structMsgToGci dataToGci;
 // Speaker
 extern int32_t old_speaker_volume;
 
+// Service interval (manually adjustable, needs old value tracking)
+extern int32_t old_svc_interval_hrs;
+
 // All EEZ Studio variables are defined in get_set_vars.h
 // Include it here so all files can access them
 #include "get_set_vars.h"
