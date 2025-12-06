@@ -146,11 +146,11 @@ void set_var_hrs_since_svc(int32_t value);
 int32_t get_var_svc_interval_hrs();
 void set_var_svc_interval_hrs(int32_t value);
 
-float get_var_accumDistance();
-void set_var_accumDistance(float value);
+float get_var_accum_distance();
+void set_var_accum_distance(float value);
 
-float get_var_tripDistance();
-void set_var_tripDistance(float value);
+float get_var_trip_distance();
+void set_var_trip_distance(float value);
 
 bool get_var_reset_preferences();
 void set_var_reset_preferences(bool value);
@@ -214,9 +214,9 @@ extern bool espnow_connected;
 extern int32_t screen_inactivity_countdown;
 extern bool flip_screen;
 extern int32_t speaker_volume;
-extern String odometer;
-extern String trip_odometer;
-extern int32_t hrs_since_svc;
+extern String odometer;        // Display string: formatted to 1 decimal place
+extern String trip_odometer;   // Display string: formatted to 1 decimal place
+extern int32_t hrs_since_svc;  // STORED AS TENTHS OF HOURS (divide by 10 for display)
 extern int32_t svc_interval_hrs;
 extern float accumDistance;
 extern float tripDistance;

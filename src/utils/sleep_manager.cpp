@@ -36,11 +36,12 @@ bool shouldEnterSleep() {
 void enterDeepSleep() {
     Serial.println("SLEEP_PIN is LOW - entering deep sleep mode...");
 
-    // Save distance values to EEPROM before sleeping
-    Serial.println("Saving distance values to EEPROM...");
+    // Save distance and hours values to EEPROM before sleeping
+    Serial.println("Saving distance and hours to EEPROM...");
     queuePreferenceWrite("accumDistance", accumDistance);
     queuePreferenceWrite("tripDistance", tripDistance);
-    delay(100);  // Give EEPROM task time to process the queue
+    queuePreferenceWrite("hrs_since_svc", hrs_since_svc);  // Saved as tenths of hours
+    delay(150);  // Give EEPROM task time to process the queue
 
     // Reset GPS update interval to default (2 minutes) to reduce radio power consumption
     resetGpsIntervalBeforeSleep();

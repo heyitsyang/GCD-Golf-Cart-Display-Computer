@@ -53,10 +53,14 @@ void loadPreferences() {
     trip_odometer = String(tripDistance, 1);
     set_var_trip_odometer(trip_odometer.c_str());
 
+    // hrs_since_svc is stored as TENTHS of hours everywhere (0.1 hr = 6 min resolution)
+    // Load directly without calling setter to avoid premature EEPROM queue write
     hrs_since_svc = prefs.getInt("hrs_since_svc", 0);
-    Serial.print("> hrs_since_svc read from eeprom = ");
+    Serial.print("> hrs_since_svc read from eeprom (tenths) = ");
     Serial.println(hrs_since_svc);
-    set_var_hrs_since_svc(hrs_since_svc);
+    Serial.print(">   (Display value in hours: ");
+    Serial.print(hrs_since_svc / 10);
+    Serial.println(")");
 
     svc_interval_hrs = prefs.getInt("svc_interval_hrs", 100);
     Serial.print("> svc_interval_hrs read from eeprom = ");

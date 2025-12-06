@@ -462,12 +462,35 @@ void set_var_trip_odometer(const char* value) {
     trip_odometer = String(value);
 }
 
+/**
+ * Hours Since Service - Storage Format Documentation
+ *
+ * IMPORTANT: hrs_since_svc is stored EVERYWHERE as tenths of hours (0.1 hour = 6 minute resolution)
+ *
+ * Storage Locations (all as tenths):
+ *   - EEPROM: int32_t stored as tenths (e.g., 15 = 1.5 hours)
+ *   - Global variable hrs_since_svc: int32_t tenths
+ *   - GPS task accumulation: converts to/from seconds for calculation
+ *
+ * Conversions:
+ *   - UI Display: hrs_since_svc / 10 → whole hours
+ *   - UI Input: whole hours * 10 → hrs_since_svc
+ *   - GPS Init: hrs_since_svc * 360 → accumSeconds (for tracking)
+ *   - GPS Accumulate: accumSeconds / 360 → hrs_since_svc
+ *
+ * Example: 125 tenths = 12.5 hours = 12 hours 30 minutes
+ */
+
 int32_t get_var_hrs_since_svc() {
-    return hrs_since_svc;
+    // Convert tenths of hours to whole hours for UI display
+    return hrs_since_svc / 10;
 }
 
 void set_var_hrs_since_svc(int32_t value) {
-    hrs_since_svc = value;
+    // Convert whole hours from UI to tenths for internal storage
+    hrs_since_svc = value * 10;
+    // Save immediately when user resets from UI (typically to 0 after service)
+    queuePreferenceWrite("hrs_since_svc", hrs_since_svc);
 }
 
 int32_t get_var_svc_interval_hrs() {
@@ -478,21 +501,21 @@ void set_var_svc_interval_hrs(int32_t value) {
     svc_interval_hrs = value;
 }
 
-float get_var_accumDistance() {
+float get_var_accum_distance() {
     return accumDistance;
 }
 
-void set_var_accumDistance(float value) {
+void set_var_accum_distance(float value) {
     accumDistance = value;
     // Update formatted display string
     odometer = String(accumDistance, 1);
 }
 
-float get_var_tripDistance() {
+float get_var_trip_distance() {
     return tripDistance;
 }
 
-void set_var_tripDistance(float value) {
+void set_var_trip_distance(float value) {
     tripDistance = value;
     // Update formatted display string
     trip_odometer = String(tripDistance, 1);

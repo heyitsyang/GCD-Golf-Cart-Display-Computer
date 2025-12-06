@@ -32,6 +32,13 @@ static float lastSavedAccumDistance = 0.0;
 static float lastSavedTripDistance = 0.0;
 static const float SAVE_INTERVAL_MILES = 0.5;  // Save every 0.5 miles
 
+// Hour tracking for service reminder (accumulate in seconds, display in hours)
+static unsigned long lastMovementTime = 0;
+static float accumSeconds = 0.0;  // Accumulate fractional seconds for precision
+static bool accumSecondsInitialized = false;  // Flag to initialize from hrs_since_svc on first use
+static int32_t lastSavedHrsSinceSvc = 0;
+static const int32_t SAVE_INTERVAL_HOURS = 1;  // Save every 1 hour
+
 // Satellite count persistence - filter brief dropouts
 static uint8_t lastValidSatCount = 0;
 static uint8_t zeroSatConsecutiveCount = 0;
@@ -223,6 +230,45 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
                 tripDistance = 0.0;
                 lastSavedTripDistance = 0.0;
             }
+
+            /**
+             * Accumulate driving hours (only when moving, same as distance)
+             *
+             * Storage format: hrs_since_svc is ALWAYS stored as tenths of hours
+             * Working format: accumSeconds tracks fractional seconds for precision
+             * Conversion: 360 seconds = 0.1 hours (1 tenth)
+             *
+             * Example: 45 minutes = 2700 seconds = 7.5 tenths = stored as 7 in hrs_since_svc
+             */
+            unsigned long currentTime = millis();
+
+            // Initialize accumSeconds from hrs_since_svc on first movement
+            if (!accumSecondsInitialized) {
+                // hrs_since_svc stored as tenths, convert to seconds for accumulation
+                // Example: hrs_since_svc=15 (1.5 hrs) * 360 = 5400 seconds
+                accumSeconds = hrs_since_svc * 360.0;
+                lastSavedHrsSinceSvc = hrs_since_svc;
+                accumSecondsInitialized = true;
+            }
+
+            if (lastMovementTime > 0) {
+                unsigned long elapsedMs = currentTime - lastMovementTime;
+                // Accumulate elapsed time in seconds with fractional precision
+                float elapsedSeconds = elapsedMs / 1000.0;
+                accumSeconds += elapsedSeconds;
+
+                // Convert accumulated seconds back to tenths of hours for storage
+                // Example: 5400 seconds / 360 = 15 tenths = 1.5 hours
+                int32_t currentTenthsOfHours = (int32_t)(accumSeconds / 360.0);
+                hrs_since_svc = currentTenthsOfHours;
+
+                // Save to EEPROM every 1.0 hours of driving (10 tenths)
+                if (hrs_since_svc - lastSavedHrsSinceSvc >= (SAVE_INTERVAL_HOURS * 10)) {
+                    queuePreferenceWrite("hrs_since_svc", hrs_since_svc);
+                    lastSavedHrsSinceSvc = hrs_since_svc;
+                }
+            }
+            lastMovementTime = currentTime;
 
             // Update display strings with 1 decimal place precision
             odometer = String(accumDistance, 1);
