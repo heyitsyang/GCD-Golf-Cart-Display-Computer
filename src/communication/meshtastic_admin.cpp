@@ -77,16 +77,66 @@ bool mt_set_position_config(const meshtastic_Config_PositionConfig *config) {
 }
 
 // Admin portnum callback to handle ADMIN_APP messages
-// Note: Currently unused - kept for future expansion of admin message handling
+// Currently a placeholder - kept for potential future admin message handling
 void admin_portnum_callback(uint32_t from, uint32_t to, uint8_t channel,
                            meshtastic_PortNum port, meshtastic_Data_payload_t *payload) {
-    // Placeholder for future admin message handling
+    // Only process actual ADMIN_APP messages (port 6)
+    if (port != meshtastic_PortNum_ADMIN_APP) {
+        return;
+    }
+
+    // If we ever receive an ADMIN_APP message, log it for debugging
+    meshtastic_AdminMessage adminMsg = meshtastic_AdminMessage_init_default;
+    pb_istream_t stream = pb_istream_from_buffer(payload->bytes, payload->size);
+
+    if (pb_decode(&stream, meshtastic_AdminMessage_fields, &adminMsg)) {
+        Serial.printf("*** Received ADMIN_APP message, variant=%d ***\n", adminMsg.which_payload_variant);
+    }
 }
 
 // Callback from mt_protocol.cpp when FromRadio.config (position) is received
+// Called by mt_protocol.cpp line 195 when position config is received from radio
 // Note: Currently unused - GCM firmware doesn't send position config during node report
+// Must exist to satisfy linker since mt_protocol.cpp unconditionally calls it
 void handlePositionConfigResponse(meshtastic_Config_PositionConfig *config) {
-    // Placeholder - would be called if GCM sent position config during node report
+    // Empty placeholder - GCM never sends position config
+}
+
+// Callback from mt_protocol.cpp when FromRadio.metadata is received
+// Called by mt_protocol.cpp line 488 when metadata is received from radio
+// Note: Currently unused - GCM firmware doesn't send metadata
+// Must exist to satisfy linker since mt_protocol.cpp unconditionally calls it
+void handleDeviceMetadata(meshtastic_DeviceMetadata *metadata) {
+    // Empty placeholder - GCM never sends metadata
+}
+
+// Callback from mt_protocol.cpp when FromRadio.my_info is received
+// Captures node ID (node number)
+void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo) {
+    if (myNodeInfo == nullptr) {
+        return;
+    }
+
+    // Convert node number to hex string with ! prefix (e.g., !a1b2c3d4)
+    uint32_t nodeNum = myNodeInfo->my_node_num;
+    char nodeIdStr[12];
+    snprintf(nodeIdStr, sizeof(nodeIdStr), "!%08x", nodeNum);
+
+    set_var_gcm_node_id(nodeIdStr);
+    Serial.print("GCM Node ID: ");
+    Serial.println(nodeIdStr);
+}
+
+// Callback from mt_protocol.cpp when GCM reboots
+// Reset state to allow re-capturing node ID and resending wake notification after reconnection
+void handleGcmRebooted() {
+    Serial.println("*** GCM REBOOTED - Resetting state for reconnection ***");
+
+    // Clear the stored node ID to indicate stale data
+    set_var_gcm_node_id("");
+
+    // Reset wake notification flag so it will be sent again on reconnection
+    wakeNotificationSent = false;
 }
 
 void initGpsConfigOnBoot() {
@@ -124,6 +174,26 @@ void initGpsConfigOnBoot() {
         configUpdateRetries++;
         if (configUpdateRetries == 1) {
             Serial.println("GPS Config Init: Sending config to Meshtastic radio...");
+        }
+    }
+}
+
+// Capture node ID once after GCM connection is established
+// Called by system task polling
+// Note: Only node ID is available - GCM firmware doesn't send DeviceMetadata messages
+void requestMetadataOnce() {
+    static bool nodeIdCaptured = false;
+
+    // Only run once, and only after connection is established
+    if (!nodeIdCaptured && !not_yet_connected) {
+        // Capture node ID from my_node_num (set during connection handshake)
+        if (my_node_num != 0) {
+            char nodeIdStr[12];
+            snprintf(nodeIdStr, sizeof(nodeIdStr), "!%08x", my_node_num);
+            set_var_gcm_node_id(nodeIdStr);
+            Serial.print("GCM Node ID: ");
+            Serial.println(nodeIdStr);
+            nodeIdCaptured = true;
         }
     }
 }

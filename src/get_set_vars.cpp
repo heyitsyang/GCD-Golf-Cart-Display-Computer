@@ -36,6 +36,7 @@ String fcast_precip4;
 String np_rcv_time;
 String espnow_status;
 String espnow_last_received;
+String gcm_node_id;
 
 // Numeric variable definitions
 int32_t avg_speed = 0;
@@ -407,6 +408,14 @@ const char* get_var_espnow_last_received() {
 
 void set_var_espnow_last_received(const char* value) {
     espnow_last_received = String(value);
+}
+
+const char* get_var_gcm_node_id() {
+    return gcm_node_id.c_str();
+}
+
+void set_var_gcm_node_id(const char* value) {
+    gcm_node_id = String(value);
 }
 
 int32_t get_var_screen_inactivity_countdown() {

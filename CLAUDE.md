@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Terminology
+
+**Important: Use these acronyms consistently throughout all conversations and code.**
+
+- **GCD** = Golf Cart Display (this codebase) - The display computer that uses a Cheap Yellow Display (CYD) 2432S028R
+- **GCM** = Golf Cart Mesh - The attached Meshtastic radio module that provides mesh networking capabilities
+- **GCI** = Golf Cart Internal - The internal golf cart computer that sends telemetry via ESP-NOW (codebase located at `C:\Users\Yang\Documents\PlatformIO\Projects\Golf-Cart-Internal-Computer`)
+
 ## Project Overview
 
 This is a golf cart smart display project built for the ESP32-based Cheap Yellow Display (CYD) 2432S028R. The system integrates GPS navigation, Meshtastic mesh networking, ESP-NOW communication, and a touchscreen UI using LVGL and EEZ Studio Flow.

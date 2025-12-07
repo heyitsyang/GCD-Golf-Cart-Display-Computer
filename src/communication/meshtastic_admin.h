@@ -30,6 +30,11 @@ struct GpsConfigSettings {
 // Uses polling to avoid stack overflow that would occur if called from connection callback
 void initGpsConfigOnBoot();
 
+// Capture GCM node ID once after connection is established
+// Called by system task polling
+// Note: Only node ID is available - GCM firmware doesn't send DeviceMetadata messages
+void requestMetadataOnce();
+
 // Reset GPS update interval to default before entering sleep mode
 // Sets gps_update_interval to 0 (which resets to default 2 minute interval)
 // Should be called after SLEEP_PIN goes HIGH, before entering deep sleep
@@ -43,8 +48,23 @@ void admin_portnum_callback(uint32_t from, uint32_t to, uint8_t channel,
                            meshtastic_PortNum port, meshtastic_Data_payload_t *payload);
 
 // Callback from mt_protocol.cpp when FromRadio.config (position) is received
+// Called by mt_protocol.cpp line 195 when position config is received from radio
 // Note: Currently unused - GCM firmware doesn't send position config during node report
-// Required by config_callback.h interface
+// Must exist to satisfy linker since mt_protocol.cpp unconditionally calls it
 void handlePositionConfigResponse(meshtastic_Config_PositionConfig *config);
+
+// Callback from mt_protocol.cpp when FromRadio.metadata is received
+// Called by mt_protocol.cpp line 488 when metadata is received from radio
+// Note: Currently unused - GCM firmware doesn't send metadata
+// Must exist to satisfy linker since mt_protocol.cpp unconditionally calls it
+void handleDeviceMetadata(meshtastic_DeviceMetadata *metadata);
+
+// Callback from mt_protocol.cpp when FromRadio.my_info is received
+// Captures node ID (node number)
+void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo);
+
+// Callback from mt_protocol.cpp when GCM reboots
+// Reset state to allow re-requesting metadata after reconnection
+void handleGcmRebooted();
 
 #endif // MESHTASTIC_ADMIN_H

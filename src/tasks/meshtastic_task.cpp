@@ -5,39 +5,11 @@
 #include "communication/meshtastic_admin.h"
 #include "get_set_vars.h"
 
-// State tracking for wake notification
-static bool wakeNotificationSent = false;
+void meshtasticTask(void *parameter) {
+    static bool old_reboot_meshtastic = false;
 
-void sendWakeNotificationOnBoot() {
-    // Only run once successfully
-    if (wakeNotificationSent) {
-        return;
-    }
-
-    // Wait for Meshtastic connection
-    if (not_yet_connected) {
-        return;
-    }
-
-    // Connection established - send wake notification
-    const char *wakeMessage = "~#01#GC#AWAKE#";
-
-    Serial.println("Sending wake notification broadcast...");
-
-    if (mt_send_text(wakeMessage, BROADCAST_ADDR, 0)) {
-        Serial.print("Wake notification sent: ");
-        Serial.println(wakeMessage);
-        wakeNotificationSent = true;
-    } else {
-        Serial.println("Failed to send wake notification, will retry");
-    }
-}
-
-  void meshtasticTask(void *parameter) {
-      static bool old_reboot_meshtastic = false;
-
-      while (true) {
-          uint32_t now = millis();
+    while (true) {
+        uint32_t now = millis();
 
           // Handle mesh serial enable/disable
           if (mesh_serial_enabled != old_mesh_serial_enabled) {
@@ -72,6 +44,20 @@ void sendWakeNotificationOnBoot() {
           bool can_send = false;
           if (mesh_serial_enabled) {
               can_send = mt_loop(now);
+          }
+
+          // Send wake notification once when connection is ready
+          if (can_send && !wakeNotificationSent) {
+              const char *wakeMessage = "~#01#GC#AWAKE#";
+              Serial.println("Sending wake notification broadcast...");
+
+              if (mt_send_text(wakeMessage, BROADCAST_ADDR, 0)) {
+                  Serial.print("Wake notification sent: ");
+                  Serial.println(wakeMessage);
+                  wakeNotificationSent = true;
+              } else {
+                  Serial.println("Failed to send wake notification, will retry");
+              }
           }
 
           // Send periodic test message

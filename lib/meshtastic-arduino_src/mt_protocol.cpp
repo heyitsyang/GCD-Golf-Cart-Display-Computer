@@ -471,6 +471,7 @@ bool handle_xmodemPacket_tag(meshtastic_XModem *packet) {
 }
 
 bool handle_metatag_data(meshtastic_DeviceMetadata *meta) {
+  Serial.println("*** handle_metatag_data CALLED ***");
   d("metatag_data:FW Version: %s\r\n", meta->firmware_version);
   d("metatag_data:device_state_version: %d\r\n", meta->device_state_version);
   d("metatag_data:canShutdown: %d\r\n", meta->canShutdown);
@@ -482,6 +483,10 @@ bool handle_metatag_data(meshtastic_DeviceMetadata *meta) {
   d("metatag_data:hw_model: %d\r\n", meta->hw_model);
   d("metatag_data:hasRemoteHardware: %d\r\n", meta->hasRemoteHardware);
   d("metatag_data:excludedModules: %d\r\n", meta->excluded_modules);
+
+  // Call custom callback to capture metadata
+  handleDeviceMetadata(meta);
+
   return true;
 }
 
@@ -507,6 +512,15 @@ bool handle_fileInfo_tag(meshtastic_FileInfo *fInfo) {
 
 bool handle_my_info(meshtastic_MyNodeInfo *myNodeInfo) {
   my_node_num = myNodeInfo->my_node_num;
+  Serial.println("=== handle_my_info EXECUTING ===");
+  Serial.printf("Node number: %u (0x%08x)\n", my_node_num, my_node_num);
+  d("handle_my_info called - node_num: %u\r\n", my_node_num);
+
+  // Call custom callback to capture node info
+  Serial.println("Calling handleMyNodeInfo callback...");
+  handleMyNodeInfo(myNodeInfo);
+  Serial.println("handleMyNodeInfo callback completed");
+
   return true;
 }
 
@@ -647,12 +661,15 @@ bool handle_packet(uint32_t now, size_t payload_len) {
     return false;
   }
 
+  Serial.printf("FromRadio tag: %d\n", fromRadio.which_payload_variant);
+
   switch (fromRadio.which_payload_variant) {
     case meshtastic_FromRadio_id_tag: // 1
       return handle_id_tag(fromRadio.id);
     case meshtastic_FromRadio_packet_tag: //2
       return handle_mesh_packet(&fromRadio.packet);
     case meshtastic_FromRadio_my_info_tag: // 3
+      Serial.println("*** Received my_info_tag! ***");
       return handle_my_info(&fromRadio.my_info);
     case meshtastic_FromRadio_node_info_tag: // 4
       return handle_node_info(&fromRadio.node_info);
@@ -663,6 +680,8 @@ bool handle_packet(uint32_t now, size_t payload_len) {
     case meshtastic_FromRadio_config_complete_id_tag: // 7
       return handle_config_complete_id(now, fromRadio.config_complete_id);
     case meshtastic_FromRadio_rebooted_tag: // 8
+      Serial.println("*** Received rebooted_tag! ***");
+      handleGcmRebooted();  // Notify callback that GCM has rebooted
       _mt_send_toRadio(toRadio);
 
     case  meshtastic_FromRadio_moduleConfig_tag: // 9
@@ -670,10 +689,11 @@ bool handle_packet(uint32_t now, size_t payload_len) {
     case meshtastic_FromRadio_channel_tag: // 10
       return handle_channel_tag(&fromRadio.channel);
     case meshtastic_FromRadio_queueStatus_tag: // 11
-      return handle_queueStatus_tag(&fromRadio.queueStatus); 
+      return handle_queueStatus_tag(&fromRadio.queueStatus);
     case  meshtastic_FromRadio_xmodemPacket_tag: // 12
       return handle_xmodemPacket_tag(&fromRadio.xmodemPacket);
     case meshtastic_FromRadio_metadata_tag: //        13
+      Serial.println("*** Received metadata_tag! ***");
       return handle_metatag_data(&fromRadio.metadata);
     case meshtastic_FromRadio_mqttClientProxyMessage_tag: // 14
       return handle_mqttClientProxyMessage_tag(&fromRadio.mqttClientProxyMessage);

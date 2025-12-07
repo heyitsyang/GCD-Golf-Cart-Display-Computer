@@ -107,6 +107,7 @@ String live_venue_event_data = "";
 uint32_t next_send_time = 0;
 bool not_yet_connected = true;
 bool old_mesh_serial_enabled = true;
+bool wakeNotificationSent = false;
 
 // Inactivity timeout variables
 uint32_t lastTouchActivity = 0;

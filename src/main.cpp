@@ -145,7 +145,7 @@ void setup() {
     displayMutex = xSemaphoreCreateMutex();
     hotPacketMutex = xSemaphoreCreateMutex();  // Protects weather and venue/event data
     eepromWriteQueue = xQueueCreate(10, sizeof(eepromWriteItem_t));
-    meshtasticCallbackQueue = xQueueCreate(5, sizeof(meshtasticCallbackItem_t));
+    meshtasticCallbackQueue = xQueueCreate(30, sizeof(meshtasticCallbackItem_t));  // Matches radio's ~30 packet buffer
     espnowRecvQueue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_recv_item_t));
     gpsConfigCallbackQueue = xQueueCreate(2, sizeof(gpsConfigCallbackItem_t));
     

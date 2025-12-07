@@ -13,8 +13,8 @@ void systemTask(void *parameter) {
         // Initialize GPS config after Meshtastic connection (polled approach to avoid stack overflow in callback)
         initGpsConfigOnBoot();
 
-        // Send wake notification after Meshtastic connection
-        sendWakeNotificationOnBoot();
+        // Capture GCM node ID after Meshtastic connection is established
+        requestMetadataOnce();
 
         // Check sleep pin status (highest priority - check first)
         if (shouldEnterSleep()) {

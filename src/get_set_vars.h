@@ -125,6 +125,9 @@ void set_var_espnow_status(const char* value);
 const char* get_var_espnow_last_received();
 void set_var_espnow_last_received(const char* value);
 
+const char* get_var_gcm_node_id();
+void set_var_gcm_node_id(const char* value);
+
 int32_t get_var_screen_inactivity_countdown();
 void set_var_screen_inactivity_countdown(int32_t value);
 
