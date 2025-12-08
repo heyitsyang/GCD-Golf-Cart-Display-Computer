@@ -85,6 +85,12 @@ void admin_portnum_callback(uint32_t from, uint32_t to, uint8_t channel,
         return;
     }
 
+    // Guard against NULL payload (can happen during GCM reconnection with corrupted packets)
+    if (payload == nullptr) {
+        Serial.println("*** admin_portnum_callback: NULL payload received ***");
+        return;
+    }
+
     // If we ever receive an ADMIN_APP message, log it for debugging
     meshtastic_AdminMessage adminMsg = meshtastic_AdminMessage_init_default;
     pb_istream_t stream = pb_istream_from_buffer(payload->bytes, payload->size);
