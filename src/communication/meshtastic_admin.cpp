@@ -129,14 +129,18 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo) {
     snprintf(nodeIdStr, sizeof(nodeIdStr), "!%08x", nodeNum);
 
     set_var_gcm_node_id(nodeIdStr);
+#if DEBUG_MESHTASTIC_CONNECTION
     Serial.print("GCM Node ID: ");
     Serial.println(nodeIdStr);
+#endif
 }
 
 // Callback from mt_protocol.cpp when GCM reboots
 // Reset state to allow re-capturing node ID and resending wake notification after reconnection
 void handleGcmRebooted() {
+#if DEBUG_MESHTASTIC_CONNECTION
     Serial.println("*** GCM REBOOTED - Resetting state for reconnection ***");
+#endif
 
     // Clear the stored node ID to indicate stale data
     set_var_gcm_node_id("");
@@ -197,8 +201,10 @@ void requestMetadataOnce() {
             char nodeIdStr[12];
             snprintf(nodeIdStr, sizeof(nodeIdStr), "!%08x", my_node_num);
             set_var_gcm_node_id(nodeIdStr);
+#if DEBUG_MESHTASTIC_CONNECTION
             Serial.print("GCM Node ID: ");
             Serial.println(nodeIdStr);
+#endif
             nodeIdCaptured = true;
         }
     }

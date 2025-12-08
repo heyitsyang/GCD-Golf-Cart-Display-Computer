@@ -37,15 +37,13 @@ void processHotPacket(const char* text) {
         case HOT_PACKET_WEATHER: {
             Serial.println("WX packet received");
 
-            // CRITICAL: Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
-            // GPS task updates these, so we must lock gpsMutex while reading them
+            // Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
             String timestamp;
             if (gpsMutex != NULL && xSemaphoreTake(gpsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 timestamp = cur_date + "  " + hhmm_str + am_pm_str;
                 xSemaphoreGive(gpsMutex);
             } else {
                 timestamp = "GPS data unavailable";
-                Serial.println("Warning: Could not lock gpsMutex for weather timestamp");
             }
 
             // Parse weather data (updates buffers and swaps)
@@ -64,15 +62,13 @@ void processHotPacket(const char* text) {
                 // Write to back buffer (whichever is NOT active)
                 int backBuffer = 1 - hotPacketActiveBuffer;
 
-                // CRITICAL: Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
-                // GPS task updates these, so we must lock gpsMutex while reading them
+                // Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
                 String timestamp;
                 if (gpsMutex != NULL && xSemaphoreTake(gpsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                     timestamp = cur_date + "  " + hhmm_str + am_pm_str;
                     xSemaphoreGive(gpsMutex);
                 } else {
                     timestamp = "GPS data unavailable";
-                    Serial.println("Warning: Could not lock gpsMutex for venue timestamp");
                 }
 
                 hotPacketBuffer_np_rcv_time[backBuffer] = timestamp;

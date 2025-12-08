@@ -4,8 +4,10 @@
 // Debug Settings
 #define DEBUG_TOUCH_SCREEN 0
 #define DEBUG_GPS 0
-#define MT_DEBUGGING 0
+#define MT_DEBUGGING 0                 // low level Meshtastic protocol debugging
+#define DEBUG_ESP32_SLEEP 0
 #define DEBUG_ESPNOW 0
+#define DEBUG_MESHTASTIC_CONNECTION 0  // GCM connection/reconnection events
 
 // Speaker pin & default settings
 #define SPEAKER_PIN 26
