@@ -1,4 +1,4 @@
-ev#include "mt_internals.h"
+#include "mt_internals.h"
 #include "../meshtastic_customizations/config_callback.h"
 
 // Magic number at the start of all MT packets
