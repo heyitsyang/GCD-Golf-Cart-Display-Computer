@@ -1,4 +1,4 @@
-#include "mt_internals.h"
+ev#include "mt_internals.h"
 #include "../meshtastic_customizations/config_callback.h"
 
 // Magic number at the start of all MT packets
@@ -683,6 +683,7 @@ bool handle_packet(uint32_t now, size_t payload_len) {
       Serial.println("*** Received rebooted_tag! ***");
       handleGcmRebooted();  // Notify callback that GCM has rebooted
       _mt_send_toRadio(toRadio);
+      return true;  // Fix upstream bug: prevent fall-through to moduleConfig_tag
 
     case  meshtastic_FromRadio_moduleConfig_tag: // 9
       return handle_moduleConfig_tag(&fromRadio.moduleConfig);

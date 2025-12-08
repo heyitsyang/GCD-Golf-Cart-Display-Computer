@@ -98,6 +98,31 @@ def update_protobuf_files(source_dir):
     if readme_path.exists():
         print(f"  ✅ Preserved README YS")
 
+def apply_patches():
+    """Apply required patches to upstream library"""
+    print("🔧 Applying required patches...")
+
+    patches_script = CUSTOMIZATIONS_DIR / "patches" / "apply_patches.py"
+
+    if patches_script.exists():
+        # Run the patch script
+        result = subprocess.run(
+            ["python3", str(patches_script)],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            print("  ✅ Patches applied successfully")
+            return True
+        else:
+            print(f"  ⚠️  Patch application had warnings:")
+            print(result.stdout)
+            return True  # Continue even with warnings
+    else:
+        print("  ℹ️  No patches to apply")
+        return True
+
 def verify_customizations():
     """Verify that our customizations are still in place"""
     print("🔍 Verifying customizations...")
@@ -154,12 +179,16 @@ def main():
         # Step 3: Update files while preserving customizations
         update_protobuf_files(source_dir)
 
-        # Step 4: Verify customizations
+        # Step 4: Apply required patches
+        if not apply_patches():
+            print("⚠️  Patch application incomplete - review warnings")
+
+        # Step 5: Verify customizations
         if not verify_customizations():
             print("❌ Customization verification failed!")
             return False
 
-        # Step 5: Check platformio config
+        # Step 6: Check platformio config
         update_platformio_config()
 
         print("=" * 60)

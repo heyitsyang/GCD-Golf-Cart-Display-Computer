@@ -37,10 +37,14 @@ pio device monitor
 **CRITICAL: These rules must be followed in all development work on this project.**
 
 ### 1. Meshtastic Library Integrity
-- **NEVER modify files in `lib/meshtastic-arduino_src/`**: This folder must remain pristine to allow transparent updates from the upstream GitHub repository (https://github.com/meshtastic/Meshtastic-arduino).
+- **NEVER modify files in `lib/meshtastic-arduino_src/` manually**: Use the automated patch system to preserve changes across updates.
 - **All Meshtastic customizations go in `lib/meshtastic_customizations/`**: ESP32-specific implementations and extensions belong here.
 - **Project-specific Meshtastic extensions go in `src/communication/`**: Custom admin commands, protocol extensions, etc. should be implemented in the main src tree, not in the library folders.
+- **Bug fixes are managed via patches**: Critical fixes to upstream library code are stored in `lib/meshtastic_customizations/patches/` and automatically applied during updates.
 - See `lib/meshtastic_customizations/README.md` for the automated update process.
+
+#### Current Applied Patches
+1. **Rebooted Tag Return Statement Fix** (`mt_protocol.cpp:686`): Fixes upstream bug causing crashes when GCM reboots. Missing `return true;` statement after `rebooted_tag` case causes fall-through to `moduleConfig_tag`, resulting in `InstrFetchProhibited` exception. All other cases in the switch statement return a value; this one was missing it. This bug exists in upstream as of 2025-12.
 
 ### 2. UART0 Split Architecture
 - **UART0 is split**: GPS RX on pin 3, Debug TX on pin 1. This is a unidirectional split configuration.

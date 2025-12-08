@@ -28,6 +28,16 @@ meshtastic_customizations/
 - Removes hardware pin dependencies needed by other platforms
 - Uses ESP32 native WiFi library
 
+### Critical Bug Fixes (Applied via Patches)
+
+#### Rebooted Tag Return Statement Fix (`patches/mt_protocol_rebooted_tag_fix.patch`)
+**Upstream Bug**: Missing `return true;` statement after `rebooted_tag` case (tag 8) in mt_protocol.cpp
+**Impact**: Causes fall-through to `moduleConfig_tag` case, leading to crashes when GCM reboots
+**Symptom**: `InstrFetchProhibited` exception at address 0x00000000
+**Fix**: Adds `return true;` statement at mt_protocol.cpp line 686 (consistent with all other cases)
+**Status**: Upstream bug not fixed as of 2025-12 (confirmed in github.com/meshtastic/Meshtastic-arduino)
+**Applied by**: `patches/apply_patches.py` (automatic during update process)
+
 ## Updating Meshtastic Protobuf Definitions
 
 ### Automated Update (Recommended)
@@ -40,16 +50,18 @@ This script will:
 1. ✅ Backup current library
 2. ⬇️ Download latest Meshtastic-arduino
 3. 🔄 Update protobuf definitions
-4. 🔒 Preserve ESP32 customizations
-5. ✅ Verify everything is working
+4. 🔧 Apply critical bug fix patches
+5. 🔒 Preserve ESP32 customizations
+6. ✅ Verify everything is working
 
 ### Manual Update Process
 1. **Backup current library**: Copy `lib/meshtastic-arduino_src/` to safe location
 2. **Download latest**: Get latest from https://github.com/meshtastic/Meshtastic-arduino
 3. **Update protobuf files**: Copy all `*.pb.h`, `*.pb.c` files from `src/meshtastic/`
 4. **Update core files**: Copy `mt_protocol.cpp`, `mt_internals.h`, `Meshtastic.h`
-5. **Preserve customizations**: Keep `*_ys_modified.cpp` files unchanged
-6. **Test compilation**: Ensure project still compiles
+5. **Apply patches**: Run `python3 patches/apply_patches.py` to apply critical bug fixes
+6. **Preserve customizations**: Keep ESP32 customizations from `esp32_overrides/`
+7. **Test compilation**: Ensure project still compiles
 
 ## Migration from Old Structure
 

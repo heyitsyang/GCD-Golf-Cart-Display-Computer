@@ -1,0 +1,11 @@
+--- mt_protocol.cpp.orig	2025-01-XX XX:XX:XX
++++ mt_protocol.cpp	2025-01-XX XX:XX:XX
+@@ -682,7 +682,8 @@
+     case meshtastic_FromRadio_rebooted_tag: // 8
+       Serial.println("*** Received rebooted_tag! ***");
+       handleGcmRebooted();  // Notify callback that GCM has rebooted
+       _mt_send_toRadio(toRadio);
++      return true;  // Fix upstream bug: prevent fall-through to moduleConfig_tag
+
+     case  meshtastic_FromRadio_moduleConfig_tag: // 9
+       return handle_moduleConfig_tag(&fromRadio.moduleConfig);

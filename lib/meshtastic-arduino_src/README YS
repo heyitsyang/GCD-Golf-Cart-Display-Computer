@@ -1,7 +1,21 @@
 This meshtastic-arduino_src folder contains Meshtastic protobuf definitions and core protocol files
 from https://github.com/meshtastic/Meshtastic-arduino/tree/master/src
 
-- ESP32-specific customizations have been moved to lib/meshtastic_customizations/esp32_overrides/
-- This directory contains only upstream protobuf definitions and core protocol files
-- Use lib/meshtastic_customizations/update_scripts/update_meshtastic.py to safely update protobuf definitions
-- ESP32 customizations for Golf Cart Computer project are now in clean, separate files
+IMPORTANT: DO NOT MANUALLY EDIT FILES IN THIS DIRECTORY
+
+- ESP32-specific customizations: lib/meshtastic_customizations/esp32_overrides/
+- Critical bug fix patches: lib/meshtastic_customizations/patches/
+- Automated update script: lib/meshtastic_customizations/update_scripts/update_meshtastic.py
+
+CURRENT PATCHES APPLIED:
+1. mt_protocol.cpp:686 - Rebooted tag return statement fix (prevents crash on GCM reconnection)
+
+To update Meshtastic library:
+  cd lib/meshtastic_customizations/update_scripts/
+  python3 update_meshtastic.py
+
+This will automatically:
+  - Backup current library
+  - Download latest upstream code
+  - Apply critical bug fix patches
+  - Preserve ESP32 customizations
