@@ -24,7 +24,8 @@ static const GpsConfigSettings desiredGpsConfig = {
 // State tracking for GPS config initialization
 static bool gpsConfigInitialized = false;
 static uint8_t configUpdateRetries = 0;
-static const uint8_t MAX_RETRIES = 100;  // 10 seconds at 100ms intervals
+static const uint8_t MAX_RETRIES = 50;  // 5 seconds at 100ms intervals
+static bool gpsConfigSentSuccessfully = false;  // Track if config was sent (will cause reboot)
 
 // Helper function to send admin messages
 static bool sendAdminMessage(meshtastic_AdminMessage *adminMsg) {
@@ -137,6 +138,12 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo) {
 
 // Callback from mt_protocol.cpp when GCM reboots
 // Reset state to allow re-capturing node ID and resending wake notification after reconnection
+//
+// NOTE: GCM boot sequence includes TWO reboots when GPS config is written:
+//   1st reboot: Initial GCM boot → GPS config sent → triggers reboot
+//   2nd reboot: GPS-config-induced reboot → system stable
+// We detect the 2nd reboot via gpsConfigSentSuccessfully flag to ensure AWAKE
+// is sent only after system is fully stable
 void handleGcmRebooted() {
 #if DEBUG_MESHTASTIC_CONNECTION
     Serial.println("*** GCM REBOOTED - Resetting state for reconnection ***");
@@ -144,6 +151,13 @@ void handleGcmRebooted() {
 
     // Clear the stored node ID to indicate stale data
     set_var_gcm_node_id("");
+
+    // If GPS config was sent successfully, this reboot is the GPS-config-induced reboot
+    // System is now stable, allow AWAKE to be sent
+    if (gpsConfigSentSuccessfully) {
+        gpsConfigAttempted = true;
+        gpsConfigSentSuccessfully = false;  // Reset flag
+    }
 
     // Reset wake notification flag so it will be sent again on reconnection
     wakeNotificationSent = false;
@@ -174,12 +188,15 @@ void initGpsConfigOnBoot() {
     if (configUpdateRetries >= MAX_RETRIES) {
         Serial.println("GPS Config Init: Failed after max retries - giving up");
         gpsConfigInitialized = true;  // Give up and don't retry forever
+        gpsConfigAttempted = true;     // No reboot will occur, allow AWAKE to be sent now
         return;
     }
 
     if (mt_set_position_config(&config)) {
         Serial.println("GPS Config Init: Complete");
         gpsConfigInitialized = true;
+        gpsConfigSentSuccessfully = true;  // Flag that GCM will reboot due to config change
+        // DO NOT set gpsConfigAttempted here - wait for GPS-config-induced reboot (2nd reboot)
     } else {
         configUpdateRetries++;
         if (configUpdateRetries == 1) {

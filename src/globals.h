@@ -109,6 +109,7 @@ extern uint32_t next_send_time;
 extern bool not_yet_connected;
 extern bool old_mesh_serial_enabled;
 extern bool wakeNotificationSent;
+extern bool gpsConfigAttempted;
 
 // Inactivity timeout variables (NOT in get_set_vars.h)
 extern uint32_t lastTouchActivity;

@@ -46,8 +46,9 @@ void meshtasticTask(void *parameter) {
               can_send = mt_loop(now);
           }
 
-          // Send wake notification once when connection is ready
-          if (can_send && !wakeNotificationSent) {
+          // Send wake notification once when connection is ready AND GPS config has been attempted
+          // GPS config write causes GCM to reboot (2nd boot), so we wait until after that before sending AWAKE
+          if (can_send && !wakeNotificationSent && gpsConfigAttempted) {
               const char *wakeMessage = "~#01#GC#AWAKE#";
 
               if (mt_send_text(wakeMessage, BROADCAST_ADDR, 0)) {
