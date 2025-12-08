@@ -316,8 +316,8 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
         }
         
         case ESPNOW_MSG_TELEMETRY: {
-            Serial.print("ESP-NOW Telemetry from ");
-            Serial.println(mac_str);
+            Serial.printf("ESP-NOW from %s : ", mac_str);
+
 
             // Extract telemetry data from message
             memcpy(&dataFromGci, item.message.data, sizeof(structMsgFromGci));
@@ -329,14 +329,13 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             battVoltage = dataFromGci.battVolts;
             fuelLevel = dataFromGci.fuel;
 
-            Serial.printf("Telemetry: Lights=%d, Lum=%d, Temp=%.1f, Batt=%.2f, Fuel=%.1f\n",
+            Serial.printf("Lights=%d, Lum=%d, Temp=%.1f, Batt=%.2f, Fuel=%.1f\n",
                          modeHeadLights, outdoorLuminosity, airTemperature, battVoltage, fuelLevel);
             break;
         }
         
         case ESPNOW_MSG_COMMAND: {
-            Serial.print("ESP-NOW Command from ");
-            Serial.println(mac_str);
+            Serial.printf("ESP-NOW Command from %s : ", mac_str);
             // Handle commands
             break;
         }

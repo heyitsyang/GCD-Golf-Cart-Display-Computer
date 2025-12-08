@@ -49,11 +49,10 @@ void meshtasticTask(void *parameter) {
           // Send wake notification once when connection is ready
           if (can_send && !wakeNotificationSent) {
               const char *wakeMessage = "~#01#GC#AWAKE#";
-              Serial.println("Sending wake notification broadcast...");
 
               if (mt_send_text(wakeMessage, BROADCAST_ADDR, 0)) {
-                  Serial.print("Wake notification sent: ");
-                  Serial.println(wakeMessage);
+                //   Serial.print("Wake notification sent: ");
+                //   Serial.println(wakeMessage);
                   wakeNotificationSent = true;
               } else {
                   Serial.println("Failed to send wake notification, will retry");
@@ -62,8 +61,7 @@ void meshtasticTask(void *parameter) {
 
           // Send periodic test message
           if (can_send && now >= next_send_time) {
-              Serial.print("\nSending test message at: ");
-              Serial.println(hhmm_str);
+              Serial.printf("Sending test message at: %s", hhmm_str.c_str());
 
               uint32_t dest = BROADCAST_ADDR;
               uint8_t channel_index = 0;

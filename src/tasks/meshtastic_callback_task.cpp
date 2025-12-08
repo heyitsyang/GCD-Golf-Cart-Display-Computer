@@ -10,14 +10,14 @@ void meshtasticCallbackTask(void *parameter) {
     
     while (true) {
         if (xQueueReceive(meshtasticCallbackQueue, &item, portMAX_DELAY)) {
-            Serial.print("Received a text message on channel: ");
-            Serial.print(item.channel);
-            Serial.print(" from: ");
-            Serial.print(item.from);
-            Serial.print(" to: ");
-            Serial.print(item.to);
-            Serial.print(" message: ");
-            Serial.println(item.text);
+            // Serial.print("Received a text message on channel: ");
+            // Serial.print(item.channel);
+            // Serial.print(" from: ");
+            // Serial.print(item.from);
+            // Serial.print(" to: ");
+            // Serial.print(item.to);
+            // Serial.print(" message: ");
+            // Serial.println(item.text);
             
             if (item.to == 0xFFFFFFFF) {
                 Serial.println("This is a BROADCAST message.");
