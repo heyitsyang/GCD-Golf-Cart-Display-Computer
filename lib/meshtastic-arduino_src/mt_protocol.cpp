@@ -567,7 +567,9 @@ bool handle_node_info(meshtastic_NodeInfo *nodeInfo) {
     node.air_util_tx = NAN;
   }
 
-  node_report_callback(&node, MT_NR_IN_PROGRESS);
+  if (node_report_callback != NULL) {
+    node_report_callback(&node, MT_NR_IN_PROGRESS);
+  }
   return true;
 }
 
@@ -577,10 +579,14 @@ bool handle_config_complete_id(uint32_t now, uint32_t config_complete_id) {
     mt_wifi_reset_idle_timeout(now);  // It's fine if we're actually in serial mode
     #endif
     want_config_id = 0;
-    node_report_callback(NULL, MT_NR_DONE);
+    if (node_report_callback != NULL) {
+      node_report_callback(NULL, MT_NR_DONE);
+    }
     node_report_callback = NULL;
   } else {
-    node_report_callback(NULL, MT_NR_INVALID);  // but return true, since it was still a valid packet
+    if (node_report_callback != NULL) {
+      node_report_callback(NULL, MT_NR_INVALID);  // but return true, since it was still a valid packet
+    }
   }
   return true;
 }

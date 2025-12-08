@@ -68,6 +68,93 @@ def apply_rebooted_tag_fix():
         print("  ℹ️  Manual patch may be required - see mt_protocol_rebooted_tag_fix.patch")
         return False
 
+def apply_node_report_callback_null_check():
+    """
+    Apply NULL check fixes for node_report_callback in mt_protocol.cpp
+
+    Upstream bug: node_report_callback is called without NULL checks, causing
+    crashes when GCM reconnects and triggers node reports when callback is NULL.
+
+    Reference: mt_protocol_node_report_callback_null_check.patch
+    """
+    print("🔧 Applying node_report_callback NULL check fix...")
+
+    protocol_file = MESHTASTIC_LIB / "mt_protocol.cpp"
+
+    if not protocol_file.exists():
+        print(f"  ❌ File not found: {protocol_file}")
+        return False
+
+    # Read the file
+    with open(protocol_file, 'r') as f:
+        content = f.read()
+
+    # Check if patch is already applied
+    if "if (node_report_callback != NULL) {" in content:
+        print("  ✅ Patch already applied")
+        return True
+
+    # Apply the fix - three separate replacements for safety
+    patches_applied = 0
+
+    # Fix 1: handle_node_info
+    old_code_1 = """  node_report_callback(&node, MT_NR_IN_PROGRESS);
+  return true;"""
+
+    new_code_1 = """  if (node_report_callback != NULL) {
+    node_report_callback(&node, MT_NR_IN_PROGRESS);
+  }
+  return true;"""
+
+    if old_code_1 in content:
+        content = content.replace(old_code_1, new_code_1)
+        patches_applied += 1
+
+    # Fix 2: handle_config_complete_id - MT_NR_DONE
+    old_code_2 = """    want_config_id = 0;
+    node_report_callback(NULL, MT_NR_DONE);
+    node_report_callback = NULL;"""
+
+    new_code_2 = """    want_config_id = 0;
+    if (node_report_callback != NULL) {
+      node_report_callback(NULL, MT_NR_DONE);
+    }
+    node_report_callback = NULL;"""
+
+    if old_code_2 in content:
+        content = content.replace(old_code_2, new_code_2)
+        patches_applied += 1
+
+    # Fix 3: handle_config_complete_id - MT_NR_INVALID
+    old_code_3 = """  } else {
+    node_report_callback(NULL, MT_NR_INVALID);  // but return true, since it was still a valid packet
+  }"""
+
+    new_code_3 = """  } else {
+    if (node_report_callback != NULL) {
+      node_report_callback(NULL, MT_NR_INVALID);  // but return true, since it was still a valid packet
+    }
+  }"""
+
+    if old_code_3 in content:
+        content = content.replace(old_code_3, new_code_3)
+        patches_applied += 1
+
+    if patches_applied == 3:
+        # Write the patched file
+        with open(protocol_file, 'w') as f:
+            f.write(content)
+
+        print(f"  ✅ Successfully applied {patches_applied} NULL check fixes")
+        return True
+    elif patches_applied > 0:
+        print(f"  ⚠️  Only applied {patches_applied}/3 fixes - file may have changed")
+        return False
+    else:
+        print("  ⚠️  Code patterns not found - file may have changed")
+        print("  ℹ️  Manual patch may be required - see mt_protocol_node_report_callback_null_check.patch")
+        return False
+
 def main():
     """Apply all required patches"""
     print("🚀 Applying Meshtastic patches for Golf Cart Project")
@@ -77,6 +164,9 @@ def main():
 
     # Apply all patches
     if not apply_rebooted_tag_fix():
+        success = False
+
+    if not apply_node_report_callback_null_check():
         success = False
 
     print("=" * 60)
