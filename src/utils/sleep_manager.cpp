@@ -5,6 +5,7 @@
 #include "get_set_vars.h"
 #include "communication/meshtastic_admin.h"
 #include "storage/preferences_manager.h"
+#include "Meshtastic.h"
 #include <esp_sleep.h>
 #include <driver/rtc_io.h>
 
@@ -43,8 +44,16 @@ void enterDeepSleep() {
     queuePreferenceWrite("hrs_since_svc", hrs_since_svc);  // Saved as tenths of hours
     delay(150);  // Give EEPROM task time to process the queue
 
-    // Reset GPS update interval to default (2 minutes) to reduce radio power consumption
-    resetGpsIntervalBeforeSleep();
+    // Cleanly shutdown Meshtastic serial connection
+    if (mesh_serial_enabled) {
+        // Reset GPS update interval to default (2 minutes) to reduce radio power consumption
+        // Must be done while serial is still active
+        resetGpsIntervalBeforeSleep();
+
+        Serial.println("Shutting down Meshtastic serial connection...");
+        mt_serial_end();  // Directly shutdown UART2 before sleep
+        mesh_serial_enabled = false;  // Update state to match
+    }
 
     // Turn off backlight to save power
     setBacklight(0);

@@ -111,7 +111,7 @@ static void updateTimeDisplay(const gps_fix& fix) {
     localDayOfWeek = weekday(localTime);
 
     // Update display strings
-    cur_date = String(getDayAbbr(localDayOfWeek)) + " " + String(localDay);
+    cur_date = String(getDayAbbr(localDayOfWeek)) + ", " + String(getMonthAbbr(localMonth)) + " " + String(localDay);
     hhmm_str = String(make12hr(localHour)) + ":" + String(prefix_zero(localMinute));
     hhmmss_str = String(make12hr(localHour)) + ":" +
                  String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));

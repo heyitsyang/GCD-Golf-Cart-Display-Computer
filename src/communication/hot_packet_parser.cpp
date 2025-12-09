@@ -21,7 +21,7 @@ int parseHotPacketType(const char* text) {
 }
 
 void processHotPacket(const char* text) {
-    Serial.println("Received a HoT pkt");
+    Serial.print("Received a HoT pkt: ");
 
     // Set flag for any HOT packet received (for UI updates)
     new_rx_data_flag = true;
