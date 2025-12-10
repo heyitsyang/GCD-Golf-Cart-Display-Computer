@@ -67,7 +67,7 @@ void meshtasticTask(void *parameter) {
               uint32_t dest = BROADCAST_ADDR;
               uint8_t channel_index = 0;
 
-              bool success = mt_send_text("Hello, world from the CYD Golf Cart Computer!",
+              bool success = mt_send_text("Hello, world from the GCD!",
                                          dest, channel_index);
               Serial.print("mt_send_text returned: ");
               Serial.println(success ? "SUCCESS" : "***** FAILED ****");
