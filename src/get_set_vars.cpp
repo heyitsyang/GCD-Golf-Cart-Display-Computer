@@ -37,6 +37,7 @@ String np_rcv_time;
 String espnow_status;
 String espnow_last_received;
 String gcm_node_id;
+String text_message;
 
 // Numeric variable definitions
 int32_t avg_speed = 0;
@@ -560,6 +561,14 @@ bool get_var_reboot_meshtastic() {
 
 void set_var_reboot_meshtastic(bool value) {
     reboot_meshtastic = value;
+}
+
+const char* get_var_text_message() {
+    return text_message.c_str();
+}
+
+void set_var_text_message(const char* value) {
+    text_message = String(value);
 }
 
 } // extern "C"

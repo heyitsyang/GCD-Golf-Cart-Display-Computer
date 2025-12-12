@@ -167,6 +167,9 @@ void set_var_temperature_adj(float value);
 bool get_var_reboot_meshtastic();
 void set_var_reboot_meshtastic(bool value);
 
+const char* get_var_text_message();
+void set_var_text_message(const char* value);
+
 #ifdef __cplusplus
 }
 #endif
@@ -205,6 +208,7 @@ extern String fcast_precip4;
 extern String np_rcv_time;
 extern String espnow_status;
 extern String espnow_last_received;
+extern String text_message;
 
 // Numeric variables
 extern int32_t avg_speed;
