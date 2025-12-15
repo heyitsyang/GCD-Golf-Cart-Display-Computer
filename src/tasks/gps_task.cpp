@@ -44,6 +44,9 @@ static uint8_t lastValidSatCount = 0;
 static uint8_t zeroSatConsecutiveCount = 0;
 static const uint8_t ZERO_SAT_THRESHOLD = 3;  // Require 3 consecutive zero readings
 
+// Track at_home state changes
+static bool old_at_home = false;
+
 /**
  * Update speed from GPS fix
  * When speed is valid, use it (with dither filtering).
@@ -157,13 +160,83 @@ static void updateBacklight(time_t& sunrise_t, time_t& sunset_t) {
 }
 
 /**
+ * Check and update home location status
+ * Handles setting home location when triggered and calculates if we're currently at home
+ */
+static void updateHomeLocation(const gps_fix& fix) {
+    if (!fix.valid.location) return;
+
+    // Check if user triggered "set home location"
+    if (set_home_loc) {
+        float lat = fix.latitude();
+        float lon = fix.longitude();
+
+        // Only save if we have valid non-zero coordinates
+        if (lat != 0.0 && lon != 0.0) {
+            homeLatitude = lat;
+            homeLongitude = lon;
+            homeLocationSet = true;
+
+            Serial.println("Setting home location:");
+            Serial.print("  Latitude: "); Serial.println(homeLatitude, 6);
+            Serial.print("  Longitude: "); Serial.println(homeLongitude, 6);
+
+            // Save to EEPROM
+            queuePreferenceWrite("home_lat", homeLatitude);
+            queuePreferenceWrite("home_lon", homeLongitude);
+        } else {
+            Serial.println("Cannot set home location: GPS coordinates are invalid (0.0, 0.0)");
+        }
+
+        // Reset the trigger regardless
+        set_home_loc = false;
+    }
+
+    // Calculate if we're at home
+    if (homeLocationSet) {
+        // Create a location object for home coordinates
+        // Must cast to int32_t to prevent overflow
+        int32_t homeLat_int32 = (int32_t)(homeLatitude * 1e7);
+        int32_t homeLon_int32 = (int32_t)(homeLongitude * 1e7);
+        NeoGPS::Location_t homeLocation(homeLat_int32, homeLon_int32);
+
+        // Calculate distance in meters
+        float distanceMeters = fix.location.DistanceKm(homeLocation) * 1000.0;
+
+        // Update at_home status based on fence radius
+        at_home = (distanceMeters <= home_gps_fence_radius_m);
+
+        // Print debug message when at_home state changes
+        if (at_home != old_at_home) {
+            if (at_home) {
+                Serial.print("*** ENTERED home geo-fence (distance: ");
+                Serial.print(distanceMeters, 1);
+                Serial.println(" meters) ***");
+            } else {
+                Serial.print("*** LEFT home geo-fence (distance: ");
+                Serial.print(distanceMeters, 1);
+                Serial.println(" meters) ***");
+            }
+            old_at_home = at_home;
+        }
+    } else {
+        // No home location set yet
+        at_home = false;
+        old_at_home = false;
+    }
+}
+
+/**
  * Update location-related data from GPS fix
  */
 static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset_t) {
     if (!fix.valid.location) return;
 
+    // Update both old and new coordinate variables
     latitude = String(fix.latitude(), 6);
     longitude = String(fix.longitude(), 6);
+    cur_lat = latitude;
+    cur_long = longitude;
 
     if (fix.valid.altitude) {
         altitude = String(fix.altitude(), 2);
@@ -218,16 +291,16 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
         }
 
         if (shouldAccumulate) {
-            accumDistance += posDistance;
-            tripDistance += posDistance;
+            accum_distance += posDistance;
+            trip_distance += posDistance;
 
             // Rollover at 100,000 miles (display limit is 99999.9)
-            if (accumDistance >= 100000.0) {
-                accumDistance = 0.0;
+            if (accum_distance >= 100000.0) {
+                accum_distance = 0.0;
                 lastSavedAccumDistance = 0.0;
             }
-            if (tripDistance >= 100000.0) {
-                tripDistance = 0.0;
+            if (trip_distance >= 100000.0) {
+                trip_distance = 0.0;
                 lastSavedTripDistance = 0.0;
             }
 
@@ -271,18 +344,18 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
             lastMovementTime = currentTime;
 
             // Update display strings with 1 decimal place precision
-            odometer = String(accumDistance, 1);
-            trip_odometer = String(tripDistance, 1);
+            odometer = String(accum_distance, 1);
+            trip_odometer = String(trip_distance, 1);
 
             // Save to EEPROM periodically (every 0.5 miles)
-            if (accumDistance - lastSavedAccumDistance >= SAVE_INTERVAL_MILES) {
-                queuePreferenceWrite("accumDistance", accumDistance);
-                lastSavedAccumDistance = accumDistance;
+            if (accum_distance - lastSavedAccumDistance >= SAVE_INTERVAL_MILES) {
+                queuePreferenceWrite("accumDistance", accum_distance);
+                lastSavedAccumDistance = accum_distance;
             }
 
-            if (tripDistance - lastSavedTripDistance >= SAVE_INTERVAL_MILES) {
-                queuePreferenceWrite("tripDistance", tripDistance);
-                lastSavedTripDistance = tripDistance;
+            if (trip_distance - lastSavedTripDistance >= SAVE_INTERVAL_MILES) {
+                queuePreferenceWrite("tripDistance", trip_distance);
+                lastSavedTripDistance = trip_distance;
             }
         }
     }
@@ -306,7 +379,7 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
         Serial.print("Pos distance (mi) = ");
         Serial.println(fix.location.DistanceMiles(lastLocation), 6);
         Serial.print("Accum distance (mi) = ");
-        Serial.println(accumDistance, 3);
+        Serial.println(accum_distance, 3);
     }
 #endif
 }
@@ -334,6 +407,7 @@ void gpsTask(void *parameter) {
                 updateHeading(fix);
                 updateTimeDisplay(fix);
                 updateLocation(fix, sunrise_t, sunset_t);
+                updateHomeLocation(fix);
             }
 
             xSemaphoreGive(gpsMutex);

@@ -39,8 +39,8 @@ void enterDeepSleep() {
 
     // Save distance and hours values to EEPROM before sleeping
     Serial.println("Saving distance and hours to EEPROM...");
-    queuePreferenceWrite("accumDistance", accumDistance);
-    queuePreferenceWrite("tripDistance", tripDistance);
+    queuePreferenceWrite("accumDistance", accum_distance);
+    queuePreferenceWrite("tripDistance", trip_distance);
     queuePreferenceWrite("hrs_since_svc", hrs_since_svc);  // Saved as tenths of hours
     delay(150);  // Give EEPROM task time to process the queue
 

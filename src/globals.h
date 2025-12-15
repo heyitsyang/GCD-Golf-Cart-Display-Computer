@@ -96,6 +96,11 @@ extern int old_day_backlight, old_night_backlight;
 extern unsigned long lastGpsTimeUpdate;  // Tracks when GPS time was last received
 extern float avg_speed_calc;  // Float version for GPS calculations
 
+// Home location variables (NOT in get_set_vars.h)
+extern float homeLatitude;    // Home location latitude
+extern float homeLongitude;   // Home location longitude
+extern bool homeLocationSet;  // True if home location has been saved
+
 // Old tracking variables (NOT in get_set_vars.h)
 extern String old_espnow_gci_mac_addr;
 extern bool old_flip_screen;

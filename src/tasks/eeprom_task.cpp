@@ -10,13 +10,19 @@ void eepromTask(void *parameter) {
         if (xQueueReceive(eepromWriteQueue, &item, portMAX_DELAY)) {
             if (xSemaphoreTake(eepromMutex, portMAX_DELAY)) {
                 switch (item.type) {
-                    case EEPROM_FLOAT:
+                    case EEPROM_FLOAT: {
                         prefs.putFloat(item.key, item.value.floatVal);
                         Serial.print("> ");
                         Serial.print(item.key);
                         Serial.print(" saved to eeprom: ");
-                        Serial.println(item.value.floatVal);
+                        Serial.println(item.value.floatVal, 6);
+
+                        // Verify the write by reading it back
+                        float readBack = prefs.getFloat(item.key, -999.0);
+                        Serial.print("  VERIFIED: Read back ");
+                        Serial.println(readBack, 6);
                         break;
+                    }
                         
                     case EEPROM_INT:
                         prefs.putInt(item.key, item.value.intVal);

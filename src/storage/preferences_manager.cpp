@@ -41,16 +41,16 @@ void loadPreferences() {
     set_var_speaker_volume(speaker_volume);
     old_speaker_volume = speaker_volume;
 
-    accumDistance = prefs.getFloat("accumDistance", 0.0);
-    Serial.print("> accumDistance read from eeprom = ");
-    Serial.println(accumDistance, 3);
-    odometer = String(accumDistance, 1);
+    accum_distance = prefs.getFloat("accumDistance", 0.0);
+    Serial.print("> accum_distance read from eeprom = ");
+    Serial.println(accum_distance, 3);
+    odometer = String(accum_distance, 1);
     set_var_odometer(odometer.c_str());
 
-    tripDistance = prefs.getFloat("tripDistance", 0.0);
-    Serial.print("> tripDistance read from eeprom = ");
-    Serial.println(tripDistance, 3);
-    trip_odometer = String(tripDistance, 1);
+    trip_distance = prefs.getFloat("tripDistance", 0.0);
+    Serial.print("> trip_distance read from eeprom = ");
+    Serial.println(trip_distance, 3);
+    trip_odometer = String(trip_distance, 1);
     set_var_trip_odometer(trip_odometer.c_str());
 
     // hrs_since_svc is stored as TENTHS of hours everywhere (0.1 hr = 6 min resolution)
@@ -95,6 +95,23 @@ void loadPreferences() {
     } else {
         use_touch_calibration = false;
         Serial.println("> No touchscreen calibration found in EEPROM, using default auto-calibration");
+    }
+
+    // Load home location coordinates
+    homeLatitude = prefs.getFloat("home_lat", 0.0);
+    homeLongitude = prefs.getFloat("home_lon", 0.0);
+    home_gps_fence_radius_m = prefs.getInt("home_fence_m", 500);
+
+    // Check if home location has been set
+    if (homeLatitude != 0.0 || homeLongitude != 0.0) {
+        homeLocationSet = true;
+        Serial.println("> Home location loaded from EEPROM:");
+        Serial.print("  Latitude: "); Serial.println(homeLatitude, 6);
+        Serial.print("  Longitude: "); Serial.println(homeLongitude, 6);
+        Serial.print("  Fence radius: "); Serial.print(home_gps_fence_radius_m); Serial.println(" meters");
+    } else {
+        homeLocationSet = false;
+        Serial.println("> No home location set in EEPROM");
     }
 }
 

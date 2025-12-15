@@ -93,6 +93,11 @@ int old_day_backlight, old_night_backlight;
 unsigned long lastGpsTimeUpdate = 0;  // Tracks when GPS time was last received
 float avg_speed_calc = 0.0;  // Float version for GPS calculations
 
+// Home location variables
+float homeLatitude = 0.0;
+float homeLongitude = 0.0;
+bool homeLocationSet = false;
+
 // Old tracking variables
 String old_espnow_gci_mac_addr;
 bool old_flip_screen = false;

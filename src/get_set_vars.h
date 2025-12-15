@@ -170,6 +170,21 @@ void set_var_reboot_meshtastic(bool value);
 const char* get_var_text_message();
 void set_var_text_message(const char* value);
 
+bool get_var_set_home_loc();
+void set_var_set_home_loc(bool value);
+
+int32_t get_var_home_gps_fence_radius_m();
+void set_var_home_gps_fence_radius_m(int32_t value);
+
+bool get_var_at_home();
+void set_var_at_home(bool value);
+
+const char* get_var_cur_lat();
+void set_var_cur_lat(const char* value);
+
+const char* get_var_cur_long();
+void set_var_cur_long(const char* value);
+
 #ifdef __cplusplus
 }
 #endif
@@ -225,12 +240,17 @@ extern String odometer;        // Display string: formatted to 1 decimal place
 extern String trip_odometer;   // Display string: formatted to 1 decimal place
 extern int32_t hrs_since_svc;  // STORED AS TENTHS OF HOURS (divide by 10 for display)
 extern int32_t svc_interval_hrs;
-extern float accumDistance;
-extern float tripDistance;
+extern float accum_distance;
+extern float trip_distance;
 extern bool reset_preferences;
 extern bool espnow_pair_gci;
 extern float temperature_adj;
 extern bool reboot_meshtastic;
+extern bool set_home_loc;
+extern int32_t home_gps_fence_radius_m;
+extern bool at_home;
+extern String cur_lat;
+extern String cur_long;
 
 
 #endif // __cplusplus

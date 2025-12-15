@@ -55,11 +55,16 @@ String odometer = "0.0";
 String trip_odometer = "0.0";
 int32_t hrs_since_svc = 0;
 int32_t svc_interval_hrs = 100;
-float accumDistance = 0.0;
-float tripDistance = 0.0;
+float accum_distance = 0.0;
+float trip_distance = 0.0;
 bool reset_preferences = false;
 float temperature_adj = 0;
 bool reboot_meshtastic = false;
+bool set_home_loc = false;
+int32_t home_gps_fence_radius_m = 500;  // Default 500 meter radius
+bool at_home = false;
+String cur_lat;
+String cur_long;
 
 // Static buffers for C string returns
 static char temp_buffer[256];
@@ -512,23 +517,23 @@ void set_var_svc_interval_hrs(int32_t value) {
 }
 
 float get_var_accum_distance() {
-    return accumDistance;
+    return accum_distance;
 }
 
 void set_var_accum_distance(float value) {
-    accumDistance = value;
+    accum_distance = value;
     // Update formatted display string
-    odometer = String(accumDistance, 1);
+    odometer = String(accum_distance, 1);
 }
 
 float get_var_trip_distance() {
-    return tripDistance;
+    return trip_distance;
 }
 
 void set_var_trip_distance(float value) {
-    tripDistance = value;
+    trip_distance = value;
     // Update formatted display string
-    trip_odometer = String(tripDistance, 1);
+    trip_odometer = String(trip_distance, 1);
 }
 
 bool get_var_reset_preferences() {
@@ -569,6 +574,63 @@ const char* get_var_text_message() {
 
 void set_var_text_message(const char* value) {
     text_message = String(value);
+}
+
+bool get_var_set_home_loc() {
+    return set_home_loc;
+}
+
+void set_var_set_home_loc(bool value) {
+    set_home_loc = value;
+}
+
+int32_t get_var_home_gps_fence_radius_m() {
+    return home_gps_fence_radius_m;
+}
+
+void set_var_home_gps_fence_radius_m(int32_t value) {
+    // Round down to nearest 100 meters
+    int32_t rounded_value = value - (value % 100);
+
+    if (home_gps_fence_radius_m != rounded_value) {
+        Serial.print("home_gps_fence_radius_m changed from ");
+        Serial.print(home_gps_fence_radius_m);
+        Serial.print(" to ");
+        Serial.print(value);
+        Serial.print(" (rounded to ");
+        Serial.print(rounded_value);
+        Serial.println(")");
+
+        // Store the rounded value for both calculations and EEPROM
+        home_gps_fence_radius_m = rounded_value;
+
+        // Save to preferences
+        queuePreferenceWrite("home_fence_m", rounded_value);
+    }
+}
+
+bool get_var_at_home() {
+    return at_home;
+}
+
+void set_var_at_home(bool value) {
+    at_home = value;
+}
+
+const char* get_var_cur_lat() {
+    return cur_lat.c_str();
+}
+
+void set_var_cur_lat(const char* value) {
+    cur_lat = String(value);
+}
+
+const char* get_var_cur_long() {
+    return cur_long.c_str();
+}
+
+void set_var_cur_long(const char* value) {
+    cur_long = String(value);
 }
 
 } // extern "C"
