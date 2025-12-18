@@ -1,4 +1,4 @@
-Golf Cart Display (GCD) for The Villages, FL Retirement Community
+# Golf Cart Display (GCD) for The Villages Retirement Community
 
 PROJECT UNDER DEVELOPMENT AND NOT STABLE
 
@@ -12,9 +12,10 @@ This is one part of a three part Golf Cart computer system:
 
 
 Various smart functions can be performed using the integrated system.
-* GCD + GCM:
+* GCD:
   * Graphical user interface
   * Location, speed, heading, time
+* GCD + GCM:
   * Weather forecast
   * "Now Playing" daily venue/event entertainment schedule for The Villages
   * Messaging - broadcast and private
@@ -24,6 +25,8 @@ Various smart functions can be performed using the integrated system.
   * Fuel monitor
   * Battery voltage monitor
   * Ambient temperature
+
+Additional details are avilable at DeepWiki: [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/heyitsyang/GCD-Golf-Cart-Display-Computer)
 
     
     
