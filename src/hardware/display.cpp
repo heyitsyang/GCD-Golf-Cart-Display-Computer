@@ -7,7 +7,7 @@
 static int beepCount = 0;
 static int targetBeeps = 0;
 static bool beepOn = false;
-static TimerHandle_t beepTimer = NULL;
+static hw_timer_t *beepTimer = NULL;
 static uint32_t currentBeepFrequency = BEEP_FREQUENCY_HZ;
 static uint32_t currentBeepDuration = BEEP_DURATION_MS;
 static uint32_t currentBeepPause = 200;
@@ -138,8 +138,8 @@ void my_print(lv_log_level_t level, const char *buf) {
 }
 #endif
 
-// Beep timer callback function
-void beepTimerCallback(TimerHandle_t xTimer) {
+// Hardware timer ISR - must be fast, no Serial.printf allowed
+void IRAM_ATTR beepTimerISR() {
     if (beepOn) {
         // Turn off beep
         ledcWrite(SPEAKER_LEDC_CHANNEL, 0);
@@ -147,18 +147,20 @@ void beepTimerCallback(TimerHandle_t xTimer) {
         beepCount++;
 
         if (beepCount < targetBeeps) {
-            // Schedule next beep after pause
-            xTimerChangePeriod(beepTimer, pdMS_TO_TICKS(currentBeepPause), 0);
+            // Schedule next beep after pause (microseconds)
+            timerWrite(beepTimer, 0);
+            timerAlarmWrite(beepTimer, currentBeepPause * 1000, false);
+            timerAlarmEnable(beepTimer);
         } else {
             // All beeps completed, stop timer
-            xTimerStop(beepTimer, 0);
+            timerAlarmDisable(beepTimer);
             beepCount = 0;
             targetBeeps = 0;
         }
     } else {
         // Turn on beep if we haven't reached target count
         if (beepCount < targetBeeps) {
-            // Check volume - mute if volume is 0 (use local copy to avoid race conditions)
+            // Check volume - mute if volume is 0
             if (currentBeepVolume <= 0) {
                 ledcWrite(SPEAKER_LEDC_CHANNEL, 0);
             } else {
@@ -169,8 +171,10 @@ void beepTimerCallback(TimerHandle_t xTimer) {
             }
             beepOn = true;
 
-            // Schedule beep off after beep duration
-            xTimerChangePeriod(beepTimer, pdMS_TO_TICKS(currentBeepDuration), 0);
+            // Schedule beep off after beep duration (microseconds)
+            timerWrite(beepTimer, 0);
+            timerAlarmWrite(beepTimer, currentBeepDuration * 1000, false);
+            timerAlarmEnable(beepTimer);
         }
     }
 }
@@ -184,14 +188,20 @@ void initSpeaker() {
     ledcAttachPin(SPEAKER_PIN, SPEAKER_LEDC_CHANNEL);
 #endif
 
-    // Create beep timer
-    beepTimer = xTimerCreate("BeepTimer", pdMS_TO_TICKS(BEEP_DURATION_MS),
-                             pdFALSE, NULL, beepTimerCallback);
+    // Create hardware timer (timer 0, divider 80 = 1MHz = 1µs per tick)
+    beepTimer = timerBegin(0, 80, true);
+
+    // Attach ISR
+    timerAttachInterrupt(beepTimer, &beepTimerISR, true);
+
+    // Start the timer (it will run continuously, we control it with alarms)
+    timerStart(beepTimer);
 
     Serial.println("Speaker initialized");
 }
 
-void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs) {
+// Internal beep function that accepts volume directly (doesn't touch speaker_volume)
+static void beep_internal(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs, int volume) {
     if (numBeeps <= 0 || beepTimer == NULL) {
         return;
     }
@@ -206,13 +216,13 @@ void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs)
 #endif
     }
 
-    // Update timing parameters and copy current volume for timer callback
+    // Update timing parameters and use provided volume (NOT speaker_volume)
     currentBeepDuration = duration;
     currentBeepPause = pauseMs;
-    currentBeepVolume = speaker_volume;  // Safe copy for timer callback
+    currentBeepVolume = volume;  // Use the volume parameter directly
 
     // Stop any ongoing beep sequence
-    xTimerStop(beepTimer, 0);
+    timerAlarmDisable(beepTimer);
     ledcWrite(SPEAKER_LEDC_CHANNEL, 0);
 
     // Reset counters and start new sequence
@@ -220,7 +230,59 @@ void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs)
     targetBeeps = numBeeps;
     beepOn = false;
 
-    // Start the beep sequence
-    beepTimerCallback(beepTimer);
+    // Reset timer counter and start the beep sequence with 1ms delay
+    timerWrite(beepTimer, 0);
+    timerAlarmWrite(beepTimer, 1000, false);
+    timerAlarmEnable(beepTimer);
+}
+
+// Public beep function - uses global speaker_volume setting
+void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs) {
+    beep_internal(numBeeps, frequency, duration, pauseMs, speaker_volume);
+}
+
+// Helper function to play a tone with volume scaling
+// Calculates effective volume as a percentage of speaker_volume WITHOUT modifying it
+static void playTone(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs, int volumePercent) {
+    // Calculate effective volume (speaker_volume * tone's volumePercent)
+    // This does NOT modify speaker_volume, avoiding EEPROM writes
+    int effectiveVolume = (speaker_volume * volumePercent) / 100;
+
+    // Use internal beep function with calculated volume
+    beep_internal(numBeeps, frequency, duration, pauseMs, effectiveVolume);
+}
+
+// Predefined tone functions
+// parameters: beeps, freq, dur, pause, vol%
+void tone_startup() {
+    playTone(1, 2500, 40, 0, 70);  // Single short mid-high beep
+}
+
+void tone_sleep() {
+    playTone(1, 2500, 500, 0, 50);  // Single long mid-high beep
+}
+
+void tone_message() {
+    playTone(2, 2500, 100, 100, 80);  // Double beeps
+}
+
+void tone_alert() {
+    playTone(1, 1500, 250, 100, 50);  // One long mid beep
+}
+
+void tone_urgent() {
+    playTone(4, 1500, 200, 100, 80);  // Quad rapid mid beeps
+}
+
+void tone_confirm() {
+    playTone(1, 2200, 50, 0, 60);  // Quick chirp
+}
+
+void tone_click() {
+    playTone(1, 20, 51, 0, 40);  // Brief low freq click for haptic feedback
+}
+
+void tone_error() {
+    playTone(1, 90, 150, 0, 10);  // Single low beep
 }
 
