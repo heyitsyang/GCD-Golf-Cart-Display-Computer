@@ -10,23 +10,22 @@ This is one part of a three part Golf Cart computer system:
 * Golf Cart Internal computer (GCI)
 
 
-
 Various smart functions can be performed using the integrated system.
 * GCD:
   * Graphical user interface
   * Location, speed, heading, time
+  * Odometer, maintenance reminder
 * GCD + GCM:
   * Weather forecast
   * "Now Playing" daily venue/event entertainment schedule for The Villages
   * Messaging - broadcast and private
 * GCM + GCD + GCI:
-  * Automatic headlights
-  * Accumulated run time for maintenance reminders
+  * Automatic headlights (future)
   * Fuel monitor
   * Battery voltage monitor
   * Ambient temperature
 
-Additional details are avilable at DeepWiki: [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/heyitsyang/GCD-Golf-Cart-Display-Computer)
+More comprehensive details are avilable at DeepWiki: [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/heyitsyang/GCD-Golf-Cart-Display-Computer)
 
     
     
