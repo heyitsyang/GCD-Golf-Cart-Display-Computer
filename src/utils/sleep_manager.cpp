@@ -55,6 +55,10 @@ void enterDeepSleep() {
         mesh_serial_enabled = false;  // Update state to match
     }
 
+    // Play sleep tone
+    tone_sleep();
+    delay(550);  // Wait for tone to complete (500ms duration + 50ms buffer)
+
     // Turn off backlight to save power
     setBacklight(0);
 

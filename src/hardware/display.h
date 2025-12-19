@@ -10,6 +10,17 @@ void initTouchscreen();
 void initBacklight();
 void initSpeaker();
 void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs);
+
+// Predefined tone functions
+void tone_startup();
+void tone_sleep();
+void tone_message();
+void tone_alert();
+void tone_urgent();
+void tone_confirm();
+void tone_click();
+void tone_error();
+
 void setBacklight(uint32_t value);
 void updateDisplayRotation();
 void updateTouchscreenRotation();

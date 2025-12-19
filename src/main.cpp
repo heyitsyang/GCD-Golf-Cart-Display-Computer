@@ -44,6 +44,7 @@
 #include "ui_eez/actions.h"
 #include "ui/venue_event_display.h"
 #include "ui/espnow_display.h"
+#include "ui/tone_actions.h"
 
 // Utils
 #include "utils/time_utils.h"
@@ -98,8 +99,8 @@ void setup() {
     // Initialize sleep pin
     initSleepPin();
 
-    // Startup beep
-    beep(1, BEEP_FREQUENCY_HZ, BEEP_DURATION_MS, 200);
+    // Startup tone
+    tone_startup();
 
     // Initialize LVGL
     String LVGL_Arduino = "LVGL v" + String(lv_version_major()) + "." +
