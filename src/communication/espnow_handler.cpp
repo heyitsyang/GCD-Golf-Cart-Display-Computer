@@ -316,7 +316,7 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
         }
         
         case ESPNOW_MSG_TELEMETRY: {
-            Serial.printf("ESP-NOW from %s : ", mac_str);
+            Serial.printf("Telemetry from %s : ", mac_str);
 
 
             // Extract telemetry data from message
@@ -365,10 +365,12 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
         }
 
         case ESPNOW_MSG_HEARTBEAT: {
+            // Heartbeat response received from GCI (closed-loop keepalive)
             #if DEBUG_ESPNOW == 1
-            Serial.print("ESP-NOW Heartbeat from ");
+            Serial.print("ESP-NOW Heartbeat response from ");
             Serial.println(mac_str);
             #endif
+            // Note: last_seen timestamp already updated in lines 278-291 above
             break;
         }
     }
