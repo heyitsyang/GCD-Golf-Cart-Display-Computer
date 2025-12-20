@@ -21,14 +21,6 @@ extern "C" void action_tone_confirm(lv_event_t *e) {
 }
 
 extern "C" void action_tone_click(lv_event_t *e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *target = (lv_obj_t*)lv_event_get_target(e);
-
-    // Ignore spurious event 0 with NULL target (initialization artifact)
-    if (code == 0 && target == NULL) {
-        return;
-    }
-
     tone_click();
 }
 
