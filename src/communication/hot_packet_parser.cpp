@@ -85,8 +85,8 @@ void processHotPacket(const char* text) {
                     np_rcv_time = hotPacketBuffer_np_rcv_time[backBuffer];
                     live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];
 
-                    Serial.print("Stored venue/event data: ");
-                    Serial.println(live_venue_event_data);
+                    // Serial.print("venue/event data buffer swapped: ");
+                    // Serial.println(live_venue_event_data);
                 } else {
                     Serial.println("Buffer swap timeout (venue data)");
                 }
