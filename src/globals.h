@@ -142,6 +142,23 @@ extern int32_t old_speaker_volume;
 // Service interval (manually adjustable, needs old value tracking)
 extern int32_t old_svc_interval_hrs;
 
+// Sleep mode state machine variables
+extern sleep_operating_mode_t sleep_operating_mode;
+extern uint32_t startup_time_ms;
+extern bool gci_communicated_flag;
+extern bool backlight_dimmed;
+extern uint32_t last_activity_time_ms;
+extern uint32_t gci_disconnect_time_ms;  // 0 = GCI connected, non-zero = time of disconnect
+extern int32_t old_backlight_timeout;
+
+// EEPROM debounce timestamps (0 = no pending write, non-zero = time of last change)
+extern uint32_t debounce_day_backlight;
+extern uint32_t debounce_night_backlight;
+extern uint32_t debounce_speaker_volume;
+extern uint32_t debounce_svc_interval_hrs;
+extern uint32_t debounce_temperature_adj;
+extern uint32_t debounce_backlight_timeout;
+
 // All EEZ Studio variables are defined in get_set_vars.h
 // Include it here so all files can access them
 #include "get_set_vars.h"

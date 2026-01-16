@@ -51,6 +51,7 @@ bool espnow_pair_gci = false;
 int32_t screen_inactivity_countdown = -1;
 bool flip_screen = false;
 int32_t speaker_volume = 10;
+int32_t backlight_timeout = 5;  // Default 5 minutes
 String odometer = "0.0";
 String trip_odometer = "0.0";
 int32_t hrs_since_svc = 0;
@@ -459,6 +460,14 @@ int32_t get_var_speaker_volume() {
 
 void set_var_speaker_volume(int32_t value) {
     speaker_volume = value;
+}
+
+int32_t get_var_backlight_timeout() {
+    return backlight_timeout;
+}
+
+void set_var_backlight_timeout(int32_t value) {
+    backlight_timeout = value;
 }
 
 const char* get_var_odometer() {

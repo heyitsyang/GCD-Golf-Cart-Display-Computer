@@ -99,6 +99,9 @@ void setup() {
     // Initialize sleep pin
     initSleepPin();
 
+    // Initialize sleep mode state machine (after loadPreferences to use backlight_timeout)
+    initSleepModeStateMachine();
+
     // Startup tone
     tone_startup();
 

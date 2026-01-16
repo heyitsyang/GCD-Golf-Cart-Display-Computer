@@ -137,6 +137,9 @@ void set_var_flip_screen(bool value);
 int32_t get_var_speaker_volume();
 void set_var_speaker_volume(int32_t value);
 
+int32_t get_var_backlight_timeout();
+void set_var_backlight_timeout(int32_t value);
+
 const char* get_var_odometer();
 void set_var_odometer(const char* value);
 
@@ -236,6 +239,7 @@ extern bool espnow_connected;
 extern int32_t screen_inactivity_countdown;
 extern bool flip_screen;
 extern int32_t speaker_volume;
+extern int32_t backlight_timeout;
 extern String odometer;        // Display string: formatted to 1 decimal place
 extern String trip_odometer;   // Display string: formatted to 1 decimal place
 extern int32_t hrs_since_svc;  // STORED AS TENTHS OF HOURS (divide by 10 for display)

@@ -97,6 +97,9 @@
 // Sleep configuration
 #define SLEEP_CHECK_INTERVAL_MS 100  // How often system task checks SLEEP_PIN (ms)
 
+// EEPROM write debounce (prevents excessive writes when adjusting UI sliders/spinners)
+#define EEPROM_DEBOUNCE_MS 2000  // Wait 2 seconds after last change before writing
+
 // Task Stack Sizes (in bytes)
 #define GPS_TASK_STACK_SIZE 4096
 #define GUI_TASK_STACK_SIZE 8192

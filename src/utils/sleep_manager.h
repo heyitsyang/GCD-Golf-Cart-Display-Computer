@@ -23,4 +23,17 @@ bool shouldEnterSleep();
  */
 void enterDeepSleep();
 
+/**
+ * Initialize the sleep mode state machine
+ * Call this from setup() after loadPreferences()
+ */
+void initSleepModeStateMachine();
+
+/**
+ * Process the sleep mode state machine
+ * Call this from system_task main loop
+ * Returns true if deep sleep should be entered
+ */
+bool processSleepModeStateMachine();
+
 #endif // SLEEP_MANAGER_H

@@ -41,6 +41,11 @@ void loadPreferences() {
     set_var_speaker_volume(speaker_volume);
     old_speaker_volume = speaker_volume;
 
+    backlight_timeout = prefs.getInt("bklt_timeout", 5);
+    Serial.print("> backlight_timeout read from eeprom = ");
+    Serial.println(backlight_timeout);
+    old_backlight_timeout = backlight_timeout;
+
     accum_distance = prefs.getFloat("accumDistance", 0.0);
     Serial.print("> accum_distance read from eeprom = ");
     Serial.println(accum_distance, 3);

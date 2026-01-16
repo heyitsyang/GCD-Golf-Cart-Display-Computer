@@ -91,6 +91,13 @@ typedef enum {
     // Add more commands as needed
 } gci_command_t;
 
+// Sleep/Operating mode state machine
+typedef enum {
+    SLEEP_MODE_STARTUP_GRACE = 0,  // Initial grace period on startup
+    SLEEP_MODE_GCI = 1,            // GCI is paired and communicating - normal sleep allowed
+    SLEEP_MODE_NO_GCI = 2          // No GCI - never sleep, backlight dimming only
+} sleep_operating_mode_t;
+
 // Golf cart interface message structures
 typedef struct struct_msg_from_gci {
     int modeLights;

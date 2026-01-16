@@ -135,5 +135,22 @@ structMsgFromGci dataFromGci;
 int cmdToGci;
 structMsgToGci dataToGci;
 
+// Sleep mode state machine variables
+sleep_operating_mode_t sleep_operating_mode = SLEEP_MODE_STARTUP_GRACE;
+uint32_t startup_time_ms = 0;
+bool gci_communicated_flag = false;
+bool backlight_dimmed = false;
+uint32_t last_activity_time_ms = 0;
+uint32_t gci_disconnect_time_ms = 0;  // 0 = GCI connected, non-zero = time of disconnect
+int32_t old_backlight_timeout = 5;
+
+// EEPROM debounce timestamps (0 = no pending write, non-zero = time of last change)
+uint32_t debounce_day_backlight = 0;
+uint32_t debounce_night_backlight = 0;
+uint32_t debounce_speaker_volume = 0;
+uint32_t debounce_svc_interval_hrs = 0;
+uint32_t debounce_temperature_adj = 0;
+uint32_t debounce_backlight_timeout = 0;
+
 // Note: All EEZ Studio shared variables (cur_date, version, etc.)
 // are defined in get_set_vars.cpp via get_set_vars.h
