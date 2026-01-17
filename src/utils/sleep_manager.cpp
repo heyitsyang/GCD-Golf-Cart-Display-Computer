@@ -9,6 +9,42 @@
 #include <esp_sleep.h>
 #include <driver/rtc_io.h>
 
+// Track current GPS interval setting to avoid redundant commands
+// -1 = unknown/not set, 0 = default (2 min), 8 = fast (8 sec)
+static int8_t current_gps_interval = -1;
+
+/**
+ * Set GCM GPS update interval
+ * interval: 0 = default (2 min), 8 = fast (8 sec)
+ * Only sends command if interval has changed
+ */
+static void setGpsInterval(int8_t interval) {
+    if (current_gps_interval == interval) {
+        return;  // Already set to desired interval
+    }
+
+    // Wait for Meshtastic connection
+    if (not_yet_connected || !mesh_serial_enabled) {
+        return;
+    }
+
+    meshtastic_Config_PositionConfig config = meshtastic_Config_PositionConfig_init_default;
+    config.gps_mode = meshtastic_Config_PositionConfig_GpsMode_ENABLED;
+    config.fixed_position = false;
+    config.gps_update_interval = interval;
+
+    if (mt_set_position_config(&config)) {
+        current_gps_interval = interval;
+        Serial.print("NO_GCI_MODE: GPS interval set to ");
+        if (interval == 0) {
+            Serial.println("default (2 min) - at home");
+        } else {
+            Serial.print(interval);
+            Serial.println(" sec - away from home");
+        }
+    }
+}
+
 void initSleepPin() {
     // Configure SLEEP_PIN as INPUT with internal pullup
     // Default HIGH = awake, LOW = sleep
@@ -234,6 +270,8 @@ bool processSleepModeStateMachine() {
                     setBacklight((day_backlight * 20) + 55);
                     backlight_dimmed = false;
                 }
+                // Reset GPS interval tracking - GCI_MODE uses SLEEP_PIN for interval control
+                current_gps_interval = -1;
                 Serial.println("*** Transitioning to GCI_MODE - GCI reconnected ***");
                 return false;
             }
@@ -241,6 +279,16 @@ bool processSleepModeStateMachine() {
             // In NO_GCI mode, never enter deep sleep
             // Handle backlight dimming instead
             handleNoGciBacklight();
+
+            // Manage GCM GPS update interval based on at_home status
+            // At home: slow interval (0 = default 2 min) to save power
+            // Away: fast interval (8 sec) for better tracking
+            if (at_home) {
+                setGpsInterval(0);   // Default 2 min interval
+            } else {
+                setGpsInterval(8);   // Fast 8 sec interval
+            }
+
             return false;
     }
 
