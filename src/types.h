@@ -50,7 +50,9 @@ typedef enum {
     ESPNOW_MSG_TELEMETRY = 2,
     ESPNOW_MSG_COMMAND = 3,
     ESPNOW_MSG_ACK = 4,
-    ESPNOW_MSG_HEARTBEAT = 5
+    ESPNOW_MSG_HEARTBEAT = 5,
+    ESPNOW_MSG_IS_HOME = 6,
+    ESPNOW_MSG_IS_DAYTIME = 7
 } espnow_msg_type_t;
 
 // ESP-NOW message structure

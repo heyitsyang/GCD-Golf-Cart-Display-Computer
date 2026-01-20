@@ -182,6 +182,9 @@ void set_var_home_gps_fence_radius_m(int32_t value);
 bool get_var_at_home();
 void set_var_at_home(bool value);
 
+bool get_var_is_daytime();
+void set_var_is_daytime(bool value);
+
 const char* get_var_cur_lat();
 void set_var_cur_lat(const char* value);
 
@@ -253,6 +256,7 @@ extern bool reboot_meshtastic;
 extern bool set_home_loc;
 extern int32_t home_gps_fence_radius_m;
 extern bool at_home;
+extern bool is_daytime;
 extern String cur_lat;
 extern String cur_long;
 

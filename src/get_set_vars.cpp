@@ -64,6 +64,7 @@ bool reboot_meshtastic = false;
 bool set_home_loc = false;
 int32_t home_gps_fence_radius_m = 500;  // Default 500 meter radius
 bool at_home = false;
+bool is_daytime = true;  // Default to daytime
 String cur_lat;
 String cur_long;
 
@@ -624,6 +625,14 @@ bool get_var_at_home() {
 
 void set_var_at_home(bool value) {
     at_home = value;
+}
+
+bool get_var_is_daytime() {
+    return is_daytime;
+}
+
+void set_var_is_daytime(bool value) {
+    is_daytime = value;
 }
 
 const char* get_var_cur_lat() {

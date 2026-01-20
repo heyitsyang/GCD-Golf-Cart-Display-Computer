@@ -27,6 +27,10 @@ public:
 
     // Golf cart interface - raw message sending
     bool sendGolfCartCommand(const uint8_t *mac_addr, gci_command_t cmdNumber, const void *payload = nullptr, size_t payloadSize = 0);
+
+    // Status messages to GCI
+    bool sendIsHome(bool is_home);
+    bool sendIsDaytime(bool is_daytime);
     
     // Status
     bool isInitialized() { return initialized; }

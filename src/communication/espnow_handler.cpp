@@ -243,6 +243,16 @@ bool ESPNowHandler::sendGolfCartCommand(const uint8_t *mac_addr, gci_command_t c
     return sendRawData(mac_addr, (uint8_t*)&dataToGci, sizeof(structMsgToGci));
 }
 
+bool ESPNowHandler::sendIsHome(bool is_home) {
+    uint8_t value = is_home ? 1 : 0;
+    return broadcast(ESPNOW_MSG_IS_HOME, &value, 1);
+}
+
+bool ESPNowHandler::sendIsDaytime(bool is_daytime) {
+    uint8_t value = is_daytime ? 1 : 0;
+    return broadcast(ESPNOW_MSG_IS_DAYTIME, &value, 1);
+}
+
 bool ESPNowHandler::sendRawData(const uint8_t *mac_addr, const uint8_t *data, size_t len) {
     for (int retry = 0; retry < ESPNOW_SEND_RETRY_COUNT; retry++) {
         esp_err_t result = esp_now_send(mac_addr, data, len);
@@ -286,6 +296,10 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
                 espnow_connected = true;
                 set_var_espnow_connected(true);
                 Serial.printf("*** ESP-NOW connection established ***\n");
+
+                // Send initial status to GCI
+                sendIsHome(at_home);
+                sendIsDaytime(is_daytime);
             }
             break;
         }

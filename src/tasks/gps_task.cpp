@@ -4,6 +4,7 @@
 #include "utils/time_utils.h"
 #include "hardware/display.h"
 #include "storage/preferences_manager.h"
+#include "communication/espnow_handler.h"
 #include <TimeLib.h>
 
 // Compass direction lookup table
@@ -55,6 +56,9 @@ static const uint8_t ZERO_SAT_THRESHOLD = 3;  // Require 3 consecutive zero read
 
 // Track at_home state changes
 static bool old_at_home = false;
+
+// Track is_daytime state changes
+static bool old_is_daytime = true;
 
 /**
  * Update speed from GPS fix
@@ -187,11 +191,23 @@ static void updateBacklight(time_t& sunrise_t, time_t& sunset_t) {
         sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
     }
 
-    // Set backlight based on day/night
+    // Set backlight based on day/night and update is_daytime status
     if (localTime > sunrise_t && localTime < sunset_t) {
+        is_daytime = true;
         setBacklight((day_backlight * 20) + 55);
     } else {
+        is_daytime = false;
         setBacklight(night_backlight * 20);
+    }
+
+    // Notify GCI when is_daytime state changes
+    if (is_daytime != old_is_daytime) {
+        Serial.printf("*** Day/night transition: %s ***\n", is_daytime ? "DAYTIME" : "NIGHTTIME");
+        old_is_daytime = is_daytime;
+
+        if (espnow_connected) {
+            espNow.sendIsDaytime(is_daytime);
+        }
     }
 }
 
@@ -242,7 +258,7 @@ static void updateHomeLocation(const gps_fix& fix) {
         // Update at_home status based on fence radius
         at_home = (distanceMeters <= home_gps_fence_radius_m);
 
-        // Print debug message when at_home state changes
+        // Print debug message and notify GCI when at_home state changes
         if (at_home != old_at_home) {
             if (at_home) {
                 Serial.print("*** ENTERED home geo-fence (distance: ");
@@ -254,6 +270,11 @@ static void updateHomeLocation(const gps_fix& fix) {
                 Serial.println(" meters) ***");
             }
             old_at_home = at_home;
+
+            // Notify GCI of at_home status change
+            if (espnow_connected) {
+                espNow.sendIsHome(at_home);
+            }
         }
     } else {
         // No home location set yet
