@@ -4,6 +4,12 @@
 #include <Arduino.h>
 
 /**
+ * Early sleep pin check - call before any display initialization
+ * If SLEEP_PIN is LOW, immediately returns to deep sleep
+ */
+void checkSleepPinEarly();
+
+/**
  * Initialize sleep pin configuration
  * Call this from setup()
  */

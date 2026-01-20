@@ -75,11 +75,15 @@ void setup() {
     version = String('v') + String(VERSION);
     Serial.println("\nSW " + version);
     Serial.println("With ESP-NOW Integration");
-    
+
+    // Early sleep check - if SLEEP_PIN is LOW, return to sleep immediately
+    // Must be called before display init to avoid showing anything on screen
+    checkSleepPinEarly();
+
     // Get MAC address
     cyd_mac_addr = String(WiFi.macAddress());
     Serial.println("MAC: " + cyd_mac_addr);
-    
+
     // Initialize storage and load preferences
     initPreferences();
     loadPreferences();

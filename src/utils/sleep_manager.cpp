@@ -17,6 +17,16 @@ static int8_t current_gps_interval = -1;
 // Ensures GCI has time to send heartbeat before transitioning to NO_GCI_MODE
 static const uint32_t MIN_STARTUP_GRACE_SECS = 30;
 
+// SLEEP_PIN debounce configuration
+// Requires pin to be stable for this duration before acting on state change
+static const uint32_t SLEEP_PIN_DEBOUNCE_MS = 200;
+
+// Debounce state tracking
+static int last_sleep_pin_state = HIGH;      // Last stable state (HIGH = awake)
+static int current_raw_state = HIGH;         // Current raw reading
+static uint32_t state_change_time_ms = 0;    // When the state last changed
+static bool debounced_sleep_state = false;   // Debounced result: true = should sleep
+
 /**
  * Set GCM GPS update interval
  * interval: 0 = default (2 min), 8 = fast (8 sec)
@@ -49,20 +59,77 @@ static void setGpsInterval(int8_t interval) {
     }
 }
 
+void checkSleepPinEarly() {
+    // Early check before display init - if SLEEP_PIN is LOW, sleep immediately
+    // Handles wake glitches or rapid transitions that briefly wake the device
+    pinMode(SLEEP_PIN, INPUT);
+
+    if (digitalRead(SLEEP_PIN) == LOW) {
+        Serial.println("SLEEP_PIN LOW at boot - returning to deep sleep");
+        Serial.flush();
+
+        // Play sleep tone
+        ledcSetup(SPEAKER_LEDC_CHANNEL, BEEP_FREQUENCY_HZ, SPEAKER_LEDC_TIMER_BIT);
+        ledcAttachPin(SPEAKER_PIN, SPEAKER_LEDC_CHANNEL);
+        tone_sleep();
+        delay(550);
+        ledcWrite(SPEAKER_LEDC_CHANNEL, 0);
+
+        // Configure wake source and sleep
+        esp_sleep_enable_ext0_wakeup((gpio_num_t)SLEEP_PIN, 1);
+        esp_deep_sleep_start();
+    }
+}
+
 void initSleepPin() {
     // Configure SLEEP_PIN as INPUT (GPIO 35 has no internal pull-up/down)
     // External pull-up required: HIGH = awake, LOW = sleep
+    // Note: pinMode already called in checkSleepPinEarly(), but safe to call again
     pinMode(SLEEP_PIN, INPUT);
+
+    // Initialize debounce state - pin must be HIGH if we got here (passed early check)
+    last_sleep_pin_state = HIGH;
+    current_raw_state = HIGH;
+    state_change_time_ms = millis();
+    debounced_sleep_state = false;
 
     Serial.print("Sleep pin (GPIO ");
     Serial.print(SLEEP_PIN);
-    Serial.println(") initialized as INPUT (external pull-up required)");
-    Serial.println("Device will enter deep sleep when pin is LOW, reboot when HIGH");
+    Serial.println(") initialized - state: HIGH (awake)");
+    Serial.print("Debounce time: ");
+    Serial.print(SLEEP_PIN_DEBOUNCE_MS);
+    Serial.println("ms");
 }
 
 bool shouldEnterSleep() {
-    // Return true if SLEEP_PIN is LOW (pulled to ground)
-    return digitalRead(SLEEP_PIN) == LOW;
+    // Debounced sleep pin reading
+    // Requires pin to be stable in new state for SLEEP_PIN_DEBOUNCE_MS
+    // This prevents rapid transitions (e.g., LOW-HIGH-LOW) from causing incorrect state
+
+    int raw_reading = digitalRead(SLEEP_PIN);
+    uint32_t now = millis();
+
+    // If raw reading changed from what we were tracking
+    if (raw_reading != current_raw_state) {
+        current_raw_state = raw_reading;
+        state_change_time_ms = now;
+        // Don't change debounced state yet - wait for stability
+    }
+
+    // If current raw state has been stable for debounce period
+    // and differs from last stable state, update the debounced state
+    if (current_raw_state != last_sleep_pin_state) {
+        if ((now - state_change_time_ms) >= SLEEP_PIN_DEBOUNCE_MS) {
+            last_sleep_pin_state = current_raw_state;
+            debounced_sleep_state = (current_raw_state == LOW);
+
+            // Log state transition
+            Serial.print("SLEEP_PIN debounced state change: ");
+            Serial.println(debounced_sleep_state ? "SLEEP (LOW)" : "AWAKE (HIGH)");
+        }
+    }
+
+    return debounced_sleep_state;
 }
 
 void enterDeepSleep() {
@@ -102,7 +169,6 @@ void enterDeepSleep() {
     esp_sleep_enable_ext0_wakeup((gpio_num_t)SLEEP_PIN, 1);
 
     Serial.println("Entering deep sleep (will reboot on SLEEP_PIN HIGH)...");
-    Serial.println("Maximum power savings: ~10uA");
     Serial.flush(); // Ensure message is sent before sleep
 
     // Enter deep sleep mode
