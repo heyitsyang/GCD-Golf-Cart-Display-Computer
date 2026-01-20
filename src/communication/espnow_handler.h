@@ -41,12 +41,12 @@ public:
     
 private:
     bool initialized = false;
-    uint16_t next_msg_id = 0;
+    uint16_t next_msg_seq_num = 0;
     espnow_peer_info_t peers[ESPNOW_MAX_PEER_NUM];
     int peer_count = 0;
     String status = "Not initialized";
     
-    uint16_t getNextMessageId() { return next_msg_id++; }
+    uint16_t getNextMsgSeqNum() { return next_msg_seq_num++; }
     bool sendRawData(const uint8_t *mac_addr, const uint8_t *data, size_t len);
 
 public:  // Make public so espnow_task can use it

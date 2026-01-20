@@ -57,13 +57,13 @@ typedef enum {
 typedef struct __attribute__((packed)) {
     uint8_t type;
     uint32_t timestamp;
-    uint16_t msg_id;
+    uint16_t msg_seq_num;
     uint16_t data_len;
     uint8_t data[ESPNOW_MAX_PAYLOAD];
 } espnow_message_t;
 
 // Calculate actual packet size for sending (header + payload)
-#define ESPNOW_PACKET_HEADER_SIZE 9  // type(1) + timestamp(4) + msg_id(2) + data_len(2)
+#define ESPNOW_PACKET_HEADER_SIZE 9  // type(1) + timestamp(4) + msg_seq_num(2) + data_len(2)
 #define ESPNOW_PACKET_SIZE(data_len) (ESPNOW_PACKET_HEADER_SIZE + (data_len))
 
 // ESP-NOW queue item for received messages

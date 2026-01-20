@@ -175,7 +175,7 @@ bool ESPNowHandler::sendMessage(const uint8_t *mac_addr, espnow_msg_type_t type,
     espnow_message_t msg;
     msg.type = type;
     msg.timestamp = millis();
-    msg.msg_id = getNextMessageId();
+    msg.msg_seq_num = getNextMsgSeqNum();
     msg.data_len = len;
     if (len > 0) {
         memcpy(msg.data, data, len);

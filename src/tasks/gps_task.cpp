@@ -28,6 +28,9 @@ static uint8_t consecutiveMovingCount = 0;
 static const uint8_t MOVING_THRESHOLD_DIMMED = 3;  // Require 3 consecutive readings when backlight dimmed
 static const uint8_t MOVING_THRESHOLD_ACTIVE = 2;  // Require 2 consecutive readings when backlight active
 
+// Maximum acceleration filter - golf carts can't accelerate faster than ~7 mph/sec
+static const float MAX_ACCELERATION_MPH = 8.0;  // Max speed increase per GPS reading (~1Hz)
+
 // Previous location for position-based distance calculation
 static NeoGPS::Location_t lastLocation;
 static bool hasLastLocation = false;
@@ -73,6 +76,12 @@ static void updateSpeed(const gps_fix& fix) {
         else if (speedMph < 4.0 && speedMph < previousSpeed) {
             speedMph = 0.0;
             consecutiveMovingCount = 0;  // Reset counter when stopping
+        }
+        // Check for impossible acceleration (GPS spike)
+        // If speed jumps by more than MAX_ACCELERATION_MPH from previous, it's likely a GPS error
+        else if (speedMph - previousSpeed > MAX_ACCELERATION_MPH) {
+            speedMph = 0.0;
+            consecutiveMovingCount = 0;  // Reset counter on acceleration spike
         }
         // Speed is above threshold - check if consecutive
         // Use stricter threshold when dimmed to prevent false wakeups
