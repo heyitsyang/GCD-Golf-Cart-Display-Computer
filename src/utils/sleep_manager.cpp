@@ -13,6 +13,10 @@
 // -1 = unknown/not set, 0 = default (2 min), 8 = fast (8 sec)
 static int8_t current_gps_interval = -1;
 
+// Minimum startup grace period in seconds (used when backlight_timeout = 0)
+// Ensures GCI has time to send heartbeat before transitioning to NO_GCI_MODE
+static const uint32_t MIN_STARTUP_GRACE_SECS = 30;
+
 /**
  * Set GCM GPS update interval
  * interval: 0 = default (2 min), 8 = fast (8 sec)
@@ -123,27 +127,50 @@ void initSleepModeStateMachine() {
 
     Serial.println("Sleep mode state machine initialized - STARTUP_GRACE period");
     Serial.print("Grace period: ");
-    Serial.print(backlight_timeout);
-    Serial.println(" minutes");
+    if (backlight_timeout == 0) {
+        Serial.print(MIN_STARTUP_GRACE_SECS);
+        Serial.println(" seconds (minimum, backlight_timeout=0)");
+    } else {
+        Serial.print(backlight_timeout);
+        Serial.println(" minutes");
+    }
 }
+
+// Track last known touch timestamp to detect NEW touches
+static uint32_t prev_lastTouchActivity = 0;
 
 /**
  * Check for activity (touch or movement) and update last_activity_time_ms
+ * Only logs when backlight is dimmed to help debug false wakeups
  */
 static void checkActivityForBacklight() {
-    bool activity_detected = false;
+    bool touch_activity = false;
+    bool movement_activity = false;
 
-    // Check for touch activity (compare with stored last touch time)
-    if (lastTouchActivity > last_activity_time_ms) {
-        activity_detected = true;
+    // Check for NEW touch activity (lastTouchActivity changed since last check)
+    if (lastTouchActivity != prev_lastTouchActivity) {
+        prev_lastTouchActivity = lastTouchActivity;
+        touch_activity = true;
     }
 
     // Check for movement (speed > 0)
+    // Note: avg_speed (int32_t) should already be filtered by MIN_SPEED_FILTER_MPH in gps_task
     if (avg_speed > 0) {
-        activity_detected = true;
+        movement_activity = true;
     }
 
-    if (activity_detected) {
+    if (touch_activity || movement_activity) {
+        // Debug: Log what triggered activity when backlight was dimmed
+        if (backlight_dimmed) {
+            Serial.print("NO_GCI_MODE: Activity detected - ");
+            if (touch_activity) Serial.print("TOUCH ");
+            if (movement_activity) {
+                Serial.print("MOVEMENT(speed=");
+                Serial.print(avg_speed);
+                Serial.print(")");
+            }
+            Serial.println();
+        }
         last_activity_time_ms = millis();
     }
 }
@@ -151,10 +178,22 @@ static void checkActivityForBacklight() {
 /**
  * Handle backlight dimming in NO_GCI_MODE
  * Backlight dims when BOTH touch AND movement have been inactive for backlight_timeout minutes
+ * If backlight_timeout == 0, dimming is disabled
  */
 static void handleNoGciBacklight() {
     // Only applicable in NO_GCI_MODE
     if (sleep_operating_mode != SLEEP_MODE_NO_GCI) {
+        return;
+    }
+
+    // If backlight_timeout is 0, dimming is disabled
+    if (backlight_timeout == 0) {
+        if (backlight_dimmed) {
+            // Restore backlight if it was previously dimmed
+            setBacklight((day_backlight * 20) + 55);
+            backlight_dimmed = false;
+            Serial.println("NO_GCI_MODE: Backlight restored - timeout disabled");
+        }
         return;
     }
 
@@ -209,31 +248,43 @@ bool processSleepModeStateMachine() {
                 Serial.println("*** Transitioning to GCI_MODE - GCI connection established ***");
             }
             // Check if grace period expired
-            else if ((now - startup_time_ms) >= timeout_ms) {
-                if (gci_communicated_flag) {
-                    sleep_operating_mode = SLEEP_MODE_GCI;
-                    gci_disconnect_time_ms = 0;
-                    Serial.println("*** Transitioning to GCI_MODE - GCI was connected during grace period ***");
-                } else {
-                    sleep_operating_mode = SLEEP_MODE_NO_GCI;
-                    Serial.println("*** Transitioning to NO_GCI_MODE - No GCI communication during grace period ***");
+            // Use minimum grace period if backlight_timeout is 0 to allow GCI time to connect
+            else {
+                uint32_t grace_timeout_ms = timeout_ms;
+                if (backlight_timeout == 0) {
+                    grace_timeout_ms = MIN_STARTUP_GRACE_SECS * 1000UL;
+                }
+                if ((now - startup_time_ms) >= grace_timeout_ms) {
+                    if (gci_communicated_flag) {
+                        sleep_operating_mode = SLEEP_MODE_GCI;
+                        gci_disconnect_time_ms = 0;
+                        Serial.println("*** Transitioning to GCI_MODE - GCI was connected during grace period ***");
+                    } else {
+                        sleep_operating_mode = SLEEP_MODE_NO_GCI;
+                        Serial.println("*** Transitioning to NO_GCI_MODE - No GCI communication during grace period ***");
+                    }
                 }
             }
             // During grace period, never sleep regardless of SLEEP_PIN state
             return false;
 
-        case SLEEP_MODE_GCI:
+        case SLEEP_MODE_GCI: {
             // Check if GCI is still connected
             if (isGciActivelyConnected()) {
                 // GCI is connected - reset disconnect timer
                 gci_disconnect_time_ms = 0;
             } else {
                 // GCI disconnected - start or continue disconnect timer
+                // Use minimum timeout if backlight_timeout is 0
+                uint32_t disconnect_timeout_ms = timeout_ms;
+                if (backlight_timeout == 0) {
+                    disconnect_timeout_ms = MIN_STARTUP_GRACE_SECS * 1000UL;
+                }
                 if (gci_disconnect_time_ms == 0) {
                     gci_disconnect_time_ms = now;
                     Serial.println("GCI_MODE: GCI disconnected, starting timeout timer");
-                } else if ((now - gci_disconnect_time_ms) >= timeout_ms) {
-                    // GCI has been disconnected for backlight_timeout minutes
+                } else if ((now - gci_disconnect_time_ms) >= disconnect_timeout_ms) {
+                    // GCI has been disconnected for timeout period
                     sleep_operating_mode = SLEEP_MODE_NO_GCI;
                     Serial.println("*** Transitioning to NO_GCI_MODE - GCI disconnected for timeout period ***");
                     return false;  // Don't sleep on transition, will handle in NO_GCI_MODE
@@ -245,6 +296,7 @@ bool processSleepModeStateMachine() {
                 return true;  // Allow deep sleep
             }
             return false;
+        }
 
         case SLEEP_MODE_NO_GCI:
             // Check if GCI reconnects (paired and heartbeat detected)

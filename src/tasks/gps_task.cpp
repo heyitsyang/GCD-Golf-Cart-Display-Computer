@@ -23,6 +23,11 @@ static const char* headingToCompass(float degrees) {
 // Previous speed for stop detection
 static float previousSpeed = 0.0;
 
+// Consecutive reading counter for spike filtering
+static uint8_t consecutiveMovingCount = 0;
+static const uint8_t MOVING_THRESHOLD_DIMMED = 3;  // Require 3 consecutive readings when backlight dimmed
+static const uint8_t MOVING_THRESHOLD_ACTIVE = 2;  // Require 2 consecutive readings when backlight active
+
 // Previous location for position-based distance calculation
 static NeoGPS::Location_t lastLocation;
 static bool hasLastLocation = false;
@@ -56,18 +61,32 @@ static bool old_at_home = false;
  */
 static void updateSpeed(const gps_fix& fix) {
     if (fix.valid.speed) {
-        float speedMph = fix.speed_mph();
+        float rawSpeed = fix.speed_mph();
+        float speedMph = rawSpeed;
 
-        // Filter out GPS dither when stationary
-        if (speedMph < MIN_SPEED_FILTER_MPH) {
+        // Filter out GPS dither when stationary (use <= to include boundary value)
+        if (speedMph <= MIN_SPEED_FILTER_MPH) {
             speedMph = 0.0;
+            consecutiveMovingCount = 0;  // Reset counter when below threshold
         }
         // Aggressive stop detection: if speed is low (<4 mph) and decreasing, zero out
         else if (speedMph < 4.0 && speedMph < previousSpeed) {
             speedMph = 0.0;
+            consecutiveMovingCount = 0;  // Reset counter when stopping
+        }
+        // Speed is above threshold - check if consecutive
+        // Use stricter threshold when dimmed to prevent false wakeups
+        else {
+            uint8_t threshold = backlight_dimmed ? MOVING_THRESHOLD_DIMMED : MOVING_THRESHOLD_ACTIVE;
+            if (consecutiveMovingCount < threshold) {
+                consecutiveMovingCount++;
+                // Not enough consecutive readings yet - report as stationary
+                speedMph = 0.0;
+            }
+            // else: consecutiveMovingCount >= threshold, allow speed through
         }
 
-        previousSpeed = fix.speed_mph();  // Store raw GPS speed for comparison
+        previousSpeed = rawSpeed;  // Store raw GPS speed for comparison
         avg_speed_calc = speedMph;
         avg_speed = (int32_t)avg_speed_calc;
     }
@@ -77,6 +96,7 @@ static void updateSpeed(const gps_fix& fix) {
         avg_speed_calc = 0.0;
         avg_speed = 0;
         previousSpeed = 0.0;
+        consecutiveMovingCount = 0;  // Reset counter on invalid speed
     }
     // Otherwise retain last known speed when invalid (e.g., cruising at 5+ mph)
 }
@@ -145,8 +165,14 @@ static void updateHdop(const gps_fix& fix) {
 
 /**
  * Update backlight based on sunrise/sunset times
+ * Skips update if backlight is dimmed due to NO_GCI_MODE inactivity
  */
 static void updateBacklight(time_t& sunrise_t, time_t& sunset_t) {
+    // Don't override dimmed backlight in NO_GCI_MODE
+    if (backlight_dimmed) {
+        return;
+    }
+
     // Recalculate sunrise/sunset when day changes
     if (localDay != old_localDay) {
         sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
@@ -272,24 +298,20 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
 
         bool shouldAccumulate = false;
 
-        // Use GPS Doppler speed as primary gate
-        if (fix.valid.speed) {
-            float dopplerSpeed = fix.speed_mph();
-
-            // Only accumulate when GPS confirms we're moving
-            if (dopplerSpeed > MIN_SPEED_FILTER_MPH) {
-                // Position speed must be reasonable
-                if (posSpeed < 30.0 && posDistance > 0.0005) {  // >2.6 feet minimum
-                    shouldAccumulate = true;
-                }
+        // Use filtered avg_speed as primary gate (already filtered for jitter and consecutive readings)
+        if (avg_speed > 0) {
+            // Position speed must be reasonable
+            if (posSpeed < 30.0 && posDistance > 0.0005) {  // >2.6 feet minimum
+                shouldAccumulate = true;
             }
-            // If Doppler says stopped, don't accumulate (filters jitter)
-        } else {
-            // No Doppler speed available - use distance threshold only
+        }
+        // Fallback: No valid speed but we have location - use stricter distance threshold
+        else if (!fix.valid.speed) {
             if (posDistance > 0.002 && posSpeed < 30.0) {  // >10 feet minimum
                 shouldAccumulate = true;
             }
         }
+        // If avg_speed is 0 and speed was valid, don't accumulate (filtered as jitter)
 
         if (shouldAccumulate) {
             accum_distance += posDistance;

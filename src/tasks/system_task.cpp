@@ -47,8 +47,11 @@ void systemTask(void *parameter) {
         // Immediate effects (like backlight changes) still happen right away.
 
         // Day backlight - immediate visual feedback, debounced EEPROM write
+        // Skip if backlight is dimmed in NO_GCI_MODE
         if (day_backlight != old_day_backlight) {
-            setBacklight((day_backlight * 20) + 55);
+            if (!backlight_dimmed) {
+                setBacklight((day_backlight * 20) + 55);
+            }
             old_day_backlight = day_backlight;
             debounce_day_backlight = now;  // Start/reset debounce timer
         }
@@ -58,8 +61,11 @@ void systemTask(void *parameter) {
         }
 
         // Night backlight - immediate visual feedback, debounced EEPROM write
+        // Skip if backlight is dimmed in NO_GCI_MODE
         if (night_backlight != old_night_backlight) {
-            setBacklight(night_backlight * 20);
+            if (!backlight_dimmed) {
+                setBacklight(night_backlight * 20);
+            }
             old_night_backlight = night_backlight;
             debounce_night_backlight = now;
         }
