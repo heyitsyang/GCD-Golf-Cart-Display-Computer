@@ -50,13 +50,13 @@ static void setGpsInterval(int8_t interval) {
 }
 
 void initSleepPin() {
-    // Configure SLEEP_PIN as INPUT with internal pullup
-    // Default HIGH = awake, LOW = sleep
-    pinMode(SLEEP_PIN, INPUT_PULLUP);
+    // Configure SLEEP_PIN as INPUT (GPIO 35 has no internal pull-up/down)
+    // External pull-up required: HIGH = awake, LOW = sleep
+    pinMode(SLEEP_PIN, INPUT);
 
     Serial.print("Sleep pin (GPIO ");
     Serial.print(SLEEP_PIN);
-    Serial.println(") initialized as INPUT_PULLUP");
+    Serial.println(") initialized as INPUT (external pull-up required)");
     Serial.println("Device will enter deep sleep when pin is LOW, reboot when HIGH");
 }
 
