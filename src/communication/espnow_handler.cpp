@@ -39,7 +39,7 @@ bool ESPNowHandler::init() {
     espnow_connected = false;  // No peers yet
     set_var_espnow_connected(false);  // Update UI variable
     Serial.println("ESP-NOW initialized successfully");
-    Serial.print("MAC Address: ");
+    Serial.print("GCD MAC Address: ");
     Serial.println(getMyMacAddress());
 
     return true;
