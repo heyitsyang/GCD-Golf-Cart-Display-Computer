@@ -49,13 +49,10 @@ static void setGpsInterval(int8_t interval) {
 
     if (mt_set_position_config(&config)) {
         current_gps_interval = interval;
-        Serial.print("NO_GCI_MODE: GPS interval set to ");
-        if (interval == 0) {
-            Serial.println("default (2 min) - at home");
-        } else {
-            Serial.print(interval);
-            Serial.println(" sec - away from home");
-        }
+#if DEBUG_SLEEP_STATE == 1
+        Serial.printf("NO_GCI_MODE: GPS interval set to %s\n",
+                      interval == 0 ? "default (2 min) - at home" : "8 sec - away from home");
+#endif
     }
 }
 
@@ -93,12 +90,9 @@ void initSleepPin() {
     state_change_time_ms = millis();
     debounced_sleep_state = false;
 
-    Serial.print("Sleep pin (GPIO ");
-    Serial.print(SLEEP_PIN);
-    Serial.println(") initialized - state: HIGH (awake)");
-    Serial.print("Debounce time: ");
-    Serial.print(SLEEP_PIN_DEBOUNCE_MS);
-    Serial.println("ms");
+#if DEBUG_INIT == 1
+    Serial.printf("Sleep pin (GPIO %d) initialized - debounce: %dms\n", SLEEP_PIN, SLEEP_PIN_DEBOUNCE_MS);
+#endif
 }
 
 bool shouldEnterSleep() {
@@ -123,9 +117,9 @@ bool shouldEnterSleep() {
             last_sleep_pin_state = current_raw_state;
             debounced_sleep_state = (current_raw_state == LOW);
 
-            // Log state transition
-            Serial.print("SLEEP_PIN debounced state change: ");
-            Serial.println(debounced_sleep_state ? "SLEEP (LOW)" : "AWAKE (HIGH)");
+#if DEBUG_SLEEP_STATE == 1
+            Serial.printf("SLEEP_PIN debounced: %s\n", debounced_sleep_state ? "SLEEP" : "AWAKE");
+#endif
         }
     }
 
@@ -133,10 +127,9 @@ bool shouldEnterSleep() {
 }
 
 void enterDeepSleep() {
-    Serial.println("SLEEP_PIN is LOW - entering deep sleep mode...");
+    Serial.println("Entering deep sleep...");
 
     // Save distance and hours values to EEPROM before sleeping
-    Serial.println("Saving distance and hours to EEPROM...");
     queuePreferenceWrite("accumDistance", accum_distance);
     queuePreferenceWrite("tripDistance", trip_distance);
     queuePreferenceWrite("hrs_since_svc", hrs_since_svc);  // Saved as tenths of hours
@@ -147,8 +140,6 @@ void enterDeepSleep() {
         // Reset GPS update interval to default (2 minutes) to reduce radio power consumption
         // Must be done while serial is still active
         resetGpsIntervalBeforeSleep();
-
-        Serial.println("Shutting down Meshtastic serial connection...");
         mt_serial_end();  // Directly shutdown UART2 before sleep
         mesh_serial_enabled = false;  // Update state to match
     }
@@ -168,7 +159,6 @@ void enterDeepSleep() {
     // ESP32 will reboot from setup() when woken
     esp_sleep_enable_ext0_wakeup((gpio_num_t)SLEEP_PIN, 1);
 
-    Serial.println("Entering deep sleep (will reboot on SLEEP_PIN HIGH)...");
     Serial.flush(); // Ensure message is sent before sleep
 
     // Enter deep sleep mode
@@ -191,15 +181,11 @@ void initSleepModeStateMachine() {
     last_activity_time_ms = millis();
     gci_disconnect_time_ms = 0;  // 0 = GCI connected (or never was)
 
-    Serial.println("Sleep mode state machine initialized - STARTUP_GRACE period");
-    Serial.print("Grace period: ");
-    if (backlight_timeout == 0) {
-        Serial.print(MIN_STARTUP_GRACE_SECS);
-        Serial.println(" seconds (minimum, backlight_timeout=0)");
-    } else {
-        Serial.print(backlight_timeout);
-        Serial.println(" minutes");
-    }
+#if DEBUG_SLEEP_STATE == 1
+    Serial.printf("Sleep state machine: STARTUP_GRACE (%d %s)\n",
+                  backlight_timeout == 0 ? MIN_STARTUP_GRACE_SECS : backlight_timeout,
+                  backlight_timeout == 0 ? "sec" : "min");
+#endif
 }
 
 // Track last known touch timestamp to detect NEW touches
@@ -226,17 +212,14 @@ static void checkActivityForBacklight() {
     }
 
     if (touch_activity || movement_activity) {
+#if DEBUG_SLEEP_STATE == 1
         // Debug: Log what triggered activity when backlight was dimmed
         if (backlight_dimmed) {
-            Serial.print("NO_GCI_MODE: Activity detected - ");
-            if (touch_activity) Serial.print("TOUCH ");
-            if (movement_activity) {
-                Serial.print("MOVEMENT(speed=");
-                Serial.print(avg_speed);
-                Serial.print(")");
-            }
-            Serial.println();
+            Serial.printf("NO_GCI_MODE: Activity - %s%s\n",
+                          touch_activity ? "TOUCH " : "",
+                          movement_activity ? "MOVEMENT" : "");
         }
+#endif
         last_activity_time_ms = millis();
     }
 }
@@ -258,7 +241,9 @@ static void handleNoGciBacklight() {
             // Restore backlight if it was previously dimmed
             setBacklight((day_backlight * 20) + 55);
             backlight_dimmed = false;
+#if DEBUG_SLEEP_STATE == 1
             Serial.println("NO_GCI_MODE: Backlight restored - timeout disabled");
+#endif
         }
         return;
     }
@@ -271,12 +256,16 @@ static void handleNoGciBacklight() {
         // Turn off backlight
         setBacklight(0);
         backlight_dimmed = true;
-        Serial.println("NO_GCI_MODE: Backlight dimmed due to inactivity");
+#if DEBUG_SLEEP_STATE == 1
+        Serial.println("NO_GCI_MODE: Backlight dimmed");
+#endif
     } else if (inactivity_duration_ms < timeout_ms && backlight_dimmed) {
         // Restore backlight based on day_backlight setting
         setBacklight((day_backlight * 20) + 55);
         backlight_dimmed = false;
-        Serial.println("NO_GCI_MODE: Backlight restored due to activity");
+#if DEBUG_SLEEP_STATE == 1
+        Serial.println("NO_GCI_MODE: Backlight restored");
+#endif
     }
 }
 
@@ -311,7 +300,7 @@ bool processSleepModeStateMachine() {
                 gci_communicated_flag = true;
                 sleep_operating_mode = SLEEP_MODE_GCI;
                 gci_disconnect_time_ms = 0;  // Reset disconnect timer
-                Serial.println("*** Transitioning to GCI_MODE - GCI connection established ***");
+                Serial.println("-> GCI_MODE (connected)");
             }
             // Check if grace period expired
             // Use minimum grace period if backlight_timeout is 0 to allow GCI time to connect
@@ -324,10 +313,10 @@ bool processSleepModeStateMachine() {
                     if (gci_communicated_flag) {
                         sleep_operating_mode = SLEEP_MODE_GCI;
                         gci_disconnect_time_ms = 0;
-                        Serial.println("*** Transitioning to GCI_MODE - GCI was connected during grace period ***");
+                        Serial.println("-> GCI_MODE");
                     } else {
                         sleep_operating_mode = SLEEP_MODE_NO_GCI;
-                        Serial.println("*** Transitioning to NO_GCI_MODE - No GCI communication during grace period ***");
+                        Serial.println("-> NO_GCI_MODE");
                     }
                 }
             }
@@ -348,11 +337,13 @@ bool processSleepModeStateMachine() {
                 }
                 if (gci_disconnect_time_ms == 0) {
                     gci_disconnect_time_ms = now;
-                    Serial.println("GCI_MODE: GCI disconnected, starting timeout timer");
+#if DEBUG_SLEEP_STATE == 1
+                    Serial.println("GCI_MODE: GCI disconnected, starting timeout");
+#endif
                 } else if ((now - gci_disconnect_time_ms) >= disconnect_timeout_ms) {
                     // GCI has been disconnected for timeout period
                     sleep_operating_mode = SLEEP_MODE_NO_GCI;
-                    Serial.println("*** Transitioning to NO_GCI_MODE - GCI disconnected for timeout period ***");
+                    Serial.println("-> NO_GCI_MODE (timeout)");
                     return false;  // Don't sleep on transition, will handle in NO_GCI_MODE
                 }
             }
@@ -376,7 +367,7 @@ bool processSleepModeStateMachine() {
                 }
                 // Reset GPS interval tracking - GCI_MODE uses SLEEP_PIN for interval control
                 current_gps_interval = -1;
-                Serial.println("*** Transitioning to GCI_MODE - GCI reconnected ***");
+                Serial.println("-> GCI_MODE (reconnected)");
                 return false;
             }
 

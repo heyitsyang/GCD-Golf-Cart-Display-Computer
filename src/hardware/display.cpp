@@ -28,7 +28,9 @@ void initDisplay() {
     display_handle = lv_tft_espi_create(TFT_WIDTH, TFT_HEIGHT, draw_buf, DRAW_BUF_SIZE);
     updateDisplayRotation();
 
+#if DEBUG_INIT == 1
     Serial.println("Display initialized");
+#endif
 }
 
 void updateDisplayRotation() {
@@ -59,7 +61,9 @@ void initTouchscreen() {
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev, my_touchpad_read);
 
+#if DEBUG_INIT == 1
     Serial.println("Touchscreen initialized");
+#endif
 }
 
 void initBacklight() {
@@ -71,7 +75,9 @@ void initBacklight() {
 #endif
     
     ledcAnalogWrite(LEDC_CHANNEL_0, 225, MAX_BACKLIGHT_VALUE);
+#if DEBUG_INIT == 1
     Serial.println("Backlight initialized");
+#endif
 }
 
 void setBacklight(uint32_t value) {
@@ -197,7 +203,9 @@ void initSpeaker() {
     // Start the timer (it will run continuously, we control it with alarms)
     timerStart(beepTimer);
 
+#if DEBUG_INIT == 1
     Serial.println("Speaker initialized");
+#endif
 }
 
 // Internal beep function that accepts volume directly (doesn't touch speaker_volume)

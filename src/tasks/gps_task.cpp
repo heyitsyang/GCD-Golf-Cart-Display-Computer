@@ -489,7 +489,9 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
 void gpsTask(void *parameter) {
     time_t sunrise_t, sunset_t;
 
+#if DEBUG_INIT == 1
     Serial.println("GPS Task started");
+#endif
 
     while (true) {
         if (xSemaphoreTake(gpsMutex, portMAX_DELAY)) {

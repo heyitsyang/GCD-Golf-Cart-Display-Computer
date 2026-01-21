@@ -9,8 +9,11 @@
 // To enable: uncomment and set to 1
 // #define MT_DEBUGGING 1
 #define DEBUG_ESP32_SLEEP 0
-#define DEBUG_ESPNOW 0
-#define DEBUG_MESHTASTIC_CONNECTION 0  // GCM connection/reconnection events
+#define DEBUG_ESPNOW 0                  // ESP-NOW verbose messages (pairing & telemetry always shown)
+#define DEBUG_MESHTASTIC_CONNECTION 0   // GCM connection/reconnection events
+#define DEBUG_EEPROM 0                  // EEPROM read/write operations
+#define DEBUG_SLEEP_STATE 0             // Sleep state machine transitions
+#define DEBUG_INIT 0                    // Initialization messages
 
 // Speaker pin & default settings
 #define SPEAKER_PIN 26

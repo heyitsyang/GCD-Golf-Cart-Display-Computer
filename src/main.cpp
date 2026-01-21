@@ -62,27 +62,19 @@
 void setup() {
     // Initialize Serial for debug output only (TX on pin 1)
     Serial.begin(GPS_BAUD, SERIAL_8N1, 3, 1);  // RX=3 (GPS), TX=1 (debug)
-    Serial.print("\nSerial initialized - GPS RX on pin 3, Debug TX on pin 1");
-    Serial.print(" at ");
-    Serial.print(GPS_BAUD);
-    Serial.println(" baud");
 
     // Disable Serial RX to prevent conflicts
     Serial.end();
     Serial.begin(GPS_BAUD, SERIAL_8N1, 3, 1);
-    
-    // Print version
+
+    // Print version and MAC (always shown - essential boot info)
     version = String('v') + String(VERSION);
-    Serial.println("\nSW " + version);
-    Serial.println("With ESP-NOW Integration");
+    cyd_mac_addr = String(WiFi.macAddress());
+    Serial.printf("\nGCD %s | MAC: %s\n", version.c_str(), cyd_mac_addr.c_str());
 
     // Early sleep check - if SLEEP_PIN is LOW, return to sleep immediately
     // Must be called before display init to avoid showing anything on screen
     checkSleepPinEarly();
-
-    // Get MAC address
-    cyd_mac_addr = String(WiFi.macAddress());
-    Serial.println("MAC: " + cyd_mac_addr);
 
     // Initialize storage and load preferences
     initPreferences();
@@ -110,9 +102,9 @@ void setup() {
     tone_startup();
 
     // Initialize LVGL
-    String LVGL_Arduino = "LVGL v" + String(lv_version_major()) + "." +
-                         String(lv_version_minor()) + "." + String(lv_version_patch());
-    Serial.println(LVGL_Arduino);
+#if DEBUG_INIT == 1
+    Serial.printf("LVGL v%d.%d.%d\n", lv_version_major(), lv_version_minor(), lv_version_patch());
+#endif
 
     // Clear screen to black immediately after LVGL init
     lv_obj_t* default_screen = lv_scr_act();
@@ -156,8 +148,8 @@ void setup() {
     
     // Create all FreeRTOS tasks (including ESP-NOW)
     createAllTasks();
-    
-    Serial.println("Setup complete - System ready");
+
+    Serial.println("Ready");
 }
 
 /*****************

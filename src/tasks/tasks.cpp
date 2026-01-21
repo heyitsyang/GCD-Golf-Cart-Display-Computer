@@ -73,5 +73,7 @@ void createAllTasks() {
         1
     );
     
-    Serial.println("All FreeRTOS tasks created successfully");
+#if DEBUG_INIT == 1
+    Serial.println("All FreeRTOS tasks created");
+#endif
 }

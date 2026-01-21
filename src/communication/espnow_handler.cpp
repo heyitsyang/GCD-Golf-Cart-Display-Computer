@@ -38,9 +38,10 @@ bool ESPNowHandler::init() {
     status = "Ready";
     espnow_connected = false;  // No peers yet
     set_var_espnow_connected(false);  // Update UI variable
-    Serial.println("ESP-NOW initialized successfully");
-    Serial.print("GCD MAC Address: ");
-    Serial.println(getMyMacAddress());
+#if DEBUG_ESPNOW == 1
+    Serial.println("ESP-NOW initialized");
+    Serial.printf("GCD MAC: %s\n", getMyMacAddress().c_str());
+#endif
 
     return true;
 }
@@ -56,27 +57,35 @@ void ESPNowHandler::deinit() {
     status = "Disabled";
     espnow_connected = false;
     set_var_espnow_connected(false);  // Update UI variable
+#if DEBUG_ESPNOW == 1
     Serial.println("ESP-NOW deinitialized");
+#endif
 }
 
 bool ESPNowHandler::restart() {
+#if DEBUG_ESPNOW == 1
     Serial.println("ESP-NOW: Restarting...");
+#endif
     deinit();
     return init();
 }
 
 bool ESPNowHandler::addPeer(const uint8_t *mac_addr, const char* name) {
     if (peer_count >= ESPNOW_MAX_PEER_NUM) {
+#if DEBUG_ESPNOW == 1
         Serial.println("ESP-NOW: Max peers reached");
+#endif
         return false;
     }
-    
+
     // Check if already exists
     if (isPeerRegistered(mac_addr)) {
+#if DEBUG_ESPNOW == 1
         Serial.println("ESP-NOW: Peer already registered");
+#endif
         return true;
     }
-    
+
     // Remove peer first if it exists (ESP-NOW might have auto-added it)
     esp_now_del_peer(mac_addr);
 
@@ -87,10 +96,12 @@ bool ESPNowHandler::addPeer(const uint8_t *mac_addr, const char* name) {
     peerInfo.encrypt = false;
 
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+#if DEBUG_ESPNOW == 1
         Serial.println("ESP-NOW: Failed to add peer");
+#endif
         return false;
     }
-    
+
     // Store in our list
     memcpy(peers[peer_count].mac_addr, mac_addr, 6);
     if (name) {
@@ -102,10 +113,12 @@ bool ESPNowHandler::addPeer(const uint8_t *mac_addr, const char* name) {
     peers[peer_count].last_seen = 0;
     peers[peer_count].last_rssi = 0;
     peer_count++;
-    
+
+#if DEBUG_ESPNOW == 1
     Serial.printf("ESP-NOW: Peer added - %02X:%02X:%02X:%02X:%02X:%02X\n",
                   mac_addr[0], mac_addr[1], mac_addr[2],
                   mac_addr[3], mac_addr[4], mac_addr[5]);
+#endif
 
     espnow_peer_count = peer_count;
     status = String("Connected (") + String(peer_count) + " peers)";
@@ -143,9 +156,11 @@ bool ESPNowHandler::removePeer(const uint8_t *mac_addr) {
                 espnow_connected = false;
                 set_var_espnow_connected(false);  // Update UI variable
 
+#if DEBUG_ESPNOW == 1
                 if (was_connected) {
-                    Serial.printf("*** ESP-NOW peer removed - connection state changed to: %s ***\n", "DISCONNECTED");
+                    Serial.println("ESP-NOW: Disconnected (no peers)");
                 }
+#endif
             }
 
             break;
@@ -204,9 +219,11 @@ bool ESPNowHandler::broadcast(espnow_msg_type_t type, const uint8_t *data, size_
                 success = false;
             }
         } else {
-            Serial.printf("ESP-NOW: Peer not in ESP-NOW list: %02X:%02X:%02X:%02X:%02X:%02X\n",
+#if DEBUG_ESPNOW == 1
+            Serial.printf("ESP-NOW: Peer not in list: %02X:%02X:%02X:%02X:%02X:%02X\n",
                          peers[i].mac_addr[0], peers[i].mac_addr[1], peers[i].mac_addr[2],
                          peers[i].mac_addr[3], peers[i].mac_addr[4], peers[i].mac_addr[5]);
+#endif
             success = false;
         }
     }
@@ -245,12 +262,20 @@ bool ESPNowHandler::sendGolfCartCommand(const uint8_t *mac_addr, gci_command_t c
 
 bool ESPNowHandler::sendIsHome(bool is_home) {
     uint8_t value = is_home ? 1 : 0;
-    return broadcast(ESPNOW_MSG_IS_HOME, &value, 1);
+    bool result = broadcast(ESPNOW_MSG_IS_HOME, &value, 1);
+    // Always show (actionable state change)
+    Serial.printf("ESP-NOW: Sent is_home=%s (%s)\n",
+                  is_home ? "HOME" : "AWAY", result ? "OK" : "FAIL");
+    return result;
 }
 
 bool ESPNowHandler::sendIsDaytime(bool is_daytime) {
     uint8_t value = is_daytime ? 1 : 0;
-    return broadcast(ESPNOW_MSG_IS_DAYTIME, &value, 1);
+    bool result = broadcast(ESPNOW_MSG_IS_DAYTIME, &value, 1);
+    // Always show (actionable state change)
+    Serial.printf("ESP-NOW: Sent is_daytime=%s (%s)\n",
+                  is_daytime ? "DAYTIME" : "NIGHTTIME", result ? "OK" : "FAIL");
+    return result;
 }
 
 bool ESPNowHandler::sendRawData(const uint8_t *mac_addr, const uint8_t *data, size_t len) {
@@ -295,7 +320,7 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             if (!espnow_connected) {
                 espnow_connected = true;
                 set_var_espnow_connected(true);
-                Serial.printf("*** ESP-NOW connection established ***\n");
+                Serial.println("ESP-NOW: Connected to GCI");
 
                 // Send initial status to GCI
                 sendIsHome(at_home);
@@ -315,24 +340,21 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
         case ESPNOW_MSG_TEXT: {
             String text((char*)item.message.data);
             espnow_last_received = String(mac_str) + ": " + text;
-            Serial.print("ESP-NOW Text from ");
-            Serial.print(mac_str);
-            Serial.print(": ");
-            Serial.println(text);
+#if DEBUG_ESPNOW == 1
+            Serial.printf("ESP-NOW Text from %s: %s\n", mac_str, text.c_str());
+#endif
             break;
         }
-        
+
         case ESPNOW_MSG_GPS_DATA: {
-            Serial.print("ESP-NOW GPS data from ");
-            Serial.println(mac_str);
+#if DEBUG_ESPNOW == 1
+            Serial.printf("ESP-NOW GPS from %s\n", mac_str);
+#endif
             // Parse and use GPS data if needed
             break;
         }
-        
+
         case ESPNOW_MSG_TELEMETRY: {
-            Serial.printf("Telemetry from %s : ", mac_str);
-
-
             // Extract telemetry data from message
             memcpy(&dataFromGci, item.message.data, sizeof(structMsgFromGci));
 
@@ -343,24 +365,27 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             battVoltage = dataFromGci.battVolts;
             fuelLevel = dataFromGci.fuel;
 
-            Serial.printf("Lights=%d, Lum=%d, Temp=%.1f, Batt=%.2f, Fuel=%.1f\n",
+            // Always show telemetry (confirms GCI communication is working)
+            Serial.printf("Telemetry: Lights=%d Lum=%d Temp=%.1f Batt=%.2f Fuel=%.1f\n",
                          modeHeadLights, outdoorLuminosity, airTemperature, battVoltage, fuelLevel);
             break;
         }
-        
+
         case ESPNOW_MSG_COMMAND: {
-            Serial.printf("ESP-NOW Command from %s : ", mac_str);
+            // Always show commands (actionable information)
+            Serial.printf("ESP-NOW Command from %s\n", mac_str);
             // Handle commands
             break;
         }
 
         case ESPNOW_MSG_ACK: {
-            Serial.printf("ESP-NOW ACK from %s - GCI paired successfully!\n", mac_str);
+            // Always show pairing success (important user feedback)
+            Serial.printf("ESP-NOW: Paired with %s\n", mac_str);
 
             // Add GCI as peer if not already added
             if (!isPeerRegistered(item.mac_addr)) {
                 if (!addPeer(item.mac_addr, "GCI")) {
-                    Serial.println("Failed to add GCI as peer");
+                    Serial.println("ESP-NOW: Failed to add GCI as peer");
                 }
             }
 
@@ -437,7 +462,9 @@ void espnowOnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len
             xQueueSend(espnowRecvQueue, &item, 0);
         }
     } else {
+#if DEBUG_ESPNOW == 1
         // Too small to be a valid wrapped message
-        Serial.printf("ESP-NOW: Received message too small: %d bytes\n", data_len);
+        Serial.printf("ESP-NOW: Message too small: %d bytes\n", data_len);
+#endif
     }
 }

@@ -37,11 +37,12 @@ void espnowTask(void *parameter) {
                 }
             }
 
-            // Disconnect if peers have timed out
+            // Disconnect if peers have timed out (missed heartbeats)
             if (has_communicated_peers && !any_peer_online) {
                 espnow_connected = false;
                 set_var_espnow_connected(false);
-                Serial.printf("*** ESP-NOW connection timeout ***\n");
+                // Always show - actionable state change (heartbeat missed)
+                Serial.println("ESP-NOW: GCI heartbeat timeout");
             }
         }
 
@@ -59,7 +60,9 @@ void espnowTask(void *parameter) {
                     // Add saved peer if exists
                     if (espnow_gci_mac_addr != "NONE" && espnow_gci_mac_addr.length() == 17) {
                         if (espNow.addPeerFromString(espnow_gci_mac_addr, "Saved Peer")) {
-                            Serial.printf("ESP-NOW: Restored saved peer: %s\n", espnow_gci_mac_addr.c_str());
+#if DEBUG_ESPNOW == 1
+                            Serial.printf("ESP-NOW: Restored peer: %s\n", espnow_gci_mac_addr.c_str());
+#endif
                         }
                     }
                     espnow_status = espNow.getStatus();
@@ -67,14 +70,18 @@ void espnowTask(void *parameter) {
                     // Connection status is set when data is received from peers
                 } else {
                     espnow_status = "Init failed";
-                    Serial.println("ESP-NOW Task: Initialization failed");
+#if DEBUG_ESPNOW == 1
+                    Serial.println("ESP-NOW: Init failed");
+#endif
                 }
             } else {
                 espNow.deinit();
                 espnow_status = "Disabled";
                 espnow_connected = false;
                 set_var_espnow_connected(false);  // Update UI variable
-                Serial.println("ESP-NOW disabled");
+#if DEBUG_ESPNOW == 1
+                Serial.println("ESP-NOW: Disabled");
+#endif
             }
         }
         
@@ -113,9 +120,9 @@ void espnowTask(void *parameter) {
 
                 // Broadcast RAW command to reach virgin GCI devices
                 if (esp_now_send(broadcastAddr, (uint8_t*)&cmdData, sizeof(cmdData)) == ESP_OK) {
-                    Serial.println("ESP-NOW: Pairing command broadcast, waiting for response...");
+                    Serial.println("ESP-NOW: Pairing...");
                 } else {
-                    Serial.println("ESP-NOW: Failed to broadcast pairing command");
+                    Serial.println("ESP-NOW: Pairing broadcast failed");
                 }
 
                 // Remove broadcast peer immediately after sending
@@ -132,14 +139,13 @@ void espnowTask(void *parameter) {
 
                 // Check if pairing succeeded (MAC changed from saved value)
                 if (espnow_gci_mac_addr != saved_mac_addr) {
-                    Serial.printf("ESP-NOW: Pairing succeeded with %s\n", espnow_gci_mac_addr.c_str());
+                    // Success message shown in ACK handler
                     pairing_succeeded = true;
                 } else {
                     // Restore saved peer if it was valid
                     if (saved_mac_addr != "NONE" && saved_mac_addr.length() == 17) {
-                        if (espNow.addPeerFromString(saved_mac_addr, "Restored Peer")) {
-                            Serial.printf("ESP-NOW: Pairing timeout - restored previous peer\n");
-                        }
+                        espNow.addPeerFromString(saved_mac_addr, "Restored Peer");
+                        Serial.println("ESP-NOW: Pairing timeout - restored previous");
                     } else {
                         Serial.println("ESP-NOW: Pairing timeout - no device found");
                     }

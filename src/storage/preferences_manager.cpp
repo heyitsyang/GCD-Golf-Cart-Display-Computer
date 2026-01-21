@@ -5,77 +5,56 @@
 
 void initPreferences() {
     prefs.begin("eeprom", false);
+#if DEBUG_INIT == 1
     Serial.println("Preferences initialized");
+#endif
 
+#if DEBUG_EEPROM == 1
     // Check NVS stats
     size_t usedEntries = prefs.freeEntries();
     Serial.printf("NVS Free Entries: %d\n", usedEntries);
+#endif
 }
 
 void loadPreferences() {
     day_backlight = prefs.getInt("day_backlight", 10);
-    Serial.print("> day_backlight read from eeprom = ");
-    Serial.println(day_backlight);
     old_day_backlight = day_backlight;
 
     night_backlight = prefs.getInt("night_backlight", 5);
-    Serial.print("> night_backlight read from eeprom = ");
-    Serial.println(night_backlight);
     old_night_backlight = night_backlight;
 
     // Key name must be 15 chars or less for NVS - use "gci_mac" (7 chars)
     espnow_gci_mac_addr = prefs.getString("gci_mac", "NONE");
-    Serial.print("> espnow_gci_mac_addr read from eeprom = ");
-    Serial.println(espnow_gci_mac_addr);
     old_espnow_gci_mac_addr = espnow_gci_mac_addr;
 
     flip_screen = prefs.getBool("flip_screen", false);
-    Serial.print("> flip_screen read from eeprom = ");
-    Serial.println(flip_screen ? "true" : "false");
     set_var_flip_screen(flip_screen);
     old_flip_screen = flip_screen;
 
     speaker_volume = prefs.getInt("speaker_volume", 10);
-    Serial.print("> speaker_volume read from eeprom = ");
-    Serial.println(speaker_volume);
     set_var_speaker_volume(speaker_volume);
     old_speaker_volume = speaker_volume;
 
     backlight_timeout = prefs.getInt("bklt_timeout", 5);
-    Serial.print("> backlight_timeout read from eeprom = ");
-    Serial.println(backlight_timeout);
     old_backlight_timeout = backlight_timeout;
 
     accum_distance = prefs.getFloat("accumDistance", 0.0);
-    Serial.print("> accum_distance read from eeprom = ");
-    Serial.println(accum_distance, 3);
     odometer = String(accum_distance, 1);
     set_var_odometer(odometer.c_str());
 
     trip_distance = prefs.getFloat("tripDistance", 0.0);
-    Serial.print("> trip_distance read from eeprom = ");
-    Serial.println(trip_distance, 3);
     trip_odometer = String(trip_distance, 1);
     set_var_trip_odometer(trip_odometer.c_str());
 
     // hrs_since_svc is stored as TENTHS of hours everywhere (0.1 hr = 6 min resolution)
     // Load directly without calling setter to avoid premature EEPROM queue write
     hrs_since_svc = prefs.getInt("hrs_since_svc", 0);
-    Serial.print("> hrs_since_svc read from eeprom (tenths) = ");
-    Serial.println(hrs_since_svc);
-    Serial.print(">   (Display value in hours: ");
-    Serial.print(hrs_since_svc / 10);
-    Serial.println(")");
 
     svc_interval_hrs = prefs.getInt("svc_interval_hrs", 100);
-    Serial.print("> svc_interval_hrs read from eeprom = ");
-    Serial.println(svc_interval_hrs);
     set_var_svc_interval_hrs(svc_interval_hrs);
     old_svc_interval_hrs = svc_interval_hrs;
 
     temperature_adj = prefs.getFloat("temperature_adj", 0.0);
-    Serial.print("> temperature_adj read from eeprom = ");
-    Serial.println(temperature_adj);
     set_var_temperature_adj(temperature_adj);
     old_temperature_adj = temperature_adj;
 
@@ -88,36 +67,29 @@ void loadPreferences() {
     touch_delta_y = prefs.getFloat("touch_delta_y", 0.0);
 
     // Check if calibration coefficients are valid (not all zeros)
-    if (touch_alpha_x != 0.0 || touch_beta_x != 0.0 || touch_alpha_y != 0.0 || touch_beta_y != 0.0) {
-        use_touch_calibration = true;
-        Serial.println("> Touchscreen calibration coefficients loaded from EEPROM:");
-        Serial.print("  alpha_x = "); Serial.println(touch_alpha_x, 6);
-        Serial.print("  beta_x = "); Serial.println(touch_beta_x, 6);
-        Serial.print("  delta_x = "); Serial.println(touch_delta_x, 6);
-        Serial.print("  alpha_y = "); Serial.println(touch_alpha_y, 6);
-        Serial.print("  beta_y = "); Serial.println(touch_beta_y, 6);
-        Serial.print("  delta_y = "); Serial.println(touch_delta_y, 6);
-    } else {
-        use_touch_calibration = false;
-        Serial.println("> No touchscreen calibration found in EEPROM, using default auto-calibration");
-    }
+    use_touch_calibration = (touch_alpha_x != 0.0 || touch_beta_x != 0.0 || touch_alpha_y != 0.0 || touch_beta_y != 0.0);
 
     // Load home location coordinates
     homeLatitude = prefs.getFloat("home_lat", 0.0);
     homeLongitude = prefs.getFloat("home_lon", 0.0);
     home_gps_fence_radius_m = prefs.getInt("home_fence_m", 500);
+    homeLocationSet = (homeLatitude != 0.0 || homeLongitude != 0.0);
 
-    // Check if home location has been set
-    if (homeLatitude != 0.0 || homeLongitude != 0.0) {
-        homeLocationSet = true;
-        Serial.println("> Home location loaded from EEPROM:");
-        Serial.print("  Latitude: "); Serial.println(homeLatitude, 6);
-        Serial.print("  Longitude: "); Serial.println(homeLongitude, 6);
-        Serial.print("  Fence radius: "); Serial.print(home_gps_fence_radius_m); Serial.println(" meters");
+#if DEBUG_EEPROM == 1
+    Serial.println("EEPROM values loaded:");
+    Serial.printf("  day_backlight=%d, night_backlight=%d\n", day_backlight, night_backlight);
+    Serial.printf("  gci_mac=%s, flip_screen=%s\n", espnow_gci_mac_addr.c_str(), flip_screen ? "true" : "false");
+    Serial.printf("  speaker_volume=%d, backlight_timeout=%d\n", speaker_volume, backlight_timeout);
+    Serial.printf("  accum_distance=%.3f, trip_distance=%.3f\n", accum_distance, trip_distance);
+    Serial.printf("  hrs_since_svc=%d (%.1f hrs), svc_interval_hrs=%d\n", hrs_since_svc, hrs_since_svc / 10.0, svc_interval_hrs);
+    Serial.printf("  temperature_adj=%.1f\n", temperature_adj);
+    Serial.printf("  touch_calibration=%s\n", use_touch_calibration ? "loaded" : "default");
+    if (homeLocationSet) {
+        Serial.printf("  home: %.6f, %.6f (fence=%dm)\n", homeLatitude, homeLongitude, home_gps_fence_radius_m);
     } else {
-        homeLocationSet = false;
-        Serial.println("> No home location set in EEPROM");
+        Serial.println("  home: not set");
     }
+#endif
 }
 
 void queuePreferenceWrite(const char* key, float value) {
