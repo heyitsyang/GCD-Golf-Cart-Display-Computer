@@ -19,7 +19,7 @@ static const uint32_t MIN_STARTUP_GRACE_SECS = 30;
 
 // SLEEP_PIN debounce configuration
 // Requires pin to be stable for this duration before acting on state change
-static const uint32_t SLEEP_PIN_DEBOUNCE_MS = 200;
+static const uint32_t SLEEP_PIN_DEBOUNCE_MS = 400;
 
 // Debounce state tracking
 static int last_sleep_pin_state = HIGH;      // Last stable state (HIGH = awake)
@@ -56,42 +56,36 @@ static void setGpsInterval(int8_t interval) {
     }
 }
 
-void checkSleepPinEarly() {
-    // Early check before display init - if SLEEP_PIN is LOW, sleep immediately
-    // Handles wake glitches or rapid transitions that briefly wake the device
-    pinMode(SLEEP_PIN, INPUT);
-
-    if (digitalRead(SLEEP_PIN) == LOW) {
-        Serial.println("SLEEP_PIN LOW at boot - returning to deep sleep");
-        Serial.flush();
-
-        // Play sleep tone
-        ledcSetup(SPEAKER_LEDC_CHANNEL, BEEP_FREQUENCY_HZ, SPEAKER_LEDC_TIMER_BIT);
-        ledcAttachPin(SPEAKER_PIN, SPEAKER_LEDC_CHANNEL);
-        tone_sleep();
-        delay(550);
-        ledcWrite(SPEAKER_LEDC_CHANNEL, 0);
-
-        // Configure wake source and sleep
-        esp_sleep_enable_ext0_wakeup((gpio_num_t)SLEEP_PIN, 1);
-        esp_deep_sleep_start();
-    }
-}
-
 void initSleepPin() {
     // Configure SLEEP_PIN as INPUT (GPIO 35 has no internal pull-up/down)
     // External pull-up required: HIGH = awake, LOW = sleep
-    // Note: pinMode already called in checkSleepPinEarly(), but safe to call again
     pinMode(SLEEP_PIN, INPUT);
 
-    // Initialize debounce state - pin must be HIGH if we got here (passed early check)
-    last_sleep_pin_state = HIGH;
-    current_raw_state = HIGH;
+    // Initialize debounce state to current pin reading
+    last_sleep_pin_state = digitalRead(SLEEP_PIN);
+    current_raw_state = last_sleep_pin_state;
     state_change_time_ms = millis();
-    debounced_sleep_state = false;
+    debounced_sleep_state = (last_sleep_pin_state == LOW);
 
 #if DEBUG_INIT == 1
-    Serial.printf("Sleep pin (GPIO %d) initialized - debounce: %dms\n", SLEEP_PIN, SLEEP_PIN_DEBOUNCE_MS);
+    Serial.printf("Sleep pin (GPIO %d) initialized - state: %s, debounce: %dms\n",
+                  SLEEP_PIN, last_sleep_pin_state == HIGH ? "HIGH" : "LOW", SLEEP_PIN_DEBOUNCE_MS);
+#endif
+}
+
+/**
+ * Reset debounce state to current pin reading
+ * Called when transitioning to GCI_MODE to ensure correct state
+ * (pin may have been floating during startup grace period)
+ */
+static void resetSleepPinDebounce() {
+    last_sleep_pin_state = digitalRead(SLEEP_PIN);
+    current_raw_state = last_sleep_pin_state;
+    state_change_time_ms = millis();
+    debounced_sleep_state = (last_sleep_pin_state == LOW);
+
+#if DEBUG_SLEEP_STATE == 1
+    Serial.printf("SLEEP_PIN debounce reset: %s\n", last_sleep_pin_state == HIGH ? "HIGH" : "LOW");
 #endif
 }
 
@@ -300,6 +294,7 @@ bool processSleepModeStateMachine() {
                 gci_communicated_flag = true;
                 sleep_operating_mode = SLEEP_MODE_GCI;
                 gci_disconnect_time_ms = 0;  // Reset disconnect timer
+                resetSleepPinDebounce();     // Re-sample pin now that GCI is confirmed
                 Serial.println("-> GCI_MODE (connected)");
             }
             // Check if grace period expired
@@ -313,6 +308,7 @@ bool processSleepModeStateMachine() {
                     if (gci_communicated_flag) {
                         sleep_operating_mode = SLEEP_MODE_GCI;
                         gci_disconnect_time_ms = 0;
+                        resetSleepPinDebounce();  // Re-sample pin now that GCI is confirmed
                         Serial.println("-> GCI_MODE");
                     } else {
                         sleep_operating_mode = SLEEP_MODE_NO_GCI;
@@ -360,6 +356,7 @@ bool processSleepModeStateMachine() {
             if (isGciActivelyConnected()) {
                 sleep_operating_mode = SLEEP_MODE_GCI;
                 gci_disconnect_time_ms = 0;
+                resetSleepPinDebounce();  // Re-sample pin now that GCI is confirmed
                 // Restore backlight if it was dimmed
                 if (backlight_dimmed) {
                     setBacklight((day_backlight * 20) + 55);

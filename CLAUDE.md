@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **GCD** = Golf Cart Display (this codebase) - The display computer that uses a Cheap Yellow Display (CYD) 2432S028R
 - **GCM** = Golf Cart Mesh - The attached Meshtastic radio module that provides mesh networking capabilities
-- **GCI** = Golf Cart Internal - The internal golf cart computer that sends telemetry via ESP-NOW (codebase located at `C:\Users\Yang\Documents\PlatformIO\Projects\Golf-Cart-Internal-Computer`)
+- **GCI** = Golf Cart Internal - The internal golf cart computer that sends telemetry via ESP-NOW (codebase located at `C:\Users\Yang\Documents\PlatformIO\Projects\GCI-Golf-Cart-Internal-Computer`)
 
 ## Project Overview
 
