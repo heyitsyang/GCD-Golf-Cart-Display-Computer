@@ -59,7 +59,7 @@ static void setGpsInterval(int8_t interval) {
 void initSleepPin() {
     // Configure SLEEP_PIN as INPUT (GPIO 35 has no internal pull-up/down)
     // External pull-up required: HIGH = awake, LOW = sleep
-    pinMode(SLEEP_PIN, INPUT);
+    pinMode(SLEEP_PIN, INPUT);   // INPUT_PULLUP not available on GPIO 35
 
     // Initialize debounce state to current pin reading
     last_sleep_pin_state = digitalRead(SLEEP_PIN);
@@ -101,6 +101,9 @@ bool shouldEnterSleep() {
     if (raw_reading != current_raw_state) {
         current_raw_state = raw_reading;
         state_change_time_ms = now;
+#if DEBUG_SLEEP_STATE == 1
+        Serial.printf("SLEEP_PIN raw: %s (debouncing...)\n", raw_reading == HIGH ? "HIGH" : "LOW");
+#endif
         // Don't change debounced state yet - wait for stability
     }
 
