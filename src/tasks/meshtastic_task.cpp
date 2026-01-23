@@ -60,29 +60,29 @@ void meshtasticTask(void *parameter) {
               }
           }
 
-          // Send periodic test message
-          if (can_send && now >= next_send_time) {
-              // Build message with last 4 hex digits of GCM node ID
-              const char* nodeId = get_var_gcm_node_id();
-              if (strlen(nodeId) >= 4) {
-                  Serial.printf("Sending test message at: %s", hhmm_str.c_str());
+        //   // Send periodic test message
+        //   if (can_send && now >= next_send_time) {
+        //       // Build message with last 4 hex digits of GCM node ID
+        //       const char* nodeId = get_var_gcm_node_id();
+        //       if (strlen(nodeId) >= 4) {
+        //           Serial.printf("Sending test message at: %s", hhmm_str.c_str());
 
-                  uint32_t dest = BROADCAST_ADDR;
-                  uint8_t channel_index = 0;
+        //           uint32_t dest = BROADCAST_ADDR;
+        //           uint8_t channel_index = 0;
 
-                  char msg[40];
-                  snprintf(msg, sizeof(msg), "Hello world from GCD %s", nodeId + strlen(nodeId) - 4);
+        //           char msg[40];
+        //           snprintf(msg, sizeof(msg), "Hello world from GCD %s", nodeId + strlen(nodeId) - 4);
 
-                  bool success = mt_send_text(msg, dest, channel_index);
-                  Serial.print("mt_send_text returned: ");
-                  Serial.println(success ? "SUCCESS" : "***** FAILED ****");
-              } else {
-                  Serial.println("Skipping test message - GCM not yet connected");
-              }
+        //           bool success = mt_send_text(msg, dest, channel_index);
+        //           Serial.print("mt_send_text returned: ");
+        //           Serial.println(success ? "SUCCESS" : "***** FAILED ****");
+        //       } else {
+        //           Serial.println("Skipping test message - GCM not yet connected");
+        //       }
 
-              next_send_time = now + SEND_PERIOD * 1000;
-              Serial.printf("Next send time in: %d minutes\n", (SEND_PERIOD / 60));
-          }
+        //       next_send_time = now + SEND_PERIOD * 1000;
+        //       Serial.printf("Next send time in: %d minutes\n", (SEND_PERIOD / 60));
+        //   }
 
           vTaskDelay(pdMS_TO_TICKS(100));
       }
