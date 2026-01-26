@@ -58,8 +58,8 @@ static void setGpsInterval(int8_t interval) {
 
 void initSleepPin() {
     // Configure SLEEP_PIN as INPUT (GPIO 35 has no internal pull-up/down)
-    // External pull-up required: HIGH = awake, LOW = sleep
-    pinMode(SLEEP_PIN, INPUT);   // INPUT_PULLUP not available on GPIO 35
+    // External pull-down used: LOW = sleep (ignition OFF), HIGH = awake (ignition ON)
+    pinMode(SLEEP_PIN, INPUT);
 
     // Initialize debounce state to current pin reading
     last_sleep_pin_state = digitalRead(SLEEP_PIN);
