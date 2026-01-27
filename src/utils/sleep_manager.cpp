@@ -74,18 +74,23 @@ void initSleepPin() {
 }
 
 /**
- * Reset debounce state to current pin reading
- * Called when transitioning to GCI_MODE to ensure correct state
- * (pin may have been floating during startup grace period)
+ * Reset debounce state when transitioning to GCI_MODE
+ * Sets safe default (don't sleep) and lets normal debounce logic determine actual state
+ * By assuming previous state was HIGH, if pin is actually LOW the debounce logic
+ * will detect the "change" and trigger sleep after the debounce period
  */
 static void resetSleepPinDebounce() {
-    last_sleep_pin_state = digitalRead(SLEEP_PIN);
-    current_raw_state = last_sleep_pin_state;
+    int pin_reading = digitalRead(SLEEP_PIN);
+    // Assume previous state was HIGH (awake) so debounce logic can detect LOW
+    last_sleep_pin_state = HIGH;
+    current_raw_state = pin_reading;
     state_change_time_ms = millis();
-    debounced_sleep_state = (last_sleep_pin_state == LOW);
+    // Default to NOT sleeping - debounce logic will set true if pin stays LOW
+    debounced_sleep_state = false;
 
 #if DEBUG_SLEEP_STATE == 1
-    Serial.printf("SLEEP_PIN debounce reset: %s\n", last_sleep_pin_state == HIGH ? "HIGH" : "LOW");
+    Serial.printf("SLEEP_PIN debounce reset: pin=%s, will sleep after %dms if LOW\n",
+                  pin_reading == HIGH ? "HIGH" : "LOW", SLEEP_PIN_DEBOUNCE_MS);
 #endif
 }
 
