@@ -38,12 +38,17 @@ void processHotPacket(const char* text) {
             Serial.println("WX packet received");
 
             // Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
+            // Show actual timestamp if GPS is working, otherwise indicate timestamp unavailable
             String timestamp;
             if (gpsMutex != NULL && xSemaphoreTake(gpsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-                timestamp = cur_date + "  " + hhmm_str + am_pm_str;
+                if (cur_date != "NO GPS" && hhmm_str.length() > 0) {
+                    timestamp = cur_date + "  " + hhmm_str + am_pm_str;
+                } else {
+                    timestamp = "TIMESTAMP UNAVAILABLE";
+                }
                 xSemaphoreGive(gpsMutex);
             } else {
-                timestamp = "GPS data unavailable";
+                timestamp = "TIMESTAMP UNAVAILABLE";
             }
 
             // Parse weather data (updates buffers and swaps)
@@ -63,12 +68,17 @@ void processHotPacket(const char* text) {
                 int backBuffer = 1 - hotPacketActiveBuffer;
 
                 // Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
+                // Show actual timestamp if GPS is working, otherwise indicate timestamp unavailable
                 String timestamp;
                 if (gpsMutex != NULL && xSemaphoreTake(gpsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-                    timestamp = cur_date + "  " + hhmm_str + am_pm_str;
+                    if (cur_date != "NO GPS" && hhmm_str.length() > 0) {
+                        timestamp = cur_date + "  " + hhmm_str + am_pm_str;
+                    } else {
+                        timestamp = "TIMESTAMP UNAVAILABLE";
+                    }
                     xSemaphoreGive(gpsMutex);
                 } else {
-                    timestamp = "GPS data unavailable";
+                    timestamp = "TIMESTAMP UNAVAILABLE";
                 }
 
                 hotPacketBuffer_np_rcv_time[backBuffer] = timestamp;
