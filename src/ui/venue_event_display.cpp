@@ -131,7 +131,7 @@ extern "C" void action_display_now_playing(lv_event_t *e) {
         Serial.println("Using cached venue/event data from Meshtastic");
     } else {
         dataToDisplay = "Sawgrass,NA#Spanish Springs,NA#Lake Sumter,NA#Brownwood,NA#Sawgrass,NA#";
-        Serial.println("Using default data - no live Meshtastic data available");
+        Serial.println("Using default venue data - no live Meshtastic data available");
     }
 
     displayVenueEventTable(dataToDisplay);
