@@ -57,6 +57,9 @@ static const uint8_t ZERO_SAT_THRESHOLD = 3;  // Require 3 consecutive zero read
 // Track at_home state changes
 static bool old_at_home = false;
 
+// Track set_home_loc for edge detection
+static bool prev_set_home_loc = false;
+
 // Track is_daytime state changes
 static bool old_is_daytime = true;
 
@@ -216,10 +219,18 @@ static void updateBacklight(time_t& sunrise_t, time_t& sunset_t) {
  * Handles setting home location when triggered and calculates if we're currently at home
  */
 static void updateHomeLocation(const gps_fix& fix) {
-    if (!fix.valid.location) return;
+    // If user tried to set home but GPS is invalid, reject and reset toggle
+    if (!fix.valid.location) {
+        if (set_home_loc && !prev_set_home_loc) {
+            Serial.println("Cannot set home location: GPS not available");
+            set_home_loc = false;
+            // Don't update prev_set_home_loc so UI toggle resets
+        }
+        return;
+    }
 
-    // Check if user triggered "set home location"
-    if (set_home_loc) {
+    // Rising edge: user toggled set_home_loc ON - save current location as home
+    if (set_home_loc && !prev_set_home_loc) {
         float lat = fix.latitude();
         float lon = fix.longitude();
 
@@ -239,10 +250,29 @@ static void updateHomeLocation(const gps_fix& fix) {
         } else {
             Serial.println("Cannot set home location: GPS coordinates are invalid (0.0, 0.0)");
         }
-
-        // Reset the trigger regardless
-        set_home_loc = false;
     }
+
+    // Falling edge: user toggled set_home_loc OFF - clear home location
+    if (!set_home_loc && prev_set_home_loc && homeLocationSet) {
+        Serial.println("Clearing home location");
+        homeLatitude = 0.0;
+        homeLongitude = 0.0;
+        homeLocationSet = false;
+
+        // Notify GCI if at_home status is changing
+        if (at_home && espnow_connected) {
+            Serial.println("*** LEFT home geo-fence (home cleared) ***");
+            espNow.sendIsHome(false);
+        }
+        at_home = false;
+        old_at_home = false;
+
+        // Persist cleared values
+        queuePreferenceWrite("home_lat", homeLatitude);
+        queuePreferenceWrite("home_lon", homeLongitude);
+    }
+
+    prev_set_home_loc = set_home_loc;
 
     // Calculate if we're at home
     if (homeLocationSet) {
