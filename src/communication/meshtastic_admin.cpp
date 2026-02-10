@@ -61,9 +61,9 @@ bool mt_send_admin_reboot(int32_t seconds) {
     adminMsg.which_payload_variant = meshtastic_AdminMessage_reboot_seconds_tag;
     adminMsg.reboot_seconds = seconds;
 
-    Serial.print("\nSending admin reboot command to Meshtastic radio (");
-    Serial.print(seconds);
-    Serial.println(" seconds delay)");
+#if DEBUG_GCM_MESSAGES
+    Serial.printf("GCM TX: Admin reboot command (%d seconds delay)\n", (int)seconds);
+#endif
 
     return sendAdminMessage(&adminMsg);
 }
@@ -97,7 +97,9 @@ void admin_portnum_callback(uint32_t from, uint32_t to, uint8_t channel,
     pb_istream_t stream = pb_istream_from_buffer(payload->bytes, payload->size);
 
     if (pb_decode(&stream, meshtastic_AdminMessage_fields, &adminMsg)) {
-        Serial.printf("*** Received ADMIN_APP message, variant=%d ***\n", adminMsg.which_payload_variant);
+#if DEBUG_GCM_MESSAGES
+        Serial.printf("GCM RX: ADMIN_APP message, variant=%d\n", adminMsg.which_payload_variant);
+#endif
     }
 }
 
@@ -194,6 +196,10 @@ void initGpsConfigOnBoot() {
 
     if (mt_set_position_config(&config)) {
         Serial.println("GPS Config Init: Complete");
+#if DEBUG_GCM_MESSAGES
+        Serial.printf("GCM TX: GPS config (mode=%d, fixed=%d, interval=%d)\n",
+                      config.gps_mode, config.fixed_position, config.gps_update_interval);
+#endif
         gpsConfigInitialized = true;
         gpsConfigSentSuccessfully = true;  // Flag that GCM will reboot due to config change
         // DO NOT set gpsConfigAttempted here - wait for GPS-config-induced reboot (2nd reboot)
@@ -234,10 +240,14 @@ bool resetGpsIntervalBeforeSleep() {
     config.fixed_position = desiredGpsConfig.fixed_position;  // Keep fixed_position setting
     config.gps_update_interval = 0;  // 0 = reset to default (2 minutes)
 
-    Serial.println("Resetting GPS update interval to default (2 min) before sleep...");
+#if DEBUG_GCM_MESSAGES
+    Serial.println("GCM TX: Resetting GPS interval to default (2 min) before sleep");
+#endif
 
     if (mt_set_position_config(&config)) {
-        Serial.println("GPS interval reset successful");
+#if DEBUG_GCM_MESSAGES
+        Serial.println("GCM TX: GPS interval reset successful");
+#endif
         return true;
     } else {
         Serial.println("GPS interval reset failed");

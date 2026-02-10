@@ -28,7 +28,9 @@ void meshtasticTask(void *parameter) {
               Serial.println("\n=== Meshtastic Reboot Triggered ===");
               if (mesh_serial_enabled) {
                   if (mt_send_admin_reboot(0)) {  // 0 = immediate reboot
-                      Serial.println("Reboot command sent successfully");
+#if DEBUG_GCM_MESSAGES
+                      Serial.println("GCM TX: Reboot command sent");
+#endif
                   } else {
                       Serial.println("Failed to send reboot command");
                   }
@@ -52,8 +54,10 @@ void meshtasticTask(void *parameter) {
               const char *wakeMessage = "~#01#GC#AWAKE#";
 
               if (mt_send_text(wakeMessage, BROADCAST_ADDR, 0)) {
-                //   Serial.print("Wake notification sent: ");
-                //   Serial.println(wakeMessage);
+#if DEBUG_GCM_MESSAGES
+                  Serial.print("GCM TX: ");
+                  Serial.println(wakeMessage);
+#endif
                   wakeNotificationSent = true;
               } else {
                   Serial.println("Failed to send wake notification, will retry");

@@ -14,6 +14,7 @@
 #define DEBUG_EEPROM 0                  // EEPROM read/write operations
 #define DEBUG_SLEEP_STATE 0             // Sleep state machine transitions
 #define DEBUG_INIT 0                    // Initialization messages
+#define DEBUG_GCM_MESSAGES 1            // GCM (Meshtastic) messages sent and received
 
 // Speaker pin & default settings
 #define SPEAKER_PIN 26

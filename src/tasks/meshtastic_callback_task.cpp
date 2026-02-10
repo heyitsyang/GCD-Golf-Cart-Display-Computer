@@ -10,22 +10,17 @@ void meshtasticCallbackTask(void *parameter) {
     
     while (true) {
         if (xQueueReceive(meshtasticCallbackQueue, &item, portMAX_DELAY)) {
-            // Serial.print("Received a text message on channel: ");
-            // Serial.print(item.channel);
-            // Serial.print(" from: ");
-            // Serial.print(item.from);
-            // Serial.print(" to: ");
-            // Serial.print(item.to);
-            // Serial.print(" message: ");
-            // Serial.println(item.text);
-            
+#if DEBUG_GCM_MESSAGES
+            Serial.printf("GCM RX: ch=%d from=%lu to=%lu msg='%s'\n",
+                         item.channel, item.from, item.to, item.text);
             if (item.to == 0xFFFFFFFF) {
-                Serial.println("This is a BROADCAST message.");
+                Serial.println("  (BROADCAST)");
             } else if (item.to == my_node_num) {
-                Serial.println("This is a DM to me!");
+                Serial.println("  (DM to me)");
             } else {
-                Serial.println("This is a DM to someone else.");
+                Serial.println("  (DM to someone else)");
             }
+#endif
             
             // Check for HoT packet
             if (isHotPacket(item.text)) {
@@ -44,8 +39,10 @@ void connected_callback(mt_node_t *node, mt_nr_progress_t progress) {
 }
 
 void text_message_callback(uint32_t from, uint32_t to, uint8_t channel, const char *text) {
-    Serial.printf("MESSAGE CALLBACK: from=%lu, to=%lu, channel=%d, text='%s'\n",
+#if DEBUG_GCM_MESSAGES
+    Serial.printf("GCM RX callback: from=%lu, to=%lu, ch=%d, text='%s'\n",
                  from, to, channel, text ? text : "NULL");
+#endif
 
     meshtasticCallbackItem_t item;
     item.from = from;

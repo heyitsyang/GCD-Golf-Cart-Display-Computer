@@ -21,7 +21,9 @@ int parseHotPacketType(const char* text) {
 }
 
 void processHotPacket(const char* text) {
-    Serial.print("Received a HoT pkt: ");
+#if DEBUG_GCM_MESSAGES
+    Serial.print("GCM RX HoT pkt: ");
+#endif
 
     // Set flag for any HOT packet received (for UI updates)
     new_rx_data_flag = true;
@@ -35,7 +37,9 @@ void processHotPacket(const char* text) {
     
     switch (HotPktType) {
         case HOT_PACKET_WEATHER: {
+#if DEBUG_GCM_MESSAGES
             Serial.println("WX packet received");
+#endif
 
             // Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
             // Show actual timestamp if GPS is working, otherwise indicate timestamp unavailable
@@ -61,7 +65,9 @@ void processHotPacket(const char* text) {
         }
 
         case HOT_PACKET_VENUE_EVENT: {
+#if DEBUG_GCM_MESSAGES
             Serial.println("Venue/Event packet received");
+#endif
             // Validate packet has enough data
             if (strlen(text) > HOT_PKT_HEADER_OFFSET) {
                 // Write to back buffer (whichever is NOT active)
@@ -428,7 +434,9 @@ int parseWeatherData(char* input, const String& timestamp) {
         fcast_temp4 = hotPacketBuffer_fcast_temp4[backBuffer];
         fcast_precip4 = hotPacketBuffer_fcast_precip4[backBuffer];
 
+#if DEBUG_GCM_MESSAGES
         Serial.println("Weather data parsed successfully");
+#endif
         return 1;
     } else {
         Serial.println("Buffer swap timeout (weather data)");
