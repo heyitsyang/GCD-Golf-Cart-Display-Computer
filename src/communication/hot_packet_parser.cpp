@@ -65,6 +65,7 @@ void processHotPacket(const char* text) {
         }
 
         case HOT_PACKET_VENUE_EVENT: {
+            // Example: |#02#Sawgrass,Trivia Tuesday#Spanish Springs,5.0.1.#Lake Sumter,Zee-R Band#Brownwood,Hacksaw Hamlin#Sawgrass,Steve Hogie Band#Eastport,Boozy Bingo-Eastport#
 #if DEBUG_GCM_MESSAGES
             Serial.println("Venue/Event packet received");
 #endif
