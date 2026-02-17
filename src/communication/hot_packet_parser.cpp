@@ -31,7 +31,12 @@ void processHotPacket(const char* text) {
     int HotPktType = parseHotPacketType(text);
 
     if (HotPktType == -1) {
-        Serial.println("Malformed HotPktType");
+        Serial.print("Malformed HoT packet type, raw: ");
+        // Print first 20 chars of packet for diagnosis
+        char preview[21];
+        strncpy(preview, text, 20);
+        preview[20] = '\0';
+        Serial.println(preview);
         return;
     }
     
@@ -199,7 +204,11 @@ int parseWeatherData(char* input, const String& timestamp) {
         Serial.print(hashCount);
         Serial.print(" '#' and ");
         Serial.print(commaCount);
-        Serial.println(" ','");
+        Serial.print(" ',', raw: ");
+        char preview[41];
+        strncpy(preview, input, 40);
+        preview[40] = '\0';
+        Serial.println(preview);
         return 0;
     }
 
