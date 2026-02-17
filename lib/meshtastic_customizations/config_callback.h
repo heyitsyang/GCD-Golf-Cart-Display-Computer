@@ -21,4 +21,9 @@ extern void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo);
 // This will be called from mt_protocol.cpp when rebooted_tag is received
 extern void handleGcmRebooted();
 
+// Callback function for handshake completion
+// Called from mt_protocol.cpp when config_complete_id (tag 7) is received
+// Signals that GCM is ready to route packets OTA
+extern void handleConfigComplete();
+
 #endif // CONFIG_CALLBACK_H

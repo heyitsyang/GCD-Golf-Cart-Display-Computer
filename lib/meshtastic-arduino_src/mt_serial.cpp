@@ -13,6 +13,8 @@ HardwareSerial meshSerial(2);  // Use UART2 on ESP32
 
 void mt_serial_init(int8_t rx_pin, int8_t tx_pin, uint32_t baud) {
     // ESP32-specific serial initialization using UART2
+    // Default 256-byte RX buffer overflows during config dump (~40+ packets at 9600 baud)
+    meshSerial.setRxBufferSize(2048);
     meshSerial.begin(baud, SERIAL_8N1, rx_pin, tx_pin);
 
     // Configure mode flags for other modules

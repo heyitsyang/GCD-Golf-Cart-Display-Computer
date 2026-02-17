@@ -10,11 +10,13 @@
 // #define MT_DEBUGGING 1
 #define DEBUG_ESP32_SLEEP 0
 #define DEBUG_ESPNOW 0                  // ESP-NOW verbose messages (pairing & telemetry always shown)
-#define DEBUG_MESHTASTIC_CONNECTION 0   // GCM connection/reconnection events
+#define DEBUG_MESHTASTIC_CONNECTION 1   // GCM connection/reconnection events
 #define DEBUG_EEPROM 0                  // EEPROM read/write operations
 #define DEBUG_SLEEP_STATE 0             // Sleep state machine transitions
 #define DEBUG_INIT 0                    // Initialization messages
 #define DEBUG_GCM_MESSAGES 1            // GCM (Meshtastic) messages sent and received
+#define DEBUG_OTA_TX_TEST 1             // Periodic T1,T2,T3... OTA test messages every 30s
+#define DEBUG_OTA_TX_TEST_CHANNEL 3     // Channel to send OTA test messages on (corresponds to UI channel selector)
 
 // Speaker pin & default settings
 #define SPEAKER_PIN 26

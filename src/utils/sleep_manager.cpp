@@ -33,18 +33,11 @@ static bool debounced_sleep_state = false;   // Debounced result: true = should 
  * Only sends command if interval has changed
  */
 static void setGpsInterval(int8_t interval) {
-    if (current_gps_interval == interval) {
-        return;  // Already set to desired interval
-    }
+    if (current_gps_interval == interval) return;
+    if (not_yet_connected || !mesh_serial_enabled) return;
 
-    // Wait for Meshtastic connection
-    if (not_yet_connected || !mesh_serial_enabled) {
-        return;
-    }
-
-    meshtastic_Config_PositionConfig config = meshtastic_Config_PositionConfig_init_default;
-    config.gps_mode = meshtastic_Config_PositionConfig_GpsMode_ENABLED;
-    config.fixed_position = false;
+    meshtastic_Config_PositionConfig config;
+    if (!getRadioPositionConfig(&config)) return;  // Config not yet captured
     config.gps_update_interval = interval;
 
     if (mt_set_position_config(&config)) {
@@ -142,7 +135,7 @@ void enterDeepSleep() {
         // Reset GPS update interval to default (2 minutes) to reduce radio power consumption
         // Must be done while serial is still active
         resetGpsIntervalBeforeSleep();
-        mt_serial_end();  // Directly shutdown UART2 before sleep
+        mt_serial_end();  // flush TX + close UART2
         mesh_serial_enabled = false;  // Update state to match
     }
 

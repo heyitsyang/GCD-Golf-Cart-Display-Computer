@@ -114,6 +114,7 @@ bool not_yet_connected = true;
 bool old_mesh_serial_enabled = true;
 bool wakeNotificationSent = false;
 bool gpsConfigAttempted = false;
+bool handshakeComplete = false;
 
 // Inactivity timeout variables
 uint32_t lastTouchActivity = 0;

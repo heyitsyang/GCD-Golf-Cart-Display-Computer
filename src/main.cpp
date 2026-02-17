@@ -67,6 +67,9 @@ void setup() {
     Serial.end();
     Serial.begin(GPS_BAUD, SERIAL_8N1, 3, 1);
 
+    // Seed PRNG with hardware RNG so packet IDs are unique across reboots
+    randomSeed(esp_random());
+
     // Print version and MAC (always shown - essential boot info)
     version = String('v') + String(VERSION);
     cyd_mac_addr = String(WiFi.macAddress());

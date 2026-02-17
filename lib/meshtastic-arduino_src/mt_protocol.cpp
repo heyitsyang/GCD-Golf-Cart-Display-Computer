@@ -9,11 +9,14 @@
 // The header is the magic number plus a 16-bit payload-length field
 #define MT_HEADER_SIZE 4
 
-// The buffer used for protobuf encoding/decoding. Since there's only one, and it's global, we
-// have to make sure we're only ever doing one encoding or decoding at a time.
+// RX buffer for incoming FromRadio packets
 #define PB_BUFSIZE 512
 pb_byte_t pb_buf[PB_BUFSIZE+4];
-size_t pb_size = 0; // Number of bytes currently in the buffer
+size_t pb_size = 0; // Number of bytes currently in the RX buffer
+
+// Separate TX buffer for outgoing ToRadio packets
+// MUST be separate from pb_buf to avoid destroying incoming data when sending
+pb_byte_t tx_buf[PB_BUFSIZE+4];
 
 // Nonce to request only my nodeinfo and skip other nodes in the db
 #define SPECIAL_NONCE 69420
@@ -70,10 +73,10 @@ bool mt_send_radio(const char * buf, size_t len) {
 }
 
 bool _mt_send_toRadio(meshtastic_ToRadio toRadio) {
-  pb_buf[0] = MT_MAGIC_0;
-  pb_buf[1] = MT_MAGIC_1;
+  tx_buf[0] = MT_MAGIC_0;
+  tx_buf[1] = MT_MAGIC_1;
 
-  pb_ostream_t stream = pb_ostream_from_buffer(pb_buf + 4, PB_BUFSIZE);
+  pb_ostream_t stream = pb_ostream_from_buffer(tx_buf + 4, PB_BUFSIZE);
   bool status = pb_encode(&stream, meshtastic_ToRadio_fields, &toRadio);
   if (!status) {
     d("Couldn't encode toRadio");
@@ -81,15 +84,10 @@ bool _mt_send_toRadio(meshtastic_ToRadio toRadio) {
   }
 
   // Store the payload length in the header
-  pb_buf[2] = stream.bytes_written / 256;
-  pb_buf[3] = stream.bytes_written % 256;
+  tx_buf[2] = stream.bytes_written / 256;
+  tx_buf[3] = stream.bytes_written % 256;
 
-  bool rv = mt_send_radio((const char *)pb_buf, 4 + stream.bytes_written);
-
-  // Clear the buffer so it can be used to hold reply packets
-  pb_size = 0;
-
-  return rv;
+  return mt_send_radio((const char *)tx_buf, 4 + stream.bytes_written);
 }
 
 // Request a node report from our MT
@@ -113,7 +111,7 @@ bool mt_request_node_report(void (*callback)(mt_node_t *, mt_nr_progress_t)) {
 bool mt_send_text(const char * text, uint32_t dest, uint8_t channel_index) {
   meshtastic_MeshPacket meshPacket = meshtastic_MeshPacket_init_default;
   meshPacket.which_payload_variant = meshtastic_MeshPacket_decoded_tag;
-  meshPacket.id = random(0x7FFFFFFF);
+  meshPacket.id = esp_random();  // Fix: use hardware RNG for unique IDs across reboots
   meshPacket.decoded.portnum = meshtastic_PortNum_TEXT_MESSAGE_APP;
   meshPacket.to = dest;
   meshPacket.channel = channel_index;
@@ -129,7 +127,10 @@ bool mt_send_text(const char * text, uint32_t dest, uint8_t channel_index) {
   Serial.print(text);
   Serial.print("' to ");
   Serial.print(dest);
-  Serial.println();
+  Serial.print(" ch=");
+  Serial.print(channel_index);
+  Serial.print(" id=");
+  Serial.println(meshPacket.id);
   return _mt_send_toRadio(toRadio);
 }
 
@@ -235,6 +236,15 @@ bool handle_config_tag(meshtastic_Config *config) {
       break;
 
     case meshtastic_Config_lora_tag:
+#if DEBUG_GCM_MESSAGES
+      Serial.printf("LoRa Config: tx_enabled=%d tx_power=%d region=%d hop_limit=%d preset=%d ch_num=%d\n",
+                    config->payload_variant.lora.tx_enabled,
+                    config->payload_variant.lora.tx_power,
+                    config->payload_variant.lora.region,
+                    config->payload_variant.lora.hop_limit,
+                    config->payload_variant.lora.modem_preset,
+                    config->payload_variant.lora.channel_num);
+#endif
       d("Config:lora_tag:use_preset: %d  \r\n", config->payload_variant.lora.use_preset);
       d("Config:lora_tag:modem_preset: %d  \r\n", config->payload_variant.lora.modem_preset);
       d("Config:lora_tag:bandwidth: %d  \r\n", config->payload_variant.lora.bandwidth);
@@ -327,6 +337,15 @@ bool handle_moduleConfig_tag(meshtastic_ModuleConfig *module){
       break;
 
       case meshtastic_ModuleConfig_serial_tag:
+#if DEBUG_GCM_MESSAGES
+        Serial.printf("Serial Module: enabled=%d mode=%d baud=%d rxd=%d txd=%d override_console=%d\n",
+                      module->payload_variant.serial.enabled,
+                      module->payload_variant.serial.mode,
+                      module->payload_variant.serial.baud,
+                      module->payload_variant.serial.rxd,
+                      module->payload_variant.serial.txd,
+                      module->payload_variant.serial.override_console_serial_port);
+#endif
         d("ModuleConfig:serial:enabled: %d\r\n", module->payload_variant.serial.enabled);
         d("ModuleConfig:serial:echo: %d\r\n", module->payload_variant.serial.echo);
         d("ModuleConfig:serial:rxd-gpio-pin: %d\r\n", module->payload_variant.serial.rxd);
@@ -457,6 +476,10 @@ bool handle_moduleConfig_tag(meshtastic_ModuleConfig *module){
 }
 
 bool handle_queueStatus_tag(meshtastic_QueueStatus *qstatus) {
+#if DEBUG_GCM_MESSAGES
+  Serial.printf("QueueStatus: res=%d free=%d/%d pkt_id=%d\n",
+                qstatus->res, qstatus->free, qstatus->maxlen, qstatus->mesh_packet_id);
+#endif
   d("queueStatus: maxlen: %d\r\n", qstatus->maxlen);
   d("queueStatus: res: %d\r\n", qstatus->res);
   d("queueStatus: free: %d\r\n", qstatus->free);
@@ -570,6 +593,7 @@ bool handle_node_info(meshtastic_NodeInfo *nodeInfo) {
 }
 
 bool handle_config_complete_id(uint32_t now, uint32_t config_complete_id) {
+  handleConfigComplete();  // Signal that handshake is done — safe to send packets now
   if (config_complete_id == want_config_id) {
     #ifdef MT_WIFI_SUPPORTED
     mt_wifi_reset_idle_timeout(now);  // It's fine if we're actually in serial mode
@@ -801,6 +825,14 @@ bool mt_loop(uint32_t now) {
   }
 
   pb_size += bytes_read;
-  mt_protocol_check_packet(now); 
+
+  // Process all complete packets, not just one per loop
+  // Critical during config dump where 40+ packets arrive in rapid succession
+  for (int i = 0; i < 10; i++) {
+    size_t before = pb_size;
+    mt_protocol_check_packet(now);
+    if (pb_size >= before) break;  // No progress — partial packet or empty buffer
+  }
+
   return rv;
 }

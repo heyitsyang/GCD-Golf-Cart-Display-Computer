@@ -21,6 +21,7 @@ void mt_serial_init(int8_t rx_pin, int8_t tx_pin, uint32_t baud) {
 }
 
 void mt_serial_end() {
+    meshSerial.flush();  // Wait for TX buffer to drain before closing
     meshSerial.end();
 }
 

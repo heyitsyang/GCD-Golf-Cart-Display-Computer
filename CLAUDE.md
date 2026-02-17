@@ -45,6 +45,7 @@ pio device monitor
 
 #### Current Applied Patches
 1. **Rebooted Tag Return Statement Fix** (`mt_protocol.cpp:686`): Fixes upstream bug causing crashes when GCM reboots. Missing `return true;` statement after `rebooted_tag` case causes fall-through to `moduleConfig_tag`, resulting in `InstrFetchProhibited` exception. All other cases in the switch statement return a value; this one was missing it. This bug exists in upstream as of 2025-12.
+2. **Deterministic Packet ID Fix** (`mt_protocol.cpp:~114`): Replaces `random(0x7FFFFFFF)` with `esp_random()` in `mt_send_text()`. Arduino `random()` on ESP32 produces identical sequences across reboots (ignores `randomSeed()`), causing Meshtastic duplicate detection to silently drop all OTA transmissions after the first boot. This bug exists in upstream as of 2025-12.
 
 ### 2. UART0 Split Architecture
 - **UART0 is split**: GPS RX on pin 3, Debug TX on pin 1. This is a unidirectional split configuration.

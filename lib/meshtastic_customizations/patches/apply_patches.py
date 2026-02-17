@@ -155,6 +155,50 @@ def apply_node_report_callback_null_check():
         print("  ℹ️  Manual patch may be required - see mt_protocol_node_report_callback_null_check.patch")
         return False
 
+def apply_random_id_fix():
+    """
+    Replace random() with esp_random() for packet IDs in mt_send_text()
+
+    Upstream bug: Uses Arduino random() which produces deterministic sequences
+    on ESP32 (randomSeed() has no effect). This causes identical packet IDs
+    across reboots, which triggers Meshtastic's duplicate detection on the
+    receiving radio, silently dropping all OTA transmissions.
+
+    Fix: Use esp_random() which reads from the ESP32 hardware true RNG.
+
+    Reference: mt_protocol_random_id_fix.patch
+    """
+    print("🔧 Applying random() → esp_random() packet ID fix...")
+
+    protocol_file = MESHTASTIC_LIB / "mt_protocol.cpp"
+
+    if not protocol_file.exists():
+        print(f"  ❌ File not found: {protocol_file}")
+        return False
+
+    with open(protocol_file, 'r') as f:
+        content = f.read()
+
+    # Check if patch is already applied
+    if "meshPacket.id = esp_random();" in content:
+        print("  ✅ Patch already applied")
+        return True
+
+    old_code = "meshPacket.id = random(0x7FFFFFFF);"
+    new_code = "meshPacket.id = esp_random();  // Fix: use hardware RNG for unique IDs across reboots"
+
+    if old_code in content:
+        content = content.replace(old_code, new_code)
+        with open(protocol_file, 'w') as f:
+            f.write(content)
+        print("  ✅ Successfully applied random ID fix")
+        return True
+    else:
+        print("  ⚠️  Code pattern not found - file may have changed")
+        print("  ℹ️  Manual patch may be required - see mt_protocol_random_id_fix.patch")
+        return False
+
+
 def main():
     """Apply all required patches"""
     print("🚀 Applying Meshtastic patches for Golf Cart Project")
@@ -167,6 +211,9 @@ def main():
         success = False
 
     if not apply_node_report_callback_null_check():
+        success = False
+
+    if not apply_random_id_fix():
         success = False
 
     print("=" * 60)

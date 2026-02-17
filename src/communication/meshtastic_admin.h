@@ -8,13 +8,10 @@
 #include "meshtastic/portnums.pb.h"
 
 // Send an admin command to reboot the Meshtastic radio
-// seconds: number of seconds until reboot (0 = immediate, <0 = cancel reboot)
-// Returns true if the command was sent successfully, false otherwise
 bool mt_send_admin_reboot(int32_t seconds = 0);
 
-// Set the position configuration on the Meshtastic radio
-// config: the position configuration to set
-// Returns true if the command was sent successfully, false otherwise
+// Set the full position configuration on the Meshtastic radio
+// IMPORTANT: Always use getRadioPositionConfig() as base to preserve all fields
 bool mt_set_position_config(const meshtastic_Config_PositionConfig *config);
 
 // GPS configuration settings that we want to enforce
@@ -48,10 +45,13 @@ void admin_portnum_callback(uint32_t from, uint32_t to, uint8_t channel,
                            meshtastic_PortNum port, meshtastic_Data_payload_t *payload);
 
 // Callback from mt_protocol.cpp when FromRadio.config (position) is received
-// Called by mt_protocol.cpp line 195 when position config is received from radio
-// Note: Currently unused - GCM firmware doesn't send position config during node report
-// Must exist to satisfy linker since mt_protocol.cpp unconditionally calls it
+// Called during connection handshake (tag 5) — captures radio's full PositionConfig
+// for read-modify-write pattern (preserves tx_gpio, rx_gpio, position_flags, etc.)
 void handlePositionConfigResponse(meshtastic_Config_PositionConfig *config);
+
+// Get the radio's captured position config (for read-modify-write pattern)
+// Returns true and copies config to *out if captured, false otherwise
+bool getRadioPositionConfig(meshtastic_Config_PositionConfig *out);
 
 // Callback from mt_protocol.cpp when FromRadio.metadata is received
 // Called by mt_protocol.cpp line 488 when metadata is received from radio
@@ -66,5 +66,9 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo);
 // Callback from mt_protocol.cpp when GCM reboots
 // Reset state to allow re-requesting metadata after reconnection
 void handleGcmRebooted();
+
+// Flag set by handleConfigComplete on first handshake — checked by meshtasticTask main loop
+// to send the reboot command outside the deep callback stack
+extern bool gcmNeedsReboot;
 
 #endif // MESHTASTIC_ADMIN_H

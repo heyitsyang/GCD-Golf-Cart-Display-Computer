@@ -48,45 +48,44 @@ void meshtasticTask(void *parameter) {
               can_send = mt_loop(now);
           }
 
-          // Send wake notification once when connection is ready AND GPS config has been attempted
-          // GPS config write causes GCM to reboot (2nd boot), so we wait until after that before sending AWAKE
-          if (can_send && !wakeNotificationSent && gpsConfigAttempted) {
-              const char *wakeMessage = "~#01#GC#AWAKE#";
+          // Send deferred GCM reboot (flag set by handleConfigComplete on first handshake)
+          if (gcmNeedsReboot) {
+              gcmNeedsReboot = false;
+              Serial.println("Sending GCM reboot for clean OTA state");
+              mt_send_admin_reboot(0);  // Immediate reboot (same as UI reboot button)
+          }
 
-              if (mt_send_text(wakeMessage, BROADCAST_ADDR, 0)) {
+          // Send AWAKE once after reboot + handshake + GPS config
+          if (can_send && handshakeComplete && gpsConfigAttempted) {
+              if (!wakeNotificationSent) {
+                  const char *wakeMessage = "~#01#GC#AWAKE#";
+                  if (mt_send_text(wakeMessage, BROADCAST_ADDR, 0)) {
 #if DEBUG_GCM_MESSAGES
-                  Serial.print("GCM TX: ");
-                  Serial.println(wakeMessage);
+                      Serial.print("GCM TX: ");
+                      Serial.println(wakeMessage);
 #endif
-                  wakeNotificationSent = true;
-              } else {
-                  Serial.println("Failed to send wake notification, will retry");
+                      wakeNotificationSent = true;
+                  } else {
+                      Serial.println("Failed to send wake notification, will retry");
+                  }
               }
           }
 
-        //   // Send periodic test message
-        //   if (can_send && now >= next_send_time) {
-        //       // Build message with last 4 hex digits of GCM node ID
-        //       const char* nodeId = get_var_gcm_node_id();
-        //       if (strlen(nodeId) >= 4) {
-        //           Serial.printf("Sending test message at: %s", hhmm_str.c_str());
+#if DEBUG_OTA_TX_TEST
+          // Periodic OTA test: send T1, T2, T3... every 30s to verify OTA TX
+          if (can_send && handshakeComplete && gpsConfigAttempted && now >= next_send_time) {
+              static int otaTestCount = 0;
+              otaTestCount++;
+              uint32_t elapsed = now / 1000;
+              char msg[48];
+              snprintf(msg, sizeof(msg), "T%d %lus", otaTestCount, elapsed);
 
-        //           uint32_t dest = BROADCAST_ADDR;
-        //           uint8_t channel_index = 0;
+              bool success = mt_send_text(msg, BROADCAST_ADDR, DEBUG_OTA_TX_TEST_CHANNEL);
+              Serial.printf("OTA test: %s → %s\n", msg, success ? "sent" : "FAILED");
 
-        //           char msg[40];
-        //           snprintf(msg, sizeof(msg), "Hello world from GCD %s", nodeId + strlen(nodeId) - 4);
-
-        //           bool success = mt_send_text(msg, dest, channel_index);
-        //           Serial.print("mt_send_text returned: ");
-        //           Serial.println(success ? "SUCCESS" : "***** FAILED ****");
-        //       } else {
-        //           Serial.println("Skipping test message - GCM not yet connected");
-        //       }
-
-        //       next_send_time = now + SEND_PERIOD * 1000;
-        //       Serial.printf("Next send time in: %d minutes\n", (SEND_PERIOD / 60));
-        //   }
+              next_send_time = now + 30000;
+          }
+#endif
 
           vTaskDelay(pdMS_TO_TICKS(100));
       }

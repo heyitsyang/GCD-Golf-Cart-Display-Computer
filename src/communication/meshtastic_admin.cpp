@@ -27,6 +27,10 @@ static uint8_t configUpdateRetries = 0;
 static const uint8_t MAX_RETRIES = 50;  // 5 seconds at 100ms intervals
 static bool gpsConfigSentSuccessfully = false;  // Track if config was sent (will cause reboot)
 
+// Captured radio position config (read-modify-write pattern)
+static meshtastic_Config_PositionConfig capturedPositionConfig;
+static bool positionConfigCaptured = false;
+
 // Helper function to send admin messages
 static bool sendAdminMessage(meshtastic_AdminMessage *adminMsg) {
     // Encode the admin message into a temporary buffer
@@ -41,7 +45,7 @@ static bool sendAdminMessage(meshtastic_AdminMessage *adminMsg) {
     // Create a MeshPacket with the admin message as payload
     meshtastic_MeshPacket meshPacket = meshtastic_MeshPacket_init_default;
     meshPacket.which_payload_variant = meshtastic_MeshPacket_decoded_tag;
-    meshPacket.id = random(0x7FFFFFFF);
+    meshPacket.id = esp_random();
     meshPacket.decoded.portnum = meshtastic_PortNum_ADMIN_APP;
     meshPacket.to = my_node_num;  // Send to the connected radio
     meshPacket.channel = 0;
@@ -103,12 +107,46 @@ void admin_portnum_callback(uint32_t from, uint32_t to, uint8_t channel,
     }
 }
 
+// Callback from mt_protocol.cpp when config_complete_id (tag 7) is received
+// On the first handshake after GCD wake, we reboot the GCM to establish clean
+// serial/OTA state. Sends are only enabled after the post-reboot handshake.
+// NOTE: We set a flag instead of calling mt_send_admin_reboot() here because
+// this callback runs deep in the call stack (mt_loop → handle_packet → ...)
+// and sendAdminMessage's stack-heavy protobuf encoding would overflow the task stack.
+static bool gcmInitialRebootDone = false;
+bool gcmNeedsReboot = false;  // Checked by meshtasticTask main loop
+
+void handleConfigComplete() {
+    if (!gcmInitialRebootDone) {
+        gcmInitialRebootDone = true;
+        gcmNeedsReboot = true;
+        Serial.println("First handshake complete - GCM reboot pending");
+        return;
+    }
+
+    if (!handshakeComplete) {
+        handshakeComplete = true;
+        Serial.println("GCM handshake complete (tag 7) - sends enabled");
+    }
+}
+
 // Callback from mt_protocol.cpp when FromRadio.config (position) is received
-// Called by mt_protocol.cpp line 195 when position config is received from radio
-// Note: Currently unused - GCM firmware doesn't send position config during node report
-// Must exist to satisfy linker since mt_protocol.cpp unconditionally calls it
+// Called during connection handshake (tag 5) — captures radio's full PositionConfig
+// so we can do read-modify-write instead of zeroing all fields
 void handlePositionConfigResponse(meshtastic_Config_PositionConfig *config) {
-    // Empty placeholder - GCM never sends position config
+    if (config == nullptr) return;
+    capturedPositionConfig = *config;
+    positionConfigCaptured = true;
+    Serial.printf("GCM position config captured (interval=%d, gps_mode=%d)\n",
+                  config->gps_update_interval, config->gps_mode);
+}
+
+// Get the radio's captured position config (for read-modify-write pattern)
+// Returns true and copies config to *out if captured, false otherwise
+bool getRadioPositionConfig(meshtastic_Config_PositionConfig *out) {
+    if (!positionConfigCaptured || out == nullptr) return false;
+    *out = capturedPositionConfig;
+    return true;
 }
 
 // Callback from mt_protocol.cpp when FromRadio.metadata is received
@@ -141,18 +179,24 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo) {
 // Callback from mt_protocol.cpp when GCM reboots
 // Reset state to allow re-capturing node ID and resending wake notification after reconnection
 //
-// NOTE: GCM boot sequence includes TWO reboots when GPS config is written:
-//   1st reboot: Initial GCM boot → GPS config sent → triggers reboot
-//   2nd reboot: GPS-config-induced reboot → system stable
-// We detect the 2nd reboot via gpsConfigSentSuccessfully flag to ensure AWAKE
-// is sent only after system is fully stable
+// GCM boot sequence:
+//   1st reboot: Explicit reboot after first handshake (clean OTA TX state)
+//   2nd reboot: GPS-config-induced reboot (only if interval needs changing)
+// gpsConfigAttempted is set either by GPS config skip (interval matches)
+// or by handleGcmRebooted after GPS-config-induced reboot
 void handleGcmRebooted() {
 #if DEBUG_MESHTASTIC_CONNECTION
     Serial.println("*** GCM REBOOTED - Resetting state for reconnection ***");
 #endif
 
+    // Block all sends until new handshake completes
+    handshakeComplete = false;
+
     // Clear the stored node ID to indicate stale data
     set_var_gcm_node_id("");
+
+    // Clear captured config — will be re-captured during reconnect handshake
+    positionConfigCaptured = false;
 
     // If GPS config was sent successfully, this reboot is the GPS-config-induced reboot
     // System is now stable, allow AWAKE to be sent
@@ -166,39 +210,38 @@ void handleGcmRebooted() {
 }
 
 void initGpsConfigOnBoot() {
-    // Only run once successfully
-    if (gpsConfigInitialized) {
+    if (gpsConfigInitialized) return;
+    if (not_yet_connected) return;
+    if (!positionConfigCaptured) return;  // Wait for radio's config from handshake
+    if (!handshakeComplete) return;       // Wait for tag 7 before sending admin commands
+
+    // Check if radio already has our desired interval (e.g., from a previous boot)
+    // If so, skip the config write entirely — no reboot needed
+    if (capturedPositionConfig.gps_update_interval == desiredGpsConfig.gps_update_interval) {
+        Serial.println("GPS Config Init: Radio already has correct interval - skipping");
+        gpsConfigInitialized = true;
+        gpsConfigAttempted = true;
         return;
     }
 
-    // Wait for Meshtastic connection
-    if (not_yet_connected) {
-        return;
-    }
-
-    // Connection established - send desired GPS config
-    // We cannot read current config (GCM doesn't send it), so we just write our desired settings
-    // This is idempotent - Meshtastic firmware handles repeated identical writes gracefully
-
-    // Create a full position config with desired values
-    meshtastic_Config_PositionConfig config = meshtastic_Config_PositionConfig_init_default;
-    config.gps_mode = desiredGpsConfig.gps_mode;
-    config.fixed_position = desiredGpsConfig.fixed_position;
-    config.gps_update_interval = desiredGpsConfig.gps_update_interval;
-
-    // Send the config - retry with limit
+    // Retry limit
     if (configUpdateRetries >= MAX_RETRIES) {
         Serial.println("GPS Config Init: Failed after max retries - giving up");
-        gpsConfigInitialized = true;  // Give up and don't retry forever
+        gpsConfigInitialized = true;
         gpsConfigAttempted = true;     // No reboot will occur, allow AWAKE to be sent now
         return;
     }
 
+    // Use captured config as base, only modify gps_update_interval
+    // This preserves all other fields (tx_gpio, rx_gpio, gps_en_gpio, position_flags, etc.)
+    meshtastic_Config_PositionConfig config = capturedPositionConfig;
+    config.gps_update_interval = desiredGpsConfig.gps_update_interval;
+
     if (mt_set_position_config(&config)) {
         Serial.println("GPS Config Init: Complete");
 #if DEBUG_GCM_MESSAGES
-        Serial.printf("GCM TX: GPS config (mode=%d, fixed=%d, interval=%d)\n",
-                      config.gps_mode, config.fixed_position, config.gps_update_interval);
+        Serial.printf("GCM TX: GPS config (interval %d -> %d, preserving all other fields)\n",
+                      capturedPositionConfig.gps_update_interval, config.gps_update_interval);
 #endif
         gpsConfigInitialized = true;
         gpsConfigSentSuccessfully = true;  // Flag that GCM will reboot due to config change
@@ -234,11 +277,12 @@ void requestMetadataOnce() {
 }
 
 bool resetGpsIntervalBeforeSleep() {
-    // Create position config with interval set to 0 (default = 2 minutes)
-    meshtastic_Config_PositionConfig config = meshtastic_Config_PositionConfig_init_default;
-    config.gps_mode = desiredGpsConfig.gps_mode;  // Keep GPS enabled
-    config.fixed_position = desiredGpsConfig.fixed_position;  // Keep fixed_position setting
-    config.gps_update_interval = 0;  // 0 = reset to default (2 minutes)
+    meshtastic_Config_PositionConfig config;
+    if (!getRadioPositionConfig(&config)) {
+        Serial.println("GPS interval reset skipped - no captured config");
+        return false;
+    }
+    config.gps_update_interval = 120;  // 120 seconds = Meshtastic default (protobuf3 won't encode 0)
 
 #if DEBUG_GCM_MESSAGES
     Serial.println("GCM TX: Resetting GPS interval to default (2 min) before sleep");

@@ -73,6 +73,31 @@ After applying patch:
 4. `handleGcmRebooted()` should run without crash
 5. Wake notification should be resent
 
+### 3. Deterministic Packet ID Fix
+**File**: `mt_protocol_random_id_fix.patch`
+**Affected File**: `lib/meshtastic-arduino_src/mt_protocol.cpp`
+**Line**: ~114 (in `mt_send_text()`)
+**Upstream Status**: Design flaw exists in upstream as of 2025-12
+
+#### Problem
+`mt_send_text()` generates packet IDs using Arduino `random(0x7FFFFFFF)`. On ESP32, `random()` produces a deterministic sequence — `randomSeed()` has no effect. This means every boot generates the same sequence of packet IDs.
+
+#### Symptom
+- First boot after firmware upload: OTA messages are received normally
+- Subsequent reboots (without power-cycling the receiving radio): NO messages are received OTA
+- `QueueStatus res=0` confirms the radio accepts packets into its TX queue, but Meshtastic's duplicate detection silently drops them because the packet IDs match recently-transmitted packets still in the dedup cache
+
+#### Solution
+Replace `random(0x7FFFFFFF)` with `esp_random()` which uses the ESP32 hardware true random number generator:
+```cpp
+meshPacket.id = esp_random();  // Fix: use hardware RNG for unique IDs across reboots
+```
+
+#### Testing
+1. Upload firmware and verify messages are received OTA
+2. Reset the GCD (without power-cycling the radio)
+3. Verify messages are STILL received OTA with different packet IDs in serial output
+
 ## Adding New Patches
 
 If you discover a new upstream bug that needs fixing:
