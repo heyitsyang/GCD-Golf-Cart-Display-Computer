@@ -48,14 +48,7 @@ void meshtasticTask(void *parameter) {
               can_send = mt_loop(now);
           }
 
-          // Send deferred GCM reboot (flag set by handleConfigComplete on first handshake)
-          if (gcmNeedsReboot) {
-              gcmNeedsReboot = false;
-              Serial.println("Sending GCM reboot for clean OTA state");
-              mt_send_admin_reboot(0);  // Immediate reboot (same as UI reboot button)
-          }
-
-          // Send AWAKE once after reboot + handshake + GPS config
+          // Send AWAKE once after handshake (tag 3) + GPS config
           if (can_send && handshakeComplete && gpsConfigAttempted) {
               if (!wakeNotificationSent) {
                   const char *wakeMessage = "~#01#GC#AWAKE#";
@@ -81,7 +74,7 @@ void meshtasticTask(void *parameter) {
               snprintf(msg, sizeof(msg), "T%d %lus", otaTestCount, elapsed);
 
               bool success = mt_send_text(msg, BROADCAST_ADDR, DEBUG_OTA_TX_TEST_CHANNEL);
-              Serial.printf("OTA test: %s → %s\n", msg, success ? "sent" : "FAILED");
+              Serial.printf("OTA test: %s -> %s\n", msg, success ? "sent" : "FAILED");
 
               next_send_time = now + 30000;
           }

@@ -199,6 +199,74 @@ def apply_random_id_fix():
         return False
 
 
+def apply_fromradio_tag_descriptions():
+    """
+    Replace numeric-only FromRadio tag debug output with human-readable descriptions.
+
+    Enhancement: The upstream debug print only shows "FromRadio tag: N" which requires
+    memorizing tag numbers. This patch adds plain-English descriptions like
+    "FromRadio tag: 2 (received message)" for easier serial debugging.
+
+    Reference: mt_protocol_fromradio_tag_descriptions.patch
+    """
+    print("🔧 Applying FromRadio tag description enhancement...")
+
+    protocol_file = MESHTASTIC_LIB / "mt_protocol.cpp"
+
+    if not protocol_file.exists():
+        print(f"  ❌ File not found: {protocol_file}")
+        return False
+
+    with open(protocol_file, 'r') as f:
+        content = f.read()
+
+    # Check if patch is already applied
+    if 'static const char* const fromRadioTagDesc[]' in content:
+        print("  ✅ Patch already applied")
+        return True
+
+    old_code = '''#if DEBUG_MESHTASTIC_CONNECTION
+  Serial.printf("FromRadio tag: %d\\n", fromRadio.which_payload_variant);
+#endif'''
+
+    new_code = '''#if DEBUG_MESHTASTIC_CONNECTION
+  {
+    static const char* const fromRadioTagDesc[] = {
+      "unknown",                    // 0
+      "request ID",                 // 1
+      "received message",           // 2
+      "GCM info about itself",      // 3
+      "info about another node",    // 4
+      "radio/device config",        // 5
+      "GCM log entry",              // 6
+      "config handshake complete",  // 7
+      "GCM just rebooted",         // 8
+      "module config",              // 9
+      "channel config",             // 10
+      "TX queue status",            // 11
+      "file transfer packet",       // 12
+      "GCM hardware/firmware info", // 13
+      "MQTT proxy message",         // 14
+      "file info",                  // 15
+    };
+    uint32_t t = fromRadio.which_payload_variant;
+    const char* desc = (t < sizeof(fromRadioTagDesc)/sizeof(fromRadioTagDesc[0])) ? fromRadioTagDesc[t] : "unknown";
+    Serial.printf("FromRadio tag: %d (%s)\\n", t, desc);
+  }
+#endif'''
+
+    if old_code in content:
+        content = content.replace(old_code, new_code)
+        with open(protocol_file, 'w') as f:
+            f.write(content)
+        print("  ✅ Successfully applied FromRadio tag descriptions")
+        return True
+    else:
+        print("  ⚠️  Code pattern not found - file may have changed")
+        print("  ℹ️  Manual patch may be required - see mt_protocol_fromradio_tag_descriptions.patch")
+        return False
+
+
 def main():
     """Apply all required patches"""
     print("🚀 Applying Meshtastic patches for Golf Cart Project")
@@ -214,6 +282,9 @@ def main():
         success = False
 
     if not apply_random_id_fix():
+        success = False
+
+    if not apply_fromradio_tag_descriptions():
         success = False
 
     print("=" * 60)

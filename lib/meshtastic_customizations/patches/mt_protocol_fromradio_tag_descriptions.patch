@@ -1,0 +1,17 @@
+Patch: FromRadio Tag Descriptions
+File: lib/meshtastic-arduino_src/mt_protocol.cpp
+Date: 2026-02-17
+
+Purpose:
+  Replaces the numeric-only "FromRadio tag: N" debug output with human-readable
+  descriptions (e.g., "FromRadio tag: 2 (received message)") to make serial
+  debug output easier to interpret.
+
+  This is a debug-only enhancement behind #if DEBUG_MESHTASTIC_CONNECTION.
+
+Before:
+  Serial.printf("FromRadio tag: %d\n", fromRadio.which_payload_variant);
+
+After:
+  Lookup array with plain-English descriptions for each tag value (0-15),
+  printed as: "FromRadio tag: N (description)"

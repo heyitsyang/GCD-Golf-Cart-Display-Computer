@@ -34,7 +34,6 @@ void connected_callback(mt_node_t *node, mt_nr_progress_t progress) {
     if (not_yet_connected) {
         Serial.println("Connected to Meshtastic device!");
         not_yet_connected = false;
-        // GPS config init will be handled by system task polling
     }
 }
 

@@ -688,7 +688,29 @@ bool handle_packet(uint32_t now, size_t payload_len) {
   }
 
 #if DEBUG_MESHTASTIC_CONNECTION
-  Serial.printf("FromRadio tag: %d\n", fromRadio.which_payload_variant);
+  {
+    static const char* const fromRadioTagDesc[] = {
+      "unknown",                    // 0
+      "request ID",                 // 1
+      "received message",           // 2
+      "GCM info about itself",      // 3
+      "info about another node",    // 4
+      "radio/device config",        // 5
+      "GCM log entry",              // 6
+      "config handshake complete",  // 7
+      "GCM just rebooted",         // 8
+      "module config",              // 9
+      "channel config",             // 10
+      "TX queue status",            // 11
+      "file transfer packet",       // 12
+      "GCM hardware/firmware info", // 13
+      "MQTT proxy message",         // 14
+      "file info",                  // 15
+    };
+    uint32_t t = fromRadio.which_payload_variant;
+    const char* desc = (t < sizeof(fromRadioTagDesc)/sizeof(fromRadioTagDesc[0])) ? fromRadioTagDesc[t] : "unknown";
+    Serial.printf("FromRadio tag: %d (%s)\n", t, desc);
+  }
 #endif
 
   switch (fromRadio.which_payload_variant) {

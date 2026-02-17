@@ -67,8 +67,4 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo);
 // Reset state to allow re-requesting metadata after reconnection
 void handleGcmRebooted();
 
-// Flag set by handleConfigComplete on first handshake — checked by meshtasticTask main loop
-// to send the reboot command outside the deep callback stack
-extern bool gcmNeedsReboot;
-
 #endif // MESHTASTIC_ADMIN_H

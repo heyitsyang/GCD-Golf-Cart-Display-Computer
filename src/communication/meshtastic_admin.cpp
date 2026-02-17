@@ -108,25 +108,11 @@ void admin_portnum_callback(uint32_t from, uint32_t to, uint8_t channel,
 }
 
 // Callback from mt_protocol.cpp when config_complete_id (tag 7) is received
-// On the first handshake after GCD wake, we reboot the GCM to establish clean
-// serial/OTA state. Sends are only enabled after the post-reboot handshake.
-// NOTE: We set a flag instead of calling mt_send_admin_reboot() here because
-// this callback runs deep in the call stack (mt_loop → handle_packet → ...)
-// and sendAdminMessage's stack-heavy protobuf encoding would overflow the task stack.
-static bool gcmInitialRebootDone = false;
-bool gcmNeedsReboot = false;  // Checked by meshtasticTask main loop
-
+// Tag 7 is unreliable on serial connections but handled if it arrives
 void handleConfigComplete() {
-    if (!gcmInitialRebootDone) {
-        gcmInitialRebootDone = true;
-        gcmNeedsReboot = true;
-        Serial.println("First handshake complete - GCM reboot pending");
-        return;
-    }
-
-    if (!handshakeComplete) {
-        handshakeComplete = true;
-        Serial.println("GCM handshake complete (tag 7) - sends enabled");
+    // Tag 3 already sets handshakeComplete, but log if tag 7 does arrive
+    if (handshakeComplete) {
+        Serial.println("GCM config_complete (tag 7) received");
     }
 }
 
@@ -157,11 +143,19 @@ void handleDeviceMetadata(meshtastic_DeviceMetadata *metadata) {
     // Empty placeholder - GCM never sends metadata
 }
 
-// Callback from mt_protocol.cpp when FromRadio.my_info is received
-// Captures node ID (node number)
+// Callback from mt_protocol.cpp when FromRadio.my_info (tag 3) is received
+// Tag 3 is the first tag in every config dump — its arrival proves the GCM serial
+// interface is alive and ready. We use it as our "handshake complete" signal since
+// tag 7 (config_complete_id) is unreliable on serial connections.
 void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo) {
     if (myNodeInfo == nullptr) {
         return;
+    }
+
+    // Tag 3 = GCM serial interface is ready for commands
+    if (!handshakeComplete) {
+        handshakeComplete = true;
+        Serial.println("GCM handshake complete (tag 3) - sends enabled");
     }
 
     // Convert node number to hex string with ! prefix (e.g., !a1b2c3d4)
@@ -179,9 +173,8 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo) {
 // Callback from mt_protocol.cpp when GCM reboots
 // Reset state to allow re-capturing node ID and resending wake notification after reconnection
 //
-// GCM boot sequence:
-//   1st reboot: Explicit reboot after first handshake (clean OTA TX state)
-//   2nd reboot: GPS-config-induced reboot (only if interval needs changing)
+// GCM boot sequence after GPS config change:
+//   GPS-config-induced reboot (only if interval needs changing)
 // gpsConfigAttempted is set either by GPS config skip (interval matches)
 // or by handleGcmRebooted after GPS-config-induced reboot
 void handleGcmRebooted() {
@@ -189,7 +182,7 @@ void handleGcmRebooted() {
     Serial.println("*** GCM REBOOTED - Resetting state for reconnection ***");
 #endif
 
-    // Block all sends until new handshake completes
+    // Block all sends until new tag 3 arrives
     handshakeComplete = false;
 
     // Clear the stored node ID to indicate stale data
@@ -212,8 +205,8 @@ void handleGcmRebooted() {
 void initGpsConfigOnBoot() {
     if (gpsConfigInitialized) return;
     if (not_yet_connected) return;
-    if (!positionConfigCaptured) return;  // Wait for radio's config from handshake
-    if (!handshakeComplete) return;       // Wait for tag 7 before sending admin commands
+    if (!handshakeComplete) return;        // Wait for tag 3 (GCM serial ready)
+    if (!positionConfigCaptured) return;   // Wait for tag 5 (position config data)
 
     // Check if radio already has our desired interval (e.g., from a previous boot)
     // If so, skip the config write entirely — no reboot needed
@@ -285,7 +278,7 @@ bool resetGpsIntervalBeforeSleep() {
     config.gps_update_interval = 120;  // 120 seconds = Meshtastic default (protobuf3 won't encode 0)
 
 #if DEBUG_GCM_MESSAGES
-    Serial.println("GCM TX: Resetting GPS interval to default (2 min) before sleep");
+    Serial.println("GCM TX: GPS config (set interval to 2 min default) before sleep");
 #endif
 
     if (mt_set_position_config(&config)) {
