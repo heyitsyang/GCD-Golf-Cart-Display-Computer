@@ -191,6 +191,12 @@ void set_var_cur_lat(const char* value);
 const char* get_var_cur_long();
 void set_var_cur_long(const char* value);
 
+const char* get_var_sunrise_time_str();
+void set_var_sunrise_time_str(const char* value);
+
+const char* get_var_sunset_time_str();
+void set_var_sunset_time_str(const char* value);
+
 #ifdef __cplusplus
 }
 #endif
@@ -259,7 +265,8 @@ extern bool at_home;
 extern bool is_daytime;
 extern String cur_lat;
 extern String cur_long;
-
+extern String sunrise_time_str;
+extern String sunset_time_str;
 
 #endif // __cplusplus
 

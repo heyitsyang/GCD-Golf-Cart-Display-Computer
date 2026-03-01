@@ -157,6 +157,16 @@ static void updateTimeDisplay(const gps_fix& fix) {
                  String(prefix_zero(localMinute)) + String(prefix_zero(localSecond));
     am_pm_str = am_pm(localHour);
 
+    // Populate sunrise/sunset strings on first valid time and on day change
+    static int last_sun_day = -1;
+    if (localDay != last_sun_day) {
+        last_sun_day = localDay;
+        time_t tmp_rise, tmp_set;
+        sun.calculate(localTime, tcr->offset, tmp_rise, tmp_set);
+        sunrise_time_str = String(make12hr(hour(tmp_rise))) + ":" + String(prefix_zero(minute(tmp_rise)));
+        sunset_time_str  = String(make12hr(hour(tmp_set)))  + ":" + String(prefix_zero(minute(tmp_set)));
+    }
+
     lastGpsTimeUpdate = millis();
 }
 
@@ -192,6 +202,8 @@ static void updateBacklight(time_t& sunrise_t, time_t& sunset_t) {
     // Recalculate sunrise/sunset when day changes
     if (localDay != old_localDay) {
         sun.calculate(localTime, tcr->offset, sunrise_t, sunset_t);
+        sunrise_time_str = String(make12hr(hour(sunrise_t))) + ":" + String(prefix_zero(minute(sunrise_t)));
+        sunset_time_str  = String(make12hr(hour(sunset_t)))  + ":" + String(prefix_zero(minute(sunset_t)));
     }
 
     // Set backlight based on day/night and update is_daytime status

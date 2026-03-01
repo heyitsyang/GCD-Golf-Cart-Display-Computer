@@ -67,6 +67,8 @@ bool at_home = false;
 bool is_daytime = true;  // Default to daytime
 String cur_lat;
 String cur_long;
+String sunrise_time_str = "_:__";
+String sunset_time_str  = "_:__";
 
 // Static buffers for C string returns
 static char temp_buffer[256];
@@ -649,6 +651,22 @@ const char* get_var_cur_long() {
 
 void set_var_cur_long(const char* value) {
     cur_long = String(value);
+}
+
+const char* get_var_sunrise_time_str() {
+    return sunrise_time_str.c_str();
+}
+
+void set_var_sunrise_time_str(const char* value) {
+    sunrise_time_str = String(value);
+}
+
+const char* get_var_sunset_time_str() {
+    return sunset_time_str.c_str();
+}
+
+void set_var_sunset_time_str(const char* value) {
+    sunset_time_str = String(value);
 }
 
 } // extern "C"
