@@ -13,7 +13,6 @@ void beep(int numBeeps, uint32_t frequency, uint32_t duration, uint32_t pauseMs)
 
 // Predefined tone functions
 void tone_startup();
-void tone_sleep();
 void tone_message();
 void tone_alert();
 void tone_urgent();

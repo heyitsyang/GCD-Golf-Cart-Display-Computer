@@ -266,10 +266,6 @@ void tone_startup() {
     playTone(1, 2500, 40, 0, 70);  // Single short mid-high beep
 }
 
-void tone_sleep() {
-    playTone(1, 2500, 500, 0, 50);  // Single long mid-high beep
-}
-
 void tone_message() {
     playTone(2, 2500, 100, 100, 80);  // Double beeps
 }
