@@ -19,7 +19,7 @@ static const uint32_t MIN_STARTUP_GRACE_SECS = 30;
 
 // SLEEP_PIN debounce configuration
 // Requires pin to be stable for this duration before acting on state change
-static const uint32_t SLEEP_PIN_DEBOUNCE_MS = 400;
+static const uint32_t SLEEP_PIN_DEBOUNCE_MS = 1000;
 
 // Debounce state tracking
 static int last_sleep_pin_state = HIGH;      // Last stable state (HIGH = awake)
@@ -46,6 +46,26 @@ static void setGpsInterval(int8_t interval) {
         Serial.printf("NO_GCI_MODE: GPS interval set to %s\n",
                       interval == 0 ? "default (2 min) - at home" : "8 sec - away from home");
 #endif
+    }
+}
+
+void checkSpuriousWake() {
+    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0) return;
+
+    // We were woken by SLEEP_PIN (EXT0). Require it to remain HIGH for the full
+    // settle window — if it dips LOW at any point, treat it as a glitch and go
+    // back to sleep. This handles oscillating or multi-pulse glitch patterns and
+    // is robust to differences in boot time between GCD and GCI.
+    pinMode(SLEEP_PIN, INPUT);
+    uint32_t settle_start = millis();
+    while (millis() - settle_start < 1000) {
+        if (digitalRead(SLEEP_PIN) == LOW) {
+            Serial.println("Spurious wake detected - returning to deep sleep");
+            Serial.flush();
+            esp_sleep_enable_ext0_wakeup((gpio_num_t)SLEEP_PIN, 1);
+            esp_deep_sleep_start();
+        }
+        delay(10);
     }
 }
 
@@ -363,6 +383,14 @@ bool processSleepModeStateMachine() {
                 current_gps_interval = -1;
                 Serial.println("-> GCI_MODE (reconnected)");
                 return false;
+            }
+
+            // If GCI communicated this session but has since gone silent (it's sleeping),
+            // allow deep sleep when SLEEP_PIN is LOW. Without this, GCD would stay awake
+            // indefinitely after GCI sleeps and the disconnect timer transitions to NO_GCI_MODE.
+            // Standalone users (gci_communicated_flag = false) are unaffected.
+            if (gci_communicated_flag && shouldEnterSleep()) {
+                return true;
             }
 
             // In NO_GCI mode, never enter deep sleep

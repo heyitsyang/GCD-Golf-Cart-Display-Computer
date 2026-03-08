@@ -4,6 +4,14 @@
 #include <Arduino.h>
 
 /**
+ * Check for spurious wake and return to deep sleep if SLEEP_PIN is already LOW.
+ * Call this as early as possible in setup(), before any display or peripheral init.
+ * If the device was woken by EXT0 (SLEEP_PIN) but the pin is already LOW after a
+ * short settle time, the wake was a glitch and the device goes back to deep sleep.
+ */
+void checkSpuriousWake();
+
+/**
  * Initialize sleep pin configuration
  * Call this from setup()
  */

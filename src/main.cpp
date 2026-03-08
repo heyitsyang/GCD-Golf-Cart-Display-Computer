@@ -67,6 +67,10 @@ void setup() {
     Serial.end();
     Serial.begin(GPS_BAUD, SERIAL_8N1, 3, 1);
 
+    // Check for spurious wake before any peripheral init.
+    // If woken by EXT0 (SLEEP_PIN) but pin is already LOW, glitch woke us — go back to sleep.
+    checkSpuriousWake();
+
     // Seed PRNG with hardware RNG so packet IDs are unique across reboots
     randomSeed(esp_random());
 
