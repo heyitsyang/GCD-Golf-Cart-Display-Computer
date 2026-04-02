@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "types.h"
 #include "utils/time_utils.h"
+#include "storage/preferences_manager.h"
 
 bool isHotPacket(const char* text) {
     return (text != NULL && text[0] == '|');
@@ -46,15 +47,22 @@ void processHotPacket(const char* text) {
             Serial.println("WX packet received");
 #endif
 
+            // Save raw packet before parseWeatherData() destroys the buffer in-place
+            String rawWxPacket = String(text);
+
             // Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
             // Show actual timestamp if GPS is working, otherwise indicate timestamp unavailable
             String timestamp;
+            int gpsYear = 0, gpsMonth = 0, gpsDay = 0;
             if (gpsMutex != NULL && xSemaphoreTake(gpsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                 if (cur_date != "NO GPS" && hhmm_str.length() > 0) {
                     timestamp = cur_date + "  " + hhmm_str + am_pm_str;
                 } else {
                     timestamp = "TIMESTAMP UNAVAILABLE";
                 }
+                gpsYear = localYear;
+                gpsMonth = localMonth;
+                gpsDay = localDay;
                 xSemaphoreGive(gpsMutex);
             } else {
                 timestamp = "TIMESTAMP UNAVAILABLE";
@@ -65,6 +73,20 @@ void processHotPacket(const char* text) {
             if (parseWeatherData((char*)text, timestamp)) {
                 // Update legacy variable for compatibility
                 wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
+
+                // Persist to EEPROM if GPS date is valid
+                if (gpsYear != 0) {
+                    int todayYYYYMMDD = gpsYear * 10000 + gpsMonth * 100 + gpsDay;
+                    if (todayYYYYMMDD != wx_stored_date || rawWxPacket != wx_stored_data) {
+                        if (xSemaphoreTake(eepromMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                            prefs.putString("wx_data", rawWxPacket.c_str());
+                            xSemaphoreGive(eepromMutex);
+                        }
+                        queuePreferenceWrite("wx_date", todayYYYYMMDD);
+                        wx_stored_date = todayYYYYMMDD;
+                        wx_stored_data = rawWxPacket;
+                    }
+                }
             }
             break;
         }
@@ -82,12 +104,16 @@ void processHotPacket(const char* text) {
                 // Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
                 // Show actual timestamp if GPS is working, otherwise indicate timestamp unavailable
                 String timestamp;
+                int gpsYear = 0, gpsMonth = 0, gpsDay = 0;
                 if (gpsMutex != NULL && xSemaphoreTake(gpsMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                     if (cur_date != "NO GPS" && hhmm_str.length() > 0) {
                         timestamp = cur_date + "  " + hhmm_str + am_pm_str;
                     } else {
                         timestamp = "TIMESTAMP UNAVAILABLE";
                     }
+                    gpsYear = localYear;
+                    gpsMonth = localMonth;
+                    gpsDay = localDay;
                     xSemaphoreGive(gpsMutex);
                 } else {
                     timestamp = "TIMESTAMP UNAVAILABLE";
@@ -107,8 +133,20 @@ void processHotPacket(const char* text) {
                     np_rcv_time = hotPacketBuffer_np_rcv_time[backBuffer];
                     live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];
 
-                    // Serial.print("venue/event data buffer swapped: ");
-                    // Serial.println(live_venue_event_data);
+                    // Persist to EEPROM if GPS date is valid
+                    if (gpsYear != 0) {
+                        int todayYYYYMMDD = gpsYear * 10000 + gpsMonth * 100 + gpsDay;
+                        String newData = String(text);  // Store full received form
+                        if (todayYYYYMMDD != np_stored_date || newData != np_stored_data) {
+                            if (xSemaphoreTake(eepromMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+                                prefs.putString("np_data", newData.c_str());
+                                xSemaphoreGive(eepromMutex);
+                            }
+                            queuePreferenceWrite("np_date", todayYYYYMMDD);
+                            np_stored_date = todayYYYYMMDD;
+                            np_stored_data = newData;
+                        }
+                    }
                 } else {
                     Serial.println("Buffer swap timeout (venue data)");
                 }

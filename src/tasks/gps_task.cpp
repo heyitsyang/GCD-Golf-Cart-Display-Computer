@@ -5,6 +5,7 @@
 #include "hardware/display.h"
 #include "storage/preferences_manager.h"
 #include "communication/espnow_handler.h"
+#include "communication/hot_packet_parser.h"
 #include <TimeLib.h>
 
 // Compass direction lookup table
@@ -168,6 +169,44 @@ static void updateTimeDisplay(const gps_fix& fix) {
     }
 
     lastGpsTimeUpdate = millis();
+
+    // On first GPS time lock, validate and load stored weather data from EEPROM
+    if (!wx_eeprom_loaded) {
+        wx_eeprom_loaded = true;
+        int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
+        if (wx_stored_date == todayYYYYMMDD && wx_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
+            // parseWeatherData modifies its input in-place; use a stack buffer
+            char wxBuf[MAX_MESHTASTIC_PAYLOAD];
+            strncpy(wxBuf, wx_stored_data.c_str(), sizeof(wxBuf) - 1);
+            wxBuf[sizeof(wxBuf) - 1] = '\0';
+            String timestamp = cur_date + "  " + hhmm_str + am_pm_str;
+            if (parseWeatherData(wxBuf, timestamp)) {
+                wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
+                new_rx_data_flag = true;
+            }
+        }
+        wx_stored_data = "";  // Free RAM
+    }
+
+    // On first GPS time lock, validate and load stored entertainment data from EEPROM
+    if (!np_eeprom_loaded) {
+        np_eeprom_loaded = true;
+        int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
+        if (np_stored_date == todayYYYYMMDD && np_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
+            int backBuffer = 1 - hotPacketActiveBuffer;
+            hotPacketBuffer_live_venue_event_data[backBuffer] = np_stored_data.substring(HOT_PKT_HEADER_OFFSET);
+            hotPacketBuffer_np_rcv_time[backBuffer] = "";
+            bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(10)) == pdTRUE);
+            if (haveMutex || hotPacketMutex == NULL) {
+                hotPacketActiveBuffer = backBuffer;
+                if (haveMutex) xSemaphoreGive(hotPacketMutex);
+                live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];
+                new_rx_data_flag = true;
+            }
+        }
+        // Boot-time cache no longer needed
+        np_stored_data = "";
+    }
 }
 
 /**

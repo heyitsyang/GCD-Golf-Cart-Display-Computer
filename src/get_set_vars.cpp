@@ -235,6 +235,7 @@ void set_var_espnow_connected(bool value) {
 }
 
 const char* get_var_wx_rcv_time() {
+    if (lastGpsTimeUpdate == 0) return "";
     // Note: wx_rcv_time is protected by hotPacketMutex
     // For UI getter, we skip mutex to avoid blocking LVGL refresh
     // Data race is acceptable here as String reads are atomic enough for display
@@ -253,11 +254,13 @@ const char* get_var_cur_temp() {
         // ESP-NOW temperature is available (has real-time data)
         tempStr = String((int)round(airTemperature));
         return tempStr.c_str();
-    } else {
-        // Fallback to Meshtastic weather data
+    } else if (lastGpsTimeUpdate != 0) {
+        // Fallback to Meshtastic weather data (only when GPS has synced)
         // Note: cur_temp is protected by hotPacketMutex in parseWeatherData
         // For UI getter, we skip mutex to avoid blocking LVGL refresh
         return cur_temp.c_str();
+    } else {
+        return "";
     }
 }
 
@@ -266,6 +269,7 @@ void set_var_cur_temp(const char* value) {
 }
 
 const char* get_var_fcast_hr1() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_hr1.c_str();
 }
 
@@ -274,6 +278,7 @@ void set_var_fcast_hr1(const char* value) {
 }
 
 const char* get_var_fcast_glyph1() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_glyph1.c_str();
 }
 
@@ -282,6 +287,7 @@ void set_var_fcast_glyph1(const char* value) {
 }
 
 const char* get_var_fcast_temp1() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_temp1.c_str();
 }
 
@@ -290,6 +296,7 @@ void set_var_fcast_temp1(const char* value) {
 }
 
 const char* get_var_fcast_precip1() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_precip1.c_str();
 }
 
@@ -298,6 +305,7 @@ void set_var_fcast_precip1(const char* value) {
 }
 
 const char* get_var_fcast_hr2() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_hr2.c_str();
 }
 
@@ -306,6 +314,7 @@ void set_var_fcast_hr2(const char* value) {
 }
 
 const char* get_var_fcast_glyph2() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_glyph2.c_str();
 }
 
@@ -314,6 +323,7 @@ void set_var_fcast_glyph2(const char* value) {
 }
 
 const char* get_var_fcast_temp2() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_temp2.c_str();
 }
 
@@ -322,6 +332,7 @@ void set_var_fcast_temp2(const char* value) {
 }
 
 const char* get_var_fcast_precip2() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_precip2.c_str();
 }
 
@@ -330,6 +341,7 @@ void set_var_fcast_precip2(const char* value) {
 }
 
 const char* get_var_fcast_hr3() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_hr3.c_str();
 }
 
@@ -338,6 +350,7 @@ void set_var_fcast_hr3(const char* value) {
 }
 
 const char* get_var_fcast_glyph3() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_glyph3.c_str();
 }
 
@@ -346,6 +359,7 @@ void set_var_fcast_glyph3(const char* value) {
 }
 
 const char* get_var_fcast_temp3() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_temp3.c_str();
 }
 
@@ -354,6 +368,7 @@ void set_var_fcast_temp3(const char* value) {
 }
 
 const char* get_var_fcast_precip3() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_precip3.c_str();
 }
 
@@ -362,6 +377,7 @@ void set_var_fcast_precip3(const char* value) {
 }
 
 const char* get_var_fcast_hr4() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_hr4.c_str();
 }
 
@@ -370,6 +386,7 @@ void set_var_fcast_hr4(const char* value) {
 }
 
 const char* get_var_fcast_glyph4() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_glyph4.c_str();
 }
 
@@ -378,6 +395,7 @@ void set_var_fcast_glyph4(const char* value) {
 }
 
 const char* get_var_fcast_temp4() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_temp4.c_str();
 }
 
@@ -386,6 +404,7 @@ void set_var_fcast_temp4(const char* value) {
 }
 
 const char* get_var_fcast_precip4() {
+    if (lastGpsTimeUpdate == 0) return "";
     return fcast_precip4.c_str();
 }
 
