@@ -179,7 +179,7 @@ static void updateTimeDisplay(const gps_fix& fix) {
             char wxBuf[MAX_MESHTASTIC_PAYLOAD];
             strncpy(wxBuf, wx_stored_data.c_str(), sizeof(wxBuf) - 1);
             wxBuf[sizeof(wxBuf) - 1] = '\0';
-            String timestamp = cur_date + "  " + hhmm_str + am_pm_str;
+            String timestamp = cur_date + "  " + hhmm_str + am_pm_str + " (stored)";
             if (parseWeatherData(wxBuf, timestamp)) {
                 wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
                 new_rx_data_flag = true;
