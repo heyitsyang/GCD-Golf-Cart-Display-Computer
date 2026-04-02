@@ -195,12 +195,13 @@ static void updateTimeDisplay(const gps_fix& fix) {
         if (np_stored_date == todayYYYYMMDD && np_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
             int backBuffer = 1 - hotPacketActiveBuffer;
             hotPacketBuffer_live_venue_event_data[backBuffer] = np_stored_data.substring(HOT_PKT_HEADER_OFFSET);
-            hotPacketBuffer_np_rcv_time[backBuffer] = "";
+            hotPacketBuffer_np_rcv_time[backBuffer] = cur_date + "  " + hhmm_str + am_pm_str + " (stored)";
             bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(10)) == pdTRUE);
             if (haveMutex || hotPacketMutex == NULL) {
                 hotPacketActiveBuffer = backBuffer;
                 if (haveMutex) xSemaphoreGive(hotPacketMutex);
                 live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];
+                np_rcv_time = hotPacketBuffer_np_rcv_time[backBuffer];
                 new_rx_data_flag = true;
             }
         }
