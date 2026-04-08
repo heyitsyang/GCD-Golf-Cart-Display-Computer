@@ -108,14 +108,16 @@ extern float old_temperature_adj;
 
 // Now playing variables (NOT in get_set_vars.h)
 extern String live_venue_event_data;
-extern int np_stored_date;    // YYYYMMDD of entertainment data in NVS (0 = none)
-extern String np_stored_data; // Raw entertainment packet loaded from NVS at boot
-extern bool np_eeprom_loaded; // True once GPS has validated boot-loaded np data
+extern int np_stored_date;       // YYYYMMDD of entertainment data in NVS (0 = none)
+extern String np_stored_data;    // Raw entertainment packet loaded from NVS at boot
+extern bool np_eeprom_loaded;    // True once GPS has validated boot-loaded np data
+extern bool np_data_is_stored;   // True while displaying EEPROM data; clears on live packet
 
 // Weather EEPROM persistence variables (NOT in get_set_vars.h)
-extern int wx_stored_date;    // YYYYMMDD of weather data in NVS (0 = none)
-extern String wx_stored_data; // Raw weather packet loaded from NVS at boot
-extern bool wx_eeprom_loaded; // True once GPS has validated boot-loaded wx data
+extern int wx_stored_date;       // YYYYMMDD of weather data in NVS (0 = none)
+extern String wx_stored_data;    // Raw weather packet loaded from NVS at boot
+extern bool wx_eeprom_loaded;    // True once GPS has validated boot-loaded wx data
+extern bool wx_data_is_stored;   // True while displaying EEPROM data; clears on live packet
 
 // Meshtastic variables (NOT in get_set_vars.h)
 extern uint32_t next_send_time;

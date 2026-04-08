@@ -173,16 +173,24 @@ static void updateTimeDisplay(const gps_fix& fix) {
     // On first GPS time lock, validate and load stored weather data from EEPROM
     if (!wx_eeprom_loaded) {
         wx_eeprom_loaded = true;
-        int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
-        if (wx_stored_date == todayYYYYMMDD && wx_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
-            // parseWeatherData modifies its input in-place; use a stack buffer
-            char wxBuf[MAX_MESHTASTIC_PAYLOAD];
-            strncpy(wxBuf, wx_stored_data.c_str(), sizeof(wxBuf) - 1);
-            wxBuf[sizeof(wxBuf) - 1] = '\0';
-            String timestamp = cur_date + "  " + hhmm_str + am_pm_str + " (stored)";
-            if (parseWeatherData(wxBuf, timestamp)) {
-                wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
-                new_rx_data_flag = true;
+        String gpsTimestamp = cur_date + "  " + hhmm_str + am_pm_str;
+        int activeBuffer = hotPacketActiveBuffer;
+        if (hotPacketBuffer_wx_rcv_time[activeBuffer] == "TIMESTAMP UNAVAILABLE") {
+            // Live data arrived before GPS - fix up the timestamp in-place
+            hotPacketBuffer_wx_rcv_time[activeBuffer] = gpsTimestamp;
+            wx_rcv_time = gpsTimestamp;
+        } else if (hotPacketBuffer_wx_rcv_time[activeBuffer].length() == 0) {
+            // No live data yet - load from EEPROM if it is from today
+            int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
+            if (wx_stored_date == todayYYYYMMDD && wx_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
+                char wxBuf[MAX_MESHTASTIC_PAYLOAD];
+                strncpy(wxBuf, wx_stored_data.c_str(), sizeof(wxBuf) - 1);
+                wxBuf[sizeof(wxBuf) - 1] = '\0';
+                if (parseWeatherData(wxBuf, gpsTimestamp)) {
+                    wx_data_is_stored = true;  // Flag getter to append " (stored)"
+                    wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
+                    new_rx_data_flag = true;
+                }
             }
         }
         wx_stored_data = "";  // Free RAM
@@ -191,22 +199,31 @@ static void updateTimeDisplay(const gps_fix& fix) {
     // On first GPS time lock, validate and load stored entertainment data from EEPROM
     if (!np_eeprom_loaded) {
         np_eeprom_loaded = true;
-        int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
-        if (np_stored_date == todayYYYYMMDD && np_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
-            int backBuffer = 1 - hotPacketActiveBuffer;
-            hotPacketBuffer_live_venue_event_data[backBuffer] = np_stored_data.substring(HOT_PKT_HEADER_OFFSET);
-            hotPacketBuffer_np_rcv_time[backBuffer] = cur_date + "  " + hhmm_str + am_pm_str + " (stored)";
-            bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(10)) == pdTRUE);
-            if (haveMutex || hotPacketMutex == NULL) {
-                hotPacketActiveBuffer = backBuffer;
-                if (haveMutex) xSemaphoreGive(hotPacketMutex);
-                live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];
-                np_rcv_time = hotPacketBuffer_np_rcv_time[backBuffer];
-                new_rx_data_flag = true;
+        String gpsTimestamp = cur_date + "  " + hhmm_str + am_pm_str;
+        int activeBuffer = hotPacketActiveBuffer;
+        if (hotPacketBuffer_np_rcv_time[activeBuffer] == "TIMESTAMP UNAVAILABLE") {
+            // Live data arrived before GPS - fix up the timestamp in-place
+            hotPacketBuffer_np_rcv_time[activeBuffer] = gpsTimestamp;
+            np_rcv_time = gpsTimestamp;
+        } else if (hotPacketBuffer_np_rcv_time[activeBuffer].length() == 0) {
+            // No live data yet - load from EEPROM if it is from today
+            int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
+            if (np_stored_date == todayYYYYMMDD && np_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
+                int backBuffer = 1 - hotPacketActiveBuffer;
+                hotPacketBuffer_live_venue_event_data[backBuffer] = np_stored_data.substring(HOT_PKT_HEADER_OFFSET);
+                hotPacketBuffer_np_rcv_time[backBuffer] = gpsTimestamp;  // No "(stored)" in string
+                bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(10)) == pdTRUE);
+                if (haveMutex || hotPacketMutex == NULL) {
+                    hotPacketActiveBuffer = backBuffer;
+                    if (haveMutex) xSemaphoreGive(hotPacketMutex);
+                    live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];
+                    np_data_is_stored = true;  // Flag getter to append " (stored)"
+                    np_rcv_time = hotPacketBuffer_np_rcv_time[backBuffer];
+                    new_rx_data_flag = true;
+                }
             }
         }
-        // Boot-time cache no longer needed
-        np_stored_data = "";
+        np_stored_data = "";  // Free RAM
     }
 }
 

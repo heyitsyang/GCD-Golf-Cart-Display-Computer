@@ -71,6 +71,8 @@ void processHotPacket(const char* text) {
             // Parse weather data (updates buffers and swaps)
             // Pass the timestamp to be written to the same back buffer
             if (parseWeatherData((char*)text, timestamp)) {
+                // Live packet received - clear stored flag
+                wx_data_is_stored = false;
                 // Update legacy variable for compatibility
                 wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
 
@@ -129,6 +131,8 @@ void processHotPacket(const char* text) {
                     hotPacketActiveBuffer = backBuffer;
                     if (haveMutex) xSemaphoreGive(hotPacketMutex);
 
+                    // Live packet received - clear stored flag
+                    np_data_is_stored = false;
                     // Update legacy variables for compatibility
                     np_rcv_time = hotPacketBuffer_np_rcv_time[backBuffer];
                     live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];

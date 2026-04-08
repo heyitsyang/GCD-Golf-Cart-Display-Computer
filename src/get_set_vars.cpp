@@ -236,9 +236,11 @@ void set_var_espnow_connected(bool value) {
 
 const char* get_var_wx_rcv_time() {
     if (lastGpsTimeUpdate == 0) return "";
-    // Note: wx_rcv_time is protected by hotPacketMutex
-    // For UI getter, we skip mutex to avoid blocking LVGL refresh
-    // Data race is acceptable here as String reads are atomic enough for display
+    if (wx_data_is_stored) {
+        static String storedStr;
+        storedStr = wx_rcv_time + " (stored)";
+        return storedStr.c_str();
+    }
     return wx_rcv_time.c_str();
 }
 
@@ -413,8 +415,11 @@ void set_var_fcast_precip4(const char* value) {
 }
 
 const char* get_var_np_rcv_time() {
-    // Note: np_rcv_time is protected by hotPacketMutex
-    // For UI getter, we skip mutex to avoid blocking LVGL refresh
+    if (np_data_is_stored) {
+        static String storedStr;
+        storedStr = np_rcv_time + " (stored)";
+        return storedStr.c_str();
+    }
     return np_rcv_time.c_str();
 }
 
