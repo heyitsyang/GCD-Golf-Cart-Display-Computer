@@ -137,6 +137,7 @@ int espnow_peer_count = 0;
 // Golf cart interface variables for incoming data
 int modeHeadLights = -99;
 int outdoorLuminosity = -99;
+float rawAirTemperature = -99;
 float airTemperature = -99;
 float battVoltage = -99;
 float fuelLevel = -99;

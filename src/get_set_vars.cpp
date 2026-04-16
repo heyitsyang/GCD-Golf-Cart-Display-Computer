@@ -252,9 +252,9 @@ const char* get_var_cur_temp() {
     // Prefer ESP-NOW air temperature if available, fallback to Meshtastic weather data
     static String tempStr;
 
-    if (airTemperature != -99) {
-        // ESP-NOW temperature is available (has real-time data)
-        tempStr = String((int)round(airTemperature));
+    if (rawAirTemperature != -99) {
+        // ESP-NOW temperature is available (has real-time data); apply adjustment dynamically
+        tempStr = String((int)round(rawAirTemperature + temperature_adj));
         return tempStr.c_str();
     } else if (lastGpsTimeUpdate != 0) {
         // Fallback to Meshtastic weather data (only when GPS has synced)

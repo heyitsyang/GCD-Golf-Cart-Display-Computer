@@ -361,7 +361,8 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             // Update individual variables for compatibility
             modeHeadLights = dataFromGci.modeLights;
             outdoorLuminosity = dataFromGci.outdoorLum;
-            airTemperature = dataFromGci.airTemp + temperature_adj;  // Apply temperature offset
+            rawAirTemperature = dataFromGci.airTemp;
+            airTemperature = rawAirTemperature + temperature_adj;  // Apply temperature offset
             battVoltage = dataFromGci.battVolts;
             fuelLevel = dataFromGci.fuel;
 
