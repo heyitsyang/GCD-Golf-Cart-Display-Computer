@@ -186,14 +186,17 @@ static void updateTimeDisplay(const gps_fix& fix) {
                 char wxBuf[MAX_MESHTASTIC_PAYLOAD];
                 strncpy(wxBuf, wx_stored_data.c_str(), sizeof(wxBuf) - 1);
                 wxBuf[sizeof(wxBuf) - 1] = '\0';
-                if (parseWeatherData(wxBuf, gpsTimestamp)) {
+                String wxTimestamp = (wx_stored_timestamp.length() > 0)
+                    ? wx_stored_timestamp : gpsTimestamp;
+                if (parseWeatherData(wxBuf, wxTimestamp)) {
                     wx_data_is_stored = true;  // Flag getter to append " (stored)"
                     wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
                     new_rx_data_flag = true;
                 }
             }
         }
-        wx_stored_data = "";  // Free RAM
+        wx_stored_data = "";       // Free RAM
+        wx_stored_timestamp = "";  // Free RAM
     }
 
     // On first GPS time lock, validate and load stored entertainment data from EEPROM
@@ -211,7 +214,9 @@ static void updateTimeDisplay(const gps_fix& fix) {
             if (np_stored_date == todayYYYYMMDD && np_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
                 int backBuffer = 1 - hotPacketActiveBuffer;
                 hotPacketBuffer_live_venue_event_data[backBuffer] = np_stored_data.substring(HOT_PKT_HEADER_OFFSET);
-                hotPacketBuffer_np_rcv_time[backBuffer] = gpsTimestamp;  // No "(stored)" in string
+                String npTimestamp = (np_stored_timestamp.length() > 0)
+                    ? np_stored_timestamp : gpsTimestamp;
+                hotPacketBuffer_np_rcv_time[backBuffer] = npTimestamp;
                 bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(10)) == pdTRUE);
                 if (haveMutex || hotPacketMutex == NULL) {
                     hotPacketActiveBuffer = backBuffer;
@@ -223,7 +228,8 @@ static void updateTimeDisplay(const gps_fix& fix) {
                 }
             }
         }
-        np_stored_data = "";  // Free RAM
+        np_stored_data = "";       // Free RAM
+        np_stored_timestamp = "";  // Free RAM
     }
 }
 

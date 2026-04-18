@@ -82,11 +82,13 @@ void processHotPacket(const char* text) {
                     if (todayYYYYMMDD != wx_stored_date || rawWxPacket != wx_stored_data) {
                         if (xSemaphoreTake(eepromMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                             prefs.putString("wx_data", rawWxPacket.c_str());
+                            prefs.putString("wx_time", timestamp.c_str());
                             xSemaphoreGive(eepromMutex);
                         }
                         queuePreferenceWrite("wx_date", todayYYYYMMDD);
                         wx_stored_date = todayYYYYMMDD;
                         wx_stored_data = rawWxPacket;
+                        wx_stored_timestamp = timestamp;
                     }
                 }
             }
@@ -144,11 +146,13 @@ void processHotPacket(const char* text) {
                         if (todayYYYYMMDD != np_stored_date || newData != np_stored_data) {
                             if (xSemaphoreTake(eepromMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
                                 prefs.putString("np_data", newData.c_str());
+                                prefs.putString("np_time", timestamp.c_str());
                                 xSemaphoreGive(eepromMutex);
                             }
                             queuePreferenceWrite("np_date", todayYYYYMMDD);
                             np_stored_date = todayYYYYMMDD;
                             np_stored_data = newData;
+                            np_stored_timestamp = timestamp;
                         }
                     }
                 } else {

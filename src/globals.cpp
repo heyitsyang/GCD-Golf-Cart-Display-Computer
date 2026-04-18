@@ -109,12 +109,14 @@ float old_temperature_adj = 0.0;
 String live_venue_event_data = "";
 int np_stored_date = 0;
 String np_stored_data = "";
+String np_stored_timestamp = "";
 bool np_eeprom_loaded = false;
 bool np_data_is_stored = false;
 
 // Weather EEPROM persistence variables
 int wx_stored_date = 0;
 String wx_stored_data = "";
+String wx_stored_timestamp = "";
 bool wx_eeprom_loaded = false;
 bool wx_data_is_stored = false;
 

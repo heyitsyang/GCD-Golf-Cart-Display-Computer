@@ -69,10 +69,12 @@ void loadPreferences() {
     // Load stored entertainment (now playing) data for boot-time validation
     np_stored_date = prefs.getInt("np_date", 0);
     np_stored_data = prefs.getString("np_data", "");
+    np_stored_timestamp = prefs.getString("np_time", "");
 
     // Load stored weather data for boot-time validation
     wx_stored_date = prefs.getInt("wx_date", 0);
     wx_stored_data = prefs.getString("wx_data", "");
+    wx_stored_timestamp = prefs.getString("wx_time", "");
 
     // Check if calibration coefficients are valid (not all zeros)
     use_touch_calibration = (touch_alpha_x != 0.0 || touch_beta_x != 0.0 || touch_alpha_y != 0.0 || touch_beta_y != 0.0);

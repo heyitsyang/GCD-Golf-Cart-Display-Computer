@@ -50,7 +50,24 @@ static void setGpsInterval(int8_t interval) {
 }
 
 void checkSpuriousWake() {
-    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0) return;
+    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+
+    // Log wakeup cause for diagnostics (always shown on wake from sleep)
+    if (cause != ESP_SLEEP_WAKEUP_UNDEFINED) {
+        const char* cause_str = "unknown";
+        switch (cause) {
+            case ESP_SLEEP_WAKEUP_EXT0:   cause_str = "EXT0 (SLEEP_PIN)"; break;
+            case ESP_SLEEP_WAKEUP_EXT1:   cause_str = "EXT1"; break;
+            case ESP_SLEEP_WAKEUP_TIMER:  cause_str = "TIMER"; break;
+            case ESP_SLEEP_WAKEUP_TOUCHPAD: cause_str = "TOUCHPAD"; break;
+            case ESP_SLEEP_WAKEUP_ULP:    cause_str = "ULP"; break;
+            default: break;
+        }
+        Serial.printf("Wake cause: %s (%d)\n", cause_str, (int)cause);
+        Serial.flush();
+    }
+
+    if (cause != ESP_SLEEP_WAKEUP_EXT0) return;
 
     // We were woken by SLEEP_PIN (EXT0). Require it to remain HIGH for the full
     // settle window — if it dips LOW at any point, treat it as a glitch and go
@@ -142,6 +159,20 @@ bool shouldEnterSleep() {
 }
 
 void enterDeepSleep() {
+    // Pre-check: if pin already bounced HIGH during debounce->sleep decision,
+    // abort before any cleanup so the state machine can re-evaluate on next tick.
+    // Logged once per bounce event to avoid spam (systemTask retries every 100ms).
+    static bool abortLogged = false;
+    if (digitalRead(SLEEP_PIN) == HIGH) {
+        if (!abortLogged) {
+            Serial.println("SLEEP_PIN HIGH at sleep entry - aborting");
+            Serial.flush();
+            abortLogged = true;
+        }
+        return;
+    }
+    abortLogged = false;  // reset so next abort event logs again
+
     Serial.println("Entering deep sleep...");
 
     // Save distance and hours values to EEPROM before sleeping
@@ -150,13 +181,16 @@ void enterDeepSleep() {
     queuePreferenceWrite("hrs_since_svc", hrs_since_svc);  // Saved as tenths of hours
     delay(150);  // Give EEPROM task time to process the queue
 
-    // Cleanly shutdown Meshtastic serial connection
+    // Cleanly shutdown Meshtastic serial connection.
+    // resetGpsIntervalBeforeSleep() must run while serial is still active.
+    // Setting mesh_serial_enabled = false signals meshtasticTask to call mt_serial_end().
+    // We then wait one tick (150ms > 100ms task period) so the task completes the shutdown
+    // before we call esp_deep_sleep_start(). Calling mt_serial_end() here directly AND
+    // letting meshtasticTask also call it causes a double-call crash.
     if (mesh_serial_enabled) {
-        // Reset GPS update interval to default (2 minutes) to reduce radio power consumption
-        // Must be done while serial is still active
         resetGpsIntervalBeforeSleep();
-        mt_serial_end();  // flush TX + close UART2
-        mesh_serial_enabled = false;  // Update state to match
+        mesh_serial_enabled = false;      // meshtasticTask calls mt_serial_end() on next tick
+        delay(150);                       // wait for that tick to complete
     }
 
     // Turn off backlight to save power
@@ -175,6 +209,8 @@ void enterDeepSleep() {
     // Enter deep sleep mode
     // This turns off everything except RTC and wake sources
     // Device will restart from setup() when SLEEP_PIN goes HIGH
+    // Note: if pin went HIGH during cleanup, checkSpuriousWake() handles the
+    // immediate EXT0 wakeup on the next boot.
     esp_deep_sleep_start();
 
     // ===== CODE NEVER REACHES HERE =====
