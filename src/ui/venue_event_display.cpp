@@ -118,27 +118,22 @@ extern "C" void action_display_now_playing(lv_event_t *e) {
     // Mark that we're now on the Now Playing screen
     is_now_playing_screen_active = true;
 
-    const char* dataToDisplay;
-
     // Only show received data if GPS has synced at least once (lastGpsTimeUpdate != 0).
-    // Without a GPS sync we cannot validate the date of received data, so show the default.
+    // Without a GPS sync we cannot validate the date of received data.
     bool gpsHasSynced = (lastGpsTimeUpdate != 0);
 
     // Read from active buffer (no mutex needed - double buffering ensures lock-free reads)
     int activeBuffer = hotPacketActiveBuffer;  // Snapshot current buffer
     if (gpsHasSynced && hotPacketBuffer_live_venue_event_data[activeBuffer].length() > 0) {
-        dataToDisplay = hotPacketBuffer_live_venue_event_data[activeBuffer].c_str();
         Serial.println("Using live venue/event data from Meshtastic");
+        displayVenueEventTable(hotPacketBuffer_live_venue_event_data[activeBuffer].c_str());
     } else if (gpsHasSynced && live_venue_event_data.length() > 0) {
         // Fallback to cached variable
-        dataToDisplay = live_venue_event_data.c_str();
         Serial.println("Using cached venue/event data from Meshtastic");
+        displayVenueEventTable(live_venue_event_data.c_str());
     } else {
-        dataToDisplay = "Sawgrass,NA#Spanish Springs,NA#Lake Sumter,NA#Brownwood,NA#Sawgrass,NA#";
-        Serial.println("Using default venue data - GPS not synced or no data available");
+        Serial.println("No venue/event data available - showing NO DATA YET");
     }
-
-    displayVenueEventTable(dataToDisplay);
 }
 
 void checkAndUpdateNowPlayingScreen() {
@@ -157,7 +152,7 @@ void checkAndUpdateNowPlayingScreen() {
     }
 
     // Check if the data has actually changed
-    const char* currentData;
+    const char* currentData = nullptr;
 
     bool gpsHasSynced = (lastGpsTimeUpdate != 0);
 
@@ -168,12 +163,10 @@ void checkAndUpdateNowPlayingScreen() {
     } else if (gpsHasSynced && live_venue_event_data.length() > 0) {
         // Fallback to legacy variable
         currentData = live_venue_event_data.c_str();
-    } else {
-        currentData = "Sawgrass,NA#Spanish Springs,NA#Lake Sumter,NA#Brownwood,NA#Sawgrass,NA#";
     }
 
-    // Only refresh if data has changed
-    if (last_displayed_data != String(currentData)) {
+    // Only refresh if data is available and has changed
+    if (currentData && last_displayed_data != String(currentData)) {
         Serial.println("Now Playing screen: Refreshing with new data");
         displayVenueEventTable(currentData);
     }

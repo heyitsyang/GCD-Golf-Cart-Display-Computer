@@ -198,8 +198,9 @@ void handleGcmRebooted() {
         gpsConfigSentSuccessfully = false;  // Reset flag
     }
 
-    // Reset wake notification flag so it will be sent again on reconnection
+    // Reset wake/request flags so they will be sent again on reconnection
     wakeNotificationSent = false;
+    reqWxEntSent = false;
 }
 
 void initGpsConfigOnBoot() {

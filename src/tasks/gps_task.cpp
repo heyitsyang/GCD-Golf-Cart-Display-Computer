@@ -193,6 +193,8 @@ static void updateTimeDisplay(const gps_fix& fix) {
                     wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
                     new_rx_data_flag = true;
                 }
+            } else {
+                reqWxEntNeeded = true;  // wx NVM data absent or from a previous day
             }
         }
         wx_stored_data = "";       // Free RAM
@@ -226,6 +228,8 @@ static void updateTimeDisplay(const gps_fix& fix) {
                     np_rcv_time = hotPacketBuffer_np_rcv_time[backBuffer];
                     new_rx_data_flag = true;
                 }
+            } else {
+                reqWxEntNeeded = true;  // np NVM data absent or from a previous day
             }
         }
         np_stored_data = "";       // Free RAM

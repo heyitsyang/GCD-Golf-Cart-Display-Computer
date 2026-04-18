@@ -62,6 +62,24 @@ void meshtasticTask(void *parameter) {
                       Serial.println("Failed to send wake notification, will retry");
                   }
               }
+
+              // Send REQ_WX_ENT once after GPS sync if NVM data was absent or from a previous day
+              if (!reqWxEntSent && wx_eeprom_loaded && np_eeprom_loaded) {
+                  if (reqWxEntNeeded) {
+                      const char *reqMessage = "~#02#GC#REQ_WX_ENT#";
+                      if (mt_send_text(reqMessage, BROADCAST_ADDR, 0)) {
+#if DEBUG_GCM_MESSAGES
+                          Serial.print("GCM TX: ");
+                          Serial.println(reqMessage);
+#endif
+                          reqWxEntSent = true;
+                      } else {
+                          Serial.println("Failed to send REQ_WX_ENT, will retry");
+                      }
+                  } else {
+                      reqWxEntSent = true;  // NVM data was current for today, no request needed
+                  }
+              }
           }
 
 #if DEBUG_OTA_TX_TEST
