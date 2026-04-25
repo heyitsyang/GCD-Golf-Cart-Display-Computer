@@ -66,7 +66,7 @@ void meshtasticTask(void *parameter) {
               // Send REQ_WX_ENT once after GPS sync if NVM data was absent or from a previous day
               if (!reqWxEntSent && wx_eeprom_loaded && np_eeprom_loaded) {
                   if (reqWxEntNeeded) {
-                      const char *reqMessage = "~#02#GC#REQ_WX_ENT#";
+                      const char *reqMessage = "~#01#GC#REQ_WX_ENT#";
                       if (mt_send_text(reqMessage, BROADCAST_ADDR, 0)) {
 #if DEBUG_GCM_MESSAGES
                           Serial.print("GCM TX: ");
