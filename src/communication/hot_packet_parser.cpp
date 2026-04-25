@@ -490,9 +490,6 @@ int parseWeatherData(char* input, const String& timestamp) {
         fcast_temp4 = hotPacketBuffer_fcast_temp4[backBuffer];
         fcast_precip4 = hotPacketBuffer_fcast_precip4[backBuffer];
 
-#if DEBUG_GCM_MESSAGES
-        Serial.println("Weather data parsed successfully");
-#endif
         return 1;
     } else {
         Serial.println("Buffer swap timeout (weather data)");
