@@ -15,10 +15,13 @@ SemaphoreHandle_t gpsMutex;
 SemaphoreHandle_t eepromMutex;
 SemaphoreHandle_t displayMutex;
 SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping (not data reads)
+SemaphoreHandle_t chatBufferMutex; // Guards the chat ring buffer
 QueueHandle_t eepromWriteQueue;
 QueueHandle_t meshtasticCallbackQueue;
 QueueHandle_t espnowRecvQueue;
 QueueHandle_t gpsConfigCallbackQueue;
+QueueHandle_t chatTxQueue;
+QueueHandle_t kbContextQueue;
 
 // Double buffering for hot packet data (eliminates blocking reads)
 volatile int hotPacketActiveBuffer = 0;  // 0 or 1

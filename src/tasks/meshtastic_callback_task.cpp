@@ -3,11 +3,15 @@
 #include "globals.h"
 #include "types.h"
 #include "communication/hot_packet_parser.h"
+#include "communication/chat_buffer.h"
+#include "ui/chat_screen.h"
+#include "ui/keyboard_bridge.h"
 #include "Meshtastic.h"
+#include <time.h>
 
 void meshtasticCallbackTask(void *parameter) {
     meshtasticCallbackItem_t item;
-    
+
     while (true) {
         if (xQueueReceive(meshtasticCallbackQueue, &item, portMAX_DELAY)) {
 #if DEBUG_GCM_MESSAGES
@@ -21,8 +25,33 @@ void meshtasticCallbackTask(void *parameter) {
                 Serial.println("  (DM to someone else)");
             }
 #endif
-            
-            // Check for HoT packet
+
+            // Append every text message to the chat ring buffer.
+            // chatAbbreviate() turns HoT/GC packets into short tags
+            // before storage; processHotPacket below still sees the
+            // original full text for its structured-data side effects.
+            chatMessage_t cm = {};
+            cm.from      = item.from;
+            cm.to        = item.to;
+            cm.channel   = item.channel;
+            cm.timestamp = item.timestamp ? item.timestamp : (uint32_t)time(NULL);
+            cm.outgoing  = false;
+            cm.deleted   = false;
+            strncpy(cm.text, item.text, sizeof(cm.text) - 1);
+            cm.text[sizeof(cm.text) - 1] = '\0';
+            chatBufferAppend(&cm);
+
+            chatScreenRequestRefresh();
+
+            // If the user is in sticky chat mode on Keyboard_Entry,
+            // append the incoming line to the running transcript.
+            if (kb_is_active() && kb_current_mode() == KB_MODE_CHAT) {
+                char line[MAX_MESHTASTIC_PAYLOAD + 4];
+                snprintf(line, sizeof(line), "< %s\n", item.text);
+                kb_set_context_append(line);
+            }
+
+            // Hot packet structured-data parser still gets the full original text.
             if (isHotPacket(item.text)) {
                 processHotPacket(item.text);
             }
@@ -47,7 +76,8 @@ void text_message_callback(uint32_t from, uint32_t to, uint8_t channel, const ch
     item.from = from;
     item.to = to;
     item.channel = channel;
-    
+    item.timestamp = (uint32_t)time(NULL);
+
     if (text != NULL) {
         strncpy(item.text, text, MAX_MESHTASTIC_PAYLOAD - 1);
         item.text[MAX_MESHTASTIC_PAYLOAD - 1] = '\0';

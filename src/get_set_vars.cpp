@@ -69,12 +69,24 @@ String cur_lat;
 String cur_long;
 String sunrise_time_str = "_:__";
 String sunset_time_str  = "_:__";
+int32_t mesh_filter = 0;  // 0 = DIRECT MSGS
 
 // Static buffers for C string returns
 static char temp_buffer[256];
 
 // Function implementations with C linkage
 extern "C" {
+
+int32_t get_var_mesh_filter() {
+    return mesh_filter;
+}
+
+void set_var_mesh_filter(int32_t value) {
+    if (value != mesh_filter) {
+        mesh_filter = value;
+        queuePreferenceWrite("mesh_filter", (int)value);
+    }
+}
 
 const char* get_var_cur_date() {
     return cur_date.c_str();

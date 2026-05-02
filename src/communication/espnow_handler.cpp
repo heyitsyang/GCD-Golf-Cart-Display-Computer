@@ -11,15 +11,23 @@ bool ESPNowHandler::init() {
     if (initialized) {
         return true;
     }
-    
+
+    // Slim WiFi init for ESP-NOW only — bypass Arduino's WiFi.mode()
+    // which uses WIFI_INIT_CONFIG_DEFAULT (large RX/TX buffer pools,
+    // AMPDU/AMSDU aggregation, NVS storage, power-management timers,
+    // ~50 KB heap usage). ESP-NOW is connectionless single-frame
+    // unicast/broadcast and needs none of that. This config saves
+    // ~25 KB heap and sidesteps the pm_attach/ets_timer_setfn crash
+    // path observed when LVGL transient allocations leave the heap
+    // fragmented.
     // Initialize WiFi in station mode
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
-    
+
     // Set WiFi channel
     int32_t channel = ESPNOW_CHANNEL;
     esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
-    
+
     // Initialize ESP-NOW
     if (esp_now_init() != ESP_OK) {
         Serial.println("ESP-NOW init failed");

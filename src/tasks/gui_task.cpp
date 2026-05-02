@@ -6,6 +6,9 @@
 #include "ui_eez/screens.h"
 #include "ui_eez/styles.h"
 #include "ui/venue_event_display.h"
+#include "ui/chat_screen.h"
+#include "ui/canned_screen.h"
+#include "ui/keyboard_bridge.h"
 #include "get_set_vars.h"
 
 void updateEspnowIndicatorColor() {
@@ -112,6 +115,11 @@ void guiTask(void *parameter) {
         lastTick = now;
         lv_timer_handler();
         ui_tick();
+
+        // Drain chat / messaging UI updates queued from other tasks.
+        kb_pump();
+        chatScreenPump();
+        cannedScreenPump();
 
         // Update espnow indicator color based on connection state
         updateEspnowIndicatorColor();

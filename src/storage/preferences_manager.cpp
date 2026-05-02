@@ -2,6 +2,7 @@
 #include "config.h"
 #include "globals.h"
 #include "types.h"
+#include "ui/canned_replies.h"
 
 void initPreferences() {
     prefs.begin("eeprom", false);
@@ -84,6 +85,10 @@ void loadPreferences() {
     homeLongitude = prefs.getFloat("home_lon", 0.0);
     home_gps_fence_radius_m = prefs.getInt("home_fence_m", 500);
     homeLocationSet = (homeLatitude != 0.0 || homeLongitude != 0.0);
+
+    // Chat / messaging UI
+    mesh_filter = prefs.getInt("mesh_filter", 0);  // default = DIRECT MSGS
+    cannedRepliesLoad();
 
 #if DEBUG_EEPROM == 1
     Serial.println("EEPROM values loaded:");

@@ -27,10 +27,13 @@ extern SemaphoreHandle_t gpsMutex;
 extern SemaphoreHandle_t eepromMutex;
 extern SemaphoreHandle_t displayMutex;
 extern SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping (not data reads)
+extern SemaphoreHandle_t chatBufferMutex;  // Guards the chat ring buffer
 extern QueueHandle_t eepromWriteQueue;
 extern QueueHandle_t meshtasticCallbackQueue;
 extern QueueHandle_t espnowRecvQueue;
 extern QueueHandle_t gpsConfigCallbackQueue;
+extern QueueHandle_t chatTxQueue;       // UI -> meshtasticTask send pipe
+extern QueueHandle_t kbContextQueue;    // RX -> GUI marshaling for keyboard/hub context
 
 // Double buffering for hot packet data (eliminates blocking reads)
 // Parser writes to back buffer, swaps atomically, GUI reads from front buffer

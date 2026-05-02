@@ -59,7 +59,6 @@
 #define SPEAKER_LEDC_TIMER_BIT 8
 
 // LVGL buffer configuration
-#define NUM_BUFS 2
 #define DRAW_BUF_SIZE (TFT_WIDTH * 30 * sizeof(lv_color_t))
 // This gives 240 * 30 * 2 = 14,400 bytes
 
@@ -105,6 +104,18 @@
 
 // EEPROM write debounce (prevents excessive writes when adjusting UI sliders/spinners)
 #define EEPROM_DEBOUNCE_MS 2000  // Wait 2 seconds after last change before writing
+
+// Chat / messaging UI
+#define CHAT_BUFFER_SIZE 32       // Ring depth for chat history (RAM-only)
+#define CANNED_REPLY_COUNT 8      // Number of canned reply slots
+#define CANNED_REPLY_MAXLEN 60    // Max chars per canned reply (fits 64-byte stringVal)
+
+// Heap monitoring (set DEBUG_HEAP to 0 to remove all logging once stable)
+#define DEBUG_HEAP 1
+// Diagnostic mode: 2 s while bringing up the chat UI so we can see
+// runtime heap drift after WiFi/ESP-NOW init. Bump back to 30000 once
+// stable.
+#define DEBUG_HEAP_INTERVAL_MS 2000
 
 // Task Stack Sizes (in bytes)
 #define GPS_TASK_STACK_SIZE 4096

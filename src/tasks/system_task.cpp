@@ -15,8 +15,21 @@ static bool debounceElapsed(uint32_t debounce_time) {
 }
 
 void systemTask(void *parameter) {
+#if DEBUG_HEAP
+    static uint32_t last_heap_dump = 0;
+#endif
     while (true) {
         uint32_t now = millis();
+
+#if DEBUG_HEAP
+        if ((now - last_heap_dump) >= DEBUG_HEAP_INTERVAL_MS) {
+            Serial.printf("[HEAP] t=%lus: free=%u, largest_block=%u\n",
+                          (unsigned long)(now / 1000),
+                          (unsigned)ESP.getFreeHeap(),
+                          (unsigned)ESP.getMaxAllocHeap());
+            last_heap_dump = now;
+        }
+#endif
 
         // Initialize GPS config after Meshtastic connection (polled approach to avoid stack overflow in callback)
         initGpsConfigOnBoot();

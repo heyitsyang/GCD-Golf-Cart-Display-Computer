@@ -45,6 +45,9 @@
 #include "ui/venue_event_display.h"
 #include "ui/espnow_display.h"
 #include "ui/tone_actions.h"
+#include "ui/chat_screen.h"
+#include "ui/canned_screen.h"
+#include "ui/keyboard_bridge.h"
 
 // Utils
 #include "utils/time_utils.h"
@@ -53,6 +56,15 @@
 // Function prototypes
 #include "prototypes.h"
 // Note: get_set_vars.h is now included via globals.h
+
+#if DEBUG_HEAP
+  #define HEAP_LOG(label) \
+      Serial.printf("[HEAP] %-26s free=%u, largest=%u\n", \
+                    (label), (unsigned)ESP.getFreeHeap(), \
+                    (unsigned)ESP.getMaxAllocHeap())
+#else
+  #define HEAP_LOG(label) ((void)0)
+#endif
 
 
 /*****************
@@ -78,10 +90,12 @@ void setup() {
     version = String('v') + String(VERSION);
     cyd_mac_addr = String(WiFi.macAddress());
     Serial.printf("\nGCD %s | MAC: %s\n", version.c_str(), cyd_mac_addr.c_str());
+    HEAP_LOG("start of setup");
 
     // Initialize storage and load preferences
     initPreferences();
     loadPreferences();
+    HEAP_LOG("after loadPreferences");
 
     // Initialize display
     initDisplay();
@@ -103,6 +117,7 @@ void setup() {
 
     // Startup tone
     tone_startup();
+    HEAP_LOG("after hw init");
 
     // Initialize LVGL
 #if DEBUG_INIT == 1
@@ -124,14 +139,26 @@ void setup() {
 
     // Initialize UI from EEZ Studio
     ui_init();
-    
+    HEAP_LOG("after ui_init");
+
+    // Initialize chat / messaging UI (mounts hand-coded LVGL into the
+    // EEZ-defined containers; must run AFTER ui_init() so the
+    // objects.* widgets exist).
+    chatScreenInit();
+    HEAP_LOG("after chatScreenInit");
+    cannedScreenInit();
+    HEAP_LOG("after cannedScreenInit");
+    kb_init();
+    HEAP_LOG("after kb_init");
+
     // Initialize Meshtastic
     mt_serial_init(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);
     randomSeed(micros());
     mt_request_node_report(connected_callback);
     set_text_message_callback(text_message_callback);
     set_portnum_callback(admin_portnum_callback);
-    
+    HEAP_LOG("after mt_serial_init");
+
     // Initialize application variables
     manual_reboot = false;
     new_rx_data_flag = false;
@@ -144,13 +171,18 @@ void setup() {
     eepromMutex = xSemaphoreCreateMutex();
     displayMutex = xSemaphoreCreateMutex();
     hotPacketMutex = xSemaphoreCreateMutex();  // Protects weather and venue/event data
+    chatBufferMutex = xSemaphoreCreateMutex();  // Protects chat ring buffer
     eepromWriteQueue = xQueueCreate(10, sizeof(eepromWriteItem_t));
     meshtasticCallbackQueue = xQueueCreate(30, sizeof(meshtasticCallbackItem_t));  // Matches radio's ~30 packet buffer
     espnowRecvQueue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_recv_item_t));
     gpsConfigCallbackQueue = xQueueCreate(2, sizeof(gpsConfigCallbackItem_t));
-    
+    chatTxQueue = xQueueCreate(8, sizeof(chatTxItem_t));
+    kbContextQueue = xQueueCreate(8, sizeof(kb_ctx_item_t));
+    HEAP_LOG("after mutex/queue create");
+
     // Create all FreeRTOS tasks (including ESP-NOW)
     createAllTasks();
+    HEAP_LOG("after createAllTasks");
 
     Serial.println("Ready");
 }

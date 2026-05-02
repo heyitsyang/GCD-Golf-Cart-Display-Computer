@@ -197,6 +197,9 @@ void set_var_sunrise_time_str(const char* value);
 const char* get_var_sunset_time_str();
 void set_var_sunset_time_str(const char* value);
 
+int32_t get_var_mesh_filter();
+void set_var_mesh_filter(int32_t value);
+
 #ifdef __cplusplus
 }
 #endif
@@ -267,6 +270,7 @@ extern String cur_lat;
 extern String cur_long;
 extern String sunrise_time_str;
 extern String sunset_time_str;
+extern int32_t mesh_filter;  // Chat-list filter dropdown selection (0..4)
 
 #endif // __cplusplus
 

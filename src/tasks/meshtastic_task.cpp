@@ -4,6 +4,7 @@
 #include "Meshtastic.h"
 #include "communication/meshtastic_admin.h"
 #include "get_set_vars.h"
+#include "types.h"
 
 void meshtasticTask(void *parameter) {
     static bool old_reboot_meshtastic = false;
@@ -78,6 +79,21 @@ void meshtasticTask(void *parameter) {
                       }
                   } else {
                       reqWxEntSent = true;  // NVM data was current for today, no request needed
+                  }
+              }
+          }
+
+          // Drain user-initiated chat TX (canned + typed) onto the radio.
+          if (can_send && chatTxQueue) {
+              chatTxItem_t tx;
+              while (xQueueReceive(chatTxQueue, &tx, 0) == pdTRUE) {
+                  if (mt_send_text(tx.text, tx.dest, tx.channel)) {
+#if DEBUG_GCM_MESSAGES
+                      Serial.printf("GCM TX: ch=%u dest=%lu msg='%s'\n",
+                                    (unsigned)tx.channel, (unsigned long)tx.dest, tx.text);
+#endif
+                  } else {
+                      Serial.printf("Chat TX failed: '%s'\n", tx.text);
                   }
               }
           }

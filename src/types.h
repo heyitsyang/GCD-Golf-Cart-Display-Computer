@@ -29,8 +29,28 @@ typedef struct {
     uint32_t from;
     uint32_t to;
     uint8_t channel;
+    uint32_t timestamp;  // epoch (time(NULL)) at receive
     char text[MAX_MESHTASTIC_PAYLOAD];
 } meshtasticCallbackItem_t;
+
+// Chat ring-buffer entry (RAM-only; lost on reboot)
+typedef struct {
+    uint32_t id;          // monotonic; used for delete + selection
+    uint32_t from;        // node ID; 0 means us (outgoing)
+    uint32_t to;          // dest node ID
+    uint8_t  channel;
+    uint32_t timestamp;   // epoch (time(NULL)) at receive/send
+    bool     outgoing;
+    bool     deleted;     // tombstone — slot kept for ordering
+    char     text[MAX_MESHTASTIC_PAYLOAD];
+} chatMessage_t;
+
+// UI -> meshtasticTask send queue payload
+typedef struct {
+    uint8_t  channel;
+    uint32_t dest;        // BROADCAST_ADDR or specific node
+    char     text[MAX_MESHTASTIC_PAYLOAD];
+} chatTxItem_t;
 
 // GPS Config callback item (for position config responses)
 typedef struct {
