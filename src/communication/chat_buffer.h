@@ -29,6 +29,9 @@ size_t chatBufferSnapshot(uint8_t filter, chatMessage_t *out, size_t maxN);
 // Look up by id. Returns true if found and not tombstoned.
 bool chatBufferGetById(uint32_t id, chatMessage_t *out);
 
+// Returns the number of direct messages currently in the ring buffer.
+size_t chatBufferDmCount(void);
+
 // Transform HoT/GC packet text into a short display tag. Plain user
 // text passes through truncated. dst is always null-terminated.
 void chatAbbreviate(const char *src, char *dst, size_t dstSize);

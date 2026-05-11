@@ -267,7 +267,7 @@ void tone_startup() {
 }
 
 void tone_message() {
-    playTone(2, 2500, 100, 100, 80);  // Double beeps
+    playTone(2, 2200, 50, 150, 80);  // Double beeps
 }
 
 void tone_alert() {

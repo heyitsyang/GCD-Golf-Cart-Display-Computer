@@ -163,3 +163,14 @@ bool chatBufferGetById(uint32_t id, chatMessage_t *out) {
     xSemaphoreGive(chatBufferMutex);
     return found;
 }
+
+size_t chatBufferDmCount(void) {
+    if (!chatBufferMutex) return 0;
+    if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) return 0;
+    size_t count = 0;
+    for (size_t i = 0; i < s_count; i++) {
+        if (dmPredicate(&s_buffer[i])) count++;
+    }
+    xSemaphoreGive(chatBufferMutex);
+    return count;
+}

@@ -5,6 +5,7 @@
 #include "communication/hot_packet_parser.h"
 #include "communication/chat_buffer.h"
 #include "ui/chat_screen.h"
+#include "hardware/display.h"
 #include "Meshtastic.h"
 #include <time.h>
 
@@ -21,7 +22,7 @@ void meshtasticCallbackTask(void *parameter) {
             } else if (item.to == my_node_num) {
                 Serial.println("  (DM to me)");
             } else {
-                Serial.println("  (DM to someone else)");
+                Serial.printf("  (DM to someone else; my_node_num=%lu)\n", my_node_num);
             }
 #endif
 
@@ -38,6 +39,10 @@ void meshtasticCallbackTask(void *parameter) {
             strncpy(cm.text, item.text, sizeof(cm.text) - 1);
             cm.text[sizeof(cm.text) - 1] = '\0';
             chatBufferAppend(&cm);
+
+            if (item.to == my_node_num && my_node_num != 0) {
+                tone_message();
+            }
 
             chatScreenRequestRefresh();
 

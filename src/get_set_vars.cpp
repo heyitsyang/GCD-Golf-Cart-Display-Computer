@@ -3,6 +3,7 @@
 #include "storage/preferences_manager.h"
 #include "hardware/display.h"
 #include "communication/espnow_handler.h"
+#include "communication/chat_buffer.h"
 #include "globals.h"
 
 // String variable definitions
@@ -703,6 +704,14 @@ const char* get_var_sunset_time_str() {
 
 void set_var_sunset_time_str(const char* value) {
     sunset_time_str = String(value);
+}
+
+int32_t get_var_num_direct_msgs_avail() {
+    return (int32_t)chatBufferDmCount();
+}
+
+void set_var_num_direct_msgs_avail(int32_t value) {
+    (void)value;
 }
 
 } // extern "C"
