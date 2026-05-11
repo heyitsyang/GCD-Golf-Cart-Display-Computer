@@ -123,7 +123,7 @@ extern "C" void action_display_now_playing(lv_event_t *e) {
     bool gpsHasSynced = (lastGpsTimeUpdate != 0);
 
     // Read from active buffer (no mutex needed - double buffering ensures lock-free reads)
-    int activeBuffer = hotPacketActiveBuffer;  // Snapshot current buffer
+    int activeBuffer = hotPacketActiveBufferNp;  // Snapshot current buffer
     if (gpsHasSynced && hotPacketBuffer_live_venue_event_data[activeBuffer].length() > 0) {
         Serial.println(np_data_is_stored ? "Using stored venue/event data from EEPROM" : "Using live venue/event data from Meshtastic");
         displayVenueEventTable(hotPacketBuffer_live_venue_event_data[activeBuffer].c_str());
@@ -157,7 +157,7 @@ void checkAndUpdateNowPlayingScreen() {
     bool gpsHasSynced = (lastGpsTimeUpdate != 0);
 
     // Read from active buffer (no mutex needed - double buffering ensures lock-free reads)
-    int activeBuffer = hotPacketActiveBuffer;  // Snapshot current buffer
+    int activeBuffer = hotPacketActiveBufferNp;  // Snapshot current buffer
     if (gpsHasSynced && hotPacketBuffer_live_venue_event_data[activeBuffer].length() > 0) {
         currentData = hotPacketBuffer_live_venue_event_data[activeBuffer].c_str();
     } else if (gpsHasSynced && live_venue_event_data.length() > 0) {
@@ -173,10 +173,10 @@ void checkAndUpdateNowPlayingScreen() {
 }
 
 void onNowPlayingScreenExit() {
-    // Mark that we're no longer on the Now Playing screen
     is_now_playing_screen_active = false;
-
-    // Clean up references
-    current_venue_table_container = nullptr;
+    if (current_venue_table_container != nullptr) {
+        lv_obj_del(current_venue_table_container);
+        current_venue_table_container = nullptr;
+    }
     last_displayed_data = "";
 }

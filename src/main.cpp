@@ -47,7 +47,6 @@
 #include "ui/tone_actions.h"
 #include "ui/chat_screen.h"
 #include "ui/canned_screen.h"
-#include "ui/keyboard_bridge.h"
 
 // Utils
 #include "utils/time_utils.h"
@@ -62,6 +61,13 @@
       Serial.printf("[HEAP] %-26s free=%u, largest=%u\n", \
                     (label), (unsigned)ESP.getFreeHeap(), \
                     (unsigned)ESP.getMaxAllocHeap())
+
+static void heapAllocFailedCallback(size_t size, uint32_t caps, const char *func) {
+    Serial.printf("[HEAP FAIL] size=%u caps=0x%x in %s | free=%u largest=%u\n",
+                  (unsigned)size, (unsigned)caps, func,
+                  (unsigned)heap_caps_get_free_size(MALLOC_CAP_8BIT),
+                  (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
+}
 #else
   #define HEAP_LOG(label) ((void)0)
 #endif
@@ -78,6 +84,10 @@ void setup() {
     // Disable Serial RX to prevent conflicts
     Serial.end();
     Serial.begin(GPS_BAUD, SERIAL_8N1, 3, 1);
+
+#if DEBUG_HEAP
+    heap_caps_register_failed_alloc_callback(heapAllocFailedCallback);
+#endif
 
     // Check for spurious wake before any peripheral init.
     // If woken by EXT0 (SLEEP_PIN) but pin is already LOW, glitch woke us — go back to sleep.
@@ -148,9 +158,6 @@ void setup() {
     HEAP_LOG("after chatScreenInit");
     cannedScreenInit();
     HEAP_LOG("after cannedScreenInit");
-    kb_init();
-    HEAP_LOG("after kb_init");
-
     // Initialize Meshtastic
     mt_serial_init(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);
     randomSeed(micros());
@@ -177,7 +184,7 @@ void setup() {
     espnowRecvQueue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_recv_item_t));
     gpsConfigCallbackQueue = xQueueCreate(2, sizeof(gpsConfigCallbackItem_t));
     chatTxQueue = xQueueCreate(8, sizeof(chatTxItem_t));
-    kbContextQueue = xQueueCreate(8, sizeof(kb_ctx_item_t));
+    firstRenderDone = xSemaphoreCreateBinary();  // espnow_task waits on this before WiFi init
     HEAP_LOG("after mutex/queue create");
 
     // Create all FreeRTOS tasks (including ESP-NOW)

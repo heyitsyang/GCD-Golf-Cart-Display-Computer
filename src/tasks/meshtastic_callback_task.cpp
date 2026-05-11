@@ -5,7 +5,6 @@
 #include "communication/hot_packet_parser.h"
 #include "communication/chat_buffer.h"
 #include "ui/chat_screen.h"
-#include "ui/keyboard_bridge.h"
 #include "Meshtastic.h"
 #include <time.h>
 
@@ -42,14 +41,6 @@ void meshtasticCallbackTask(void *parameter) {
             chatBufferAppend(&cm);
 
             chatScreenRequestRefresh();
-
-            // If the user is in sticky chat mode on Keyboard_Entry,
-            // append the incoming line to the running transcript.
-            if (kb_is_active() && kb_current_mode() == KB_MODE_CHAT) {
-                char line[MAX_MESHTASTIC_PAYLOAD + 4];
-                snprintf(line, sizeof(line), "< %s\n", item.text);
-                kb_set_context_append(line);
-            }
 
             // Hot packet structured-data parser still gets the full original text.
             if (isHotPacket(item.text)) {

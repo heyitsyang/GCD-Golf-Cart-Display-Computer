@@ -17,7 +17,12 @@ void espnowTask(void *parameter) {
     String saved_mac_addr = "";
     bool pairing_succeeded = false;
 
-    // Queue is created in main.cpp
+    // Block until gui_task completes its first render. esp_wifi_start() (called
+    // from ESPNowHandler::init()) spawns the WiFi task at IDF priority 23 on
+    // core 0. If that task runs concurrently with LVGL's first lv_timer_handler()
+    // it fragments the heap below the 24 KB draw-buffer threshold and crashes.
+    // 5-second timeout is a safety fallback; normal path is gui_task signals quickly.
+    if (firstRenderDone) xSemaphoreTake(firstRenderDone, pdMS_TO_TICKS(5000));
 
     while (true) {
         // Check for peer timeouts
@@ -116,13 +121,16 @@ void espnowTask(void *parameter) {
 
                 // Temporarily add broadcast peer for RAW pairing
                 uint8_t broadcastAddr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-                espNow.addPeer(broadcastAddr, "Broadcast-Temp");
+                if (!espNow.addPeer(broadcastAddr, "Broadcast-Temp")) {
+                    Serial.println("ESP-NOW: addPeer(broadcast) FAILED");
+                }
 
                 // Broadcast RAW command to reach virgin GCI devices
-                if (esp_now_send(broadcastAddr, (uint8_t*)&cmdData, sizeof(cmdData)) == ESP_OK) {
+                esp_err_t sendErr = esp_now_send(broadcastAddr, (uint8_t*)&cmdData, sizeof(cmdData));
+                if (sendErr == ESP_OK) {
                     Serial.println("ESP-NOW: Pairing...");
                 } else {
-                    Serial.println("ESP-NOW: Pairing broadcast failed");
+                    Serial.printf("ESP-NOW: Pairing broadcast failed (err=0x%x)\n", (int)sendErr);
                 }
 
                 // Remove broadcast peer immediately after sending

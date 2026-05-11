@@ -42,14 +42,14 @@ typedef struct {
     uint32_t timestamp;   // epoch (time(NULL)) at receive/send
     bool     outgoing;
     bool     deleted;     // tombstone — slot kept for ordering
-    char     text[MAX_MESHTASTIC_PAYLOAD];
+    char     text[CHAT_TEXT_SIZE];
 } chatMessage_t;
 
 // UI -> meshtasticTask send queue payload
 typedef struct {
     uint8_t  channel;
     uint32_t dest;        // BROADCAST_ADDR or specific node
-    char     text[MAX_MESHTASTIC_PAYLOAD];
+    char     text[CHAT_TEXT_SIZE];
 } chatTxItem_t;
 
 // GPS Config callback item (for position config responses)

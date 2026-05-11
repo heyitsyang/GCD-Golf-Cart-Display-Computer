@@ -12,21 +12,36 @@ bool ESPNowHandler::init() {
         return true;
     }
 
-    // Slim WiFi init for ESP-NOW only — bypass Arduino's WiFi.mode()
-    // which uses WIFI_INIT_CONFIG_DEFAULT (large RX/TX buffer pools,
-    // AMPDU/AMSDU aggregation, NVS storage, power-management timers,
-    // ~50 KB heap usage). ESP-NOW is connectionless single-frame
-    // unicast/broadcast and needs none of that. This config saves
-    // ~25 KB heap and sidesteps the pm_attach/ets_timer_setfn crash
-    // path observed when LVGL transient allocations leave the heap
-    // fragmented.
-    // Initialize WiFi in station mode
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
-
-    // Set WiFi channel
-    int32_t channel = ESPNOW_CHANNEL;
-    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+    // espnow_task waits on firstRenderDone semaphore before calling this function,
+    // so esp_wifi_start() (which spawns the IDF WiFi task at priority 23 on core 0)
+    // cannot run until after LVGL's first lv_timer_handler() completes.
+    // If WiFi was not pre-initialized in setup(), do the full init here.
+    // Never call WiFi.mode(): it uses default buffer counts which OOM on this device.
+    wifi_mode_t _wm;
+    if (esp_wifi_get_mode(&_wm) != ESP_OK) {
+        // Not yet initialized (espnow_enabled was false at boot, user just enabled)
+        wifi_init_config_t wCfg = WIFI_INIT_CONFIG_DEFAULT();
+        wCfg.static_rx_buf_num = 3;
+        wCfg.tx_buf_type = 1;
+        wCfg.static_tx_buf_num = 0;
+        wCfg.dynamic_tx_buf_num = 4;
+        if (esp_wifi_init(&wCfg) != ESP_OK) {
+            Serial.println("ESP-NOW: WiFi init failed");
+            return false;
+        }
+        esp_wifi_set_mode(WIFI_MODE_STA);
+    }
+    // Always attempt esp_wifi_start(). esp_wifi_get_channel() returns ESP_OK with ch=0
+    // on some IDF versions even when WiFi is only initialized (not started), making it
+    // unreliable as a started-vs-not check. ESP_ERR_WIFI_STATE (0x3006) means already
+    // running — that is fine. Any other failure is a real error.
+    {
+        esp_err_t startErr = esp_wifi_start();
+        if (startErr != ESP_OK && startErr != ESP_ERR_WIFI_STATE) {
+            Serial.printf("ESP-NOW: WiFi start failed (0x%x)\n", (int)startErr);
+            return false;
+        }
+    }
 
     // Initialize ESP-NOW
     if (esp_now_init() != ESP_OK) {
@@ -34,6 +49,32 @@ bool ESPNowHandler::init() {
         status = "Init failed";
         return false;
     }
+
+    // Lock the radio onto ESPNOW_CHANNEL. esp_wifi_set_channel() only works in AP/APSTA
+    // mode normally; enabling promiscuous mode briefly lets it work in STA mode too.
+    // Must be called AFTER esp_now_init() — by then the driver is fully started.
+    // peerInfo.channel=0 already bypasses the IDF strict equality check, but both
+    // devices still need the same RF channel.
+    esp_wifi_set_promiscuous(true);
+    esp_err_t chErr = ESP_FAIL;
+    for (int i = 0; i < 5; i++) {
+        chErr = esp_wifi_set_channel(ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE);
+        if (chErr == ESP_OK) break;
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+    esp_wifi_set_promiscuous(false);
+    uint8_t home_ch = 0;
+    wifi_second_chan_t home_sec = WIFI_SECOND_CHAN_NONE;
+    esp_wifi_get_channel(&home_ch, &home_sec);
+    if (chErr != ESP_OK || home_ch != ESPNOW_CHANNEL) {
+        Serial.printf("ESP-NOW: channel set FAILED (err=%d, home=%u, want=%u)\n",
+                      (int)chErr, (unsigned)home_ch, (unsigned)ESPNOW_CHANNEL);
+    }
+#if DEBUG_ESPNOW == 1
+    else {
+        Serial.printf("ESP-NOW: home channel = %u\n", (unsigned)home_ch);
+    }
+#endif
     
     // Register callbacks
     esp_now_register_send_cb(espnowOnDataSent);
@@ -97,16 +138,21 @@ bool ESPNowHandler::addPeer(const uint8_t *mac_addr, const char* name) {
     // Remove peer first if it exists (ESP-NOW might have auto-added it)
     esp_now_del_peer(mac_addr);
 
-    // Add to ESP-NOW with correct settings
+    // Add to ESP-NOW with correct settings.
+    // peerInfo.channel = 0 means "use whatever the local home channel is" —
+    // avoids the IDF's strict equality check (which logs
+    // "Peer channel is not equal to the home channel, send fail!" if
+    // home_ch ever drifts off ESPNOW_CHANNEL). Both devices still need
+    // to be tuned to the same actual channel via esp_wifi_set_channel.
     esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, mac_addr, 6);
-    peerInfo.channel = ESPNOW_CHANNEL;
+    peerInfo.channel = 0;
     peerInfo.encrypt = false;
 
-    if (esp_now_add_peer(&peerInfo) != ESP_OK) {
-#if DEBUG_ESPNOW == 1
-        Serial.println("ESP-NOW: Failed to add peer");
-#endif
+    esp_err_t addErr = esp_now_add_peer(&peerInfo);
+    if (addErr != ESP_OK) {
+        Serial.printf("ESP-NOW: esp_now_add_peer failed (err=0x%x, ch=%u)\n",
+                      (int)addErr, (unsigned)peerInfo.channel);
         return false;
     }
 

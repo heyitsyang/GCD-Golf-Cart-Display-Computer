@@ -8,7 +8,6 @@
 #include "ui/venue_event_display.h"
 #include "ui/chat_screen.h"
 #include "ui/canned_screen.h"
-#include "ui/keyboard_bridge.h"
 #include "get_set_vars.h"
 
 void updateEspnowIndicatorColor() {
@@ -108,16 +107,22 @@ void guiTask(void *parameter) {
     static uint32_t last_gps_time_check = 0;
     static lv_obj_t* previous_screen = nullptr;
 
+    static bool first_render_signaled = false;
+
     while (true) {
         uint32_t now = millis();
 
         lv_tick_inc(now - lastTick);
         lastTick = now;
         lv_timer_handler();
+
+        if (!first_render_signaled) {
+            first_render_signaled = true;
+            if (firstRenderDone) xSemaphoreGive(firstRenderDone);
+        }
         ui_tick();
 
         // Drain chat / messaging UI updates queued from other tasks.
-        kb_pump();
         chatScreenPump();
         cannedScreenPump();
 

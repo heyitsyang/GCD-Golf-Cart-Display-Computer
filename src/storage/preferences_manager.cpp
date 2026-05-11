@@ -2,7 +2,6 @@
 #include "config.h"
 #include "globals.h"
 #include "types.h"
-#include "ui/canned_replies.h"
 
 void initPreferences() {
     prefs.begin("eeprom", false);
@@ -88,7 +87,6 @@ void loadPreferences() {
 
     // Chat / messaging UI
     mesh_filter = prefs.getInt("mesh_filter", 0);  // default = DIRECT MSGS
-    cannedRepliesLoad();
 
 #if DEBUG_EEPROM == 1
     Serial.println("EEPROM values loaded:");

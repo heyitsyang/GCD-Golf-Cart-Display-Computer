@@ -16,15 +16,16 @@ SemaphoreHandle_t eepromMutex;
 SemaphoreHandle_t displayMutex;
 SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping (not data reads)
 SemaphoreHandle_t chatBufferMutex; // Guards the chat ring buffer
+SemaphoreHandle_t firstRenderDone = nullptr;
 QueueHandle_t eepromWriteQueue;
 QueueHandle_t meshtasticCallbackQueue;
 QueueHandle_t espnowRecvQueue;
 QueueHandle_t gpsConfigCallbackQueue;
 QueueHandle_t chatTxQueue;
-QueueHandle_t kbContextQueue;
 
 // Double buffering for hot packet data (eliminates blocking reads)
-volatile int hotPacketActiveBuffer = 0;  // 0 or 1
+volatile int hotPacketActiveBufferWx = 0;  // 0 or 1, weather fields only
+volatile int hotPacketActiveBufferNp = 0;  // 0 or 1, venue/event data only
 String hotPacketBuffer_wx_rcv_time[2];
 String hotPacketBuffer_cur_temp[2];
 String hotPacketBuffer_fcast_hr1[2];

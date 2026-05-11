@@ -47,14 +47,19 @@ pio device monitor
 1. **Rebooted Tag Return Statement Fix** (`mt_protocol.cpp:686`): Fixes upstream bug causing crashes when GCM reboots. Missing `return true;` statement after `rebooted_tag` case causes fall-through to `moduleConfig_tag`, resulting in `InstrFetchProhibited` exception. All other cases in the switch statement return a value; this one was missing it. This bug exists in upstream as of 2025-12.
 2. **Deterministic Packet ID Fix** (`mt_protocol.cpp:~114`): Replaces `random(0x7FFFFFFF)` with `esp_random()` in `mt_send_text()`. Arduino `random()` on ESP32 produces identical sequences across reboots (ignores `randomSeed()`), causing Meshtastic duplicate detection to silently drop all OTA transmissions after the first boot. This bug exists in upstream as of 2025-12.
 
-### 2. UART0 Split Architecture
+### 2. EEZ Studio Flow Engine Integrity
+- **NEVER modify any file in `src/ui_eez/` manually**: EEZ Studio overwrites all files in this directory on every project export/sync. Any manual edits will be silently lost.
+- **All files in `src/ui_eez/` are generated**: `eez-flow.cpp`, `screens.c`, `ui.c`, `styles.c`, `images.c`, and all headers are owned by EEZ Studio. Treat this directory the same as `lib/meshtastic-arduino_src/`.
+- **No patches are currently required**: `create_screens()` pre-creates all 14 screen FlowStates at boot; `getPageFlowState` reuses existing FlowStates rather than accumulating new ones. The EEZ Studio output is correct as-is for this project.
+
+### 4. UART0 Split Architecture
 - **UART0 is split**: GPS RX on pin 3, Debug TX on pin 1. This is a unidirectional split configuration.
 - **Never use UART0 for full-duplex communication**: The GPS only transmits to us (we receive), and we only transmit debug output.
 - **Variable naming reflects the split**: `gpsSerial` refers to UART0 RX (GPS input), `Serial` refers to UART0 TX (debug output). Note: `MT_SERIAL_*` constants refer to Meshtastic's serial connection on UART2, which is separate.
 - **Debug output goes to Serial (UART0 TX)**: Use `Serial.println()` for debug messages.
 - **GPS input comes from gpsSerial (UART0 RX)**: Read GPS data using `gpsSerial.read()` or similar.
 
-### 3. ESP32 Memory Constraints
+### 5. ESP32 Memory Constraints
 - **CRITICAL: Flash/Program Space is the primary constraint**: OTA functionality has already been sacrificed to allocate more program space. Every byte of code matters.
   - Avoid adding large libraries or dependencies
   - Be mindful of string literals and constant data in flash
@@ -67,7 +72,7 @@ pio device monitor
   - LVGL display buffers
 - **Test memory-intensive changes**: Use `ESP.getFreeHeap()` to monitor available RAM during development.
 
-### 4. FreeRTOS Synchronization
+### 6. FreeRTOS Synchronization
 - **Always use mutexes for shared data**: Check `src/globals.h` for existing mutexes (`gpsMutex`, `eepromMutex`, `displayMutex`, `hotPacketMutex`).
 - **Follow the locking pattern**:
   ```cpp
@@ -78,13 +83,13 @@ pio device monitor
   ```
 - **Use queues for task communication**: See `eepromWriteQueue`, `meshtasticCallbackQueue`, `espnowRecvQueue`.
 
-### 5. Touchscreen Orientation
+### 7. Touchscreen Orientation
 - **CRITICAL: Touchscreen rotation is fixed at TOUCH_ROTATION_180**: The touchscreen orientation must NEVER change, regardless of display orientation.
 - **Display rotation is variable**: The display can be rotated between 90° and 270° based on the `flip_screen` setting (see `updateDisplayRotation()` in `src/hardware/display.cpp`).
 - **Touch calibration is orientation-specific**: Calibration coefficients in EEPROM are calculated for `TOUCH_ROTATION_180` and are transformed in software to match the current display orientation.
 - **Never modify `updateTouchscreenRotation()`**: This function always sets rotation to `TOUCH_ROTATION_180`. Any changes will break touch calibration.
 
-### 6. EEZ Studio Integration
+### 8. EEZ Studio Integration
 - **UI variables must be registered**: Add getter/setter functions in `src/get_set_vars.h` and `src/get_set_vars.cpp`.
 - **Follow the existing pattern**: Boolean, integer, float, and string types all have specific patterns.
 - **Preferences persistence**: Use `queuePreferenceWrite()` in setters when values should persist across reboots.

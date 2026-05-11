@@ -3,6 +3,8 @@
 #include "globals.h"
 
 void createAllTasks() {
+    // Core 1 tasks first — all block immediately on queues/serial so they
+    // don't compete for heap during gui_task's first render.
     xTaskCreatePinnedToCore(
         gpsTask,
         "GPS Task",
@@ -12,17 +14,7 @@ void createAllTasks() {
         &gpsTaskHandle,
         1
     );
-    
-    xTaskCreatePinnedToCore(
-        guiTask,
-        "GUI Task",
-        GUI_TASK_STACK_SIZE,
-        NULL,
-        GUI_TASK_PRIORITY,
-        &guiTaskHandle,
-        0
-    );
-    
+
     xTaskCreatePinnedToCore(
         meshtasticTask,
         "Meshtastic Task",
@@ -32,7 +24,7 @@ void createAllTasks() {
         &meshtasticTaskHandle,
         1
     );
-    
+
     xTaskCreatePinnedToCore(
         meshtasticCallbackTask,
         "Meshtastic Callback Task",
@@ -42,17 +34,7 @@ void createAllTasks() {
         &meshtasticCallbackTaskHandle,
         1
     );
-    
-    xTaskCreatePinnedToCore(
-        espnowTask,
-        "ESP-NOW Task",
-        ESPNOW_TASK_STACK_SIZE,
-        NULL,
-        ESPNOW_TASK_PRIORITY,
-        &espnowTaskHandle,
-        0  // Core 0 for WiFi operations
-    );
-    
+
     xTaskCreatePinnedToCore(
         eepromTask,
         "EEPROM Task",
@@ -62,7 +44,7 @@ void createAllTasks() {
         &eepromTaskHandle,
         1
     );
-    
+
     xTaskCreatePinnedToCore(
         systemTask,
         "System Task",
@@ -71,6 +53,31 @@ void createAllTasks() {
         SYSTEM_TASK_PRIORITY,
         &systemTaskHandle,
         1
+    );
+
+    // Core 0: espnow_task blocks on firstRenderDone semaphore before touching WiFi,
+    // so it cannot call esp_wifi_start() until after gui_task's first render.
+    xTaskCreatePinnedToCore(
+        espnowTask,
+        "ESP-NOW Task",
+        ESPNOW_TASK_STACK_SIZE,
+        NULL,
+        ESPNOW_TASK_PRIORITY,
+        &espnowTaskHandle,
+        0  // Core 0 for WiFi operations
+    );
+
+    // gui_task is created last so all task stacks are already allocated when
+    // the first lv_timer_handler() call runs — eliminates concurrent heap
+    // contention from task creation during the first LVGL render.
+    xTaskCreatePinnedToCore(
+        guiTask,
+        "GUI Task",
+        GUI_TASK_STACK_SIZE,
+        NULL,
+        GUI_TASK_PRIORITY,
+        &guiTaskHandle,
+        0
     );
     
 #if DEBUG_INIT == 1

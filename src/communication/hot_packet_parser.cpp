@@ -74,7 +74,7 @@ void processHotPacket(const char* text) {
                 // Live packet received - clear stored flag
                 wx_data_is_stored = false;
                 // Update legacy variable for compatibility
-                wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
+                wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBufferWx];
 
                 // Persist to EEPROM if GPS date is valid
                 if (gpsYear != 0) {
@@ -103,7 +103,7 @@ void processHotPacket(const char* text) {
             // Validate packet has enough data
             if (strlen(text) > HOT_PKT_HEADER_OFFSET) {
                 // Write to back buffer (whichever is NOT active)
-                int backBuffer = 1 - hotPacketActiveBuffer;
+                int backBuffer = 1 - hotPacketActiveBufferNp;
 
                 // Protect access to GPS-updated global strings (cur_date, hhmm_str, am_pm_str)
                 // Show actual timestamp if GPS is working, otherwise indicate timestamp unavailable
@@ -130,7 +130,7 @@ void processHotPacket(const char* text) {
                 // Mutex only protects the pointer swap, not data reads
                 bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(10)) == pdTRUE);
                 if (haveMutex || hotPacketMutex == NULL) {
-                    hotPacketActiveBuffer = backBuffer;
+                    hotPacketActiveBufferNp = backBuffer;
                     if (haveMutex) xSemaphoreGive(hotPacketMutex);
 
                     // Live packet received - clear stored flag
@@ -268,7 +268,7 @@ int parseWeatherData(char* input, const String& timestamp) {
     ptr = HOT_PKT_HEADER_OFFSET;
 
     // Write to back buffer (whichever is NOT active)
-    int backBuffer = 1 - hotPacketActiveBuffer;
+    int backBuffer = 1 - hotPacketActiveBufferWx;
 
     // SAFEGUARD #1: Clear back buffer before parsing to prevent stale data contamination
     hotPacketBuffer_wx_rcv_time[backBuffer] = "";
@@ -467,7 +467,7 @@ int parseWeatherData(char* input, const String& timestamp) {
     // Mutex only protects the pointer swap, not data reads (10ms timeout is very short)
     bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(10)) == pdTRUE);
     if (haveMutex || hotPacketMutex == NULL) {
-        hotPacketActiveBuffer = backBuffer;
+        hotPacketActiveBufferWx = backBuffer;
         if (haveMutex) xSemaphoreGive(hotPacketMutex);
 
         // Update legacy variables for compatibility

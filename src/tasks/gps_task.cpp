@@ -7,6 +7,8 @@
 #include "communication/espnow_handler.h"
 #include "communication/hot_packet_parser.h"
 #include <TimeLib.h>
+#include <sys/time.h>
+#include <time.h>
 
 // Compass direction lookup table
 static const char* COMPASS_DIRECTIONS[] = {
@@ -142,6 +144,18 @@ static void updateTimeDisplay(const gps_fix& fix) {
 
     // Convert to local time
     utcTime = now();
+
+    // Mirror UTC into the ESP32 system clock so libc time(NULL)/localtime_r
+    // work for chat-message timestamps. TZ string must match the
+    // TimeChangeRule pair in globals.cpp (US Eastern).
+    static bool sysClockTzInitialized = false;
+    if (!sysClockTzInitialized) {
+        setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0/2", 1);
+        tzset();
+        sysClockTzInitialized = true;
+    }
+    struct timeval tv = { .tv_sec = utcTime, .tv_usec = 0 };
+    settimeofday(&tv, NULL);
     localTime = myTZ.toLocal(utcTime, &tcr);
     localYear = year(localTime);
     localMonth = month(localTime);
@@ -174,7 +188,7 @@ static void updateTimeDisplay(const gps_fix& fix) {
     if (!wx_eeprom_loaded) {
         wx_eeprom_loaded = true;
         String gpsTimestamp = cur_date + "  " + hhmm_str + am_pm_str;
-        int activeBuffer = hotPacketActiveBuffer;
+        int activeBuffer = hotPacketActiveBufferWx;
         if (hotPacketBuffer_wx_rcv_time[activeBuffer] == "TIMESTAMP UNAVAILABLE") {
             // Live data arrived before GPS - fix up the timestamp in-place
             hotPacketBuffer_wx_rcv_time[activeBuffer] = gpsTimestamp;
@@ -190,7 +204,7 @@ static void updateTimeDisplay(const gps_fix& fix) {
                     ? wx_stored_timestamp : gpsTimestamp;
                 if (parseWeatherData(wxBuf, wxTimestamp)) {
                     wx_data_is_stored = true;  // Flag getter to append " (stored)"
-                    wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBuffer];
+                    wx_rcv_time = hotPacketBuffer_wx_rcv_time[hotPacketActiveBufferWx];
                     new_rx_data_flag = true;
                 }
             } else {
@@ -205,7 +219,7 @@ static void updateTimeDisplay(const gps_fix& fix) {
     if (!np_eeprom_loaded) {
         np_eeprom_loaded = true;
         String gpsTimestamp = cur_date + "  " + hhmm_str + am_pm_str;
-        int activeBuffer = hotPacketActiveBuffer;
+        int activeBuffer = hotPacketActiveBufferNp;
         if (hotPacketBuffer_np_rcv_time[activeBuffer] == "TIMESTAMP UNAVAILABLE") {
             // Live data arrived before GPS - fix up the timestamp in-place
             hotPacketBuffer_np_rcv_time[activeBuffer] = gpsTimestamp;
@@ -214,14 +228,14 @@ static void updateTimeDisplay(const gps_fix& fix) {
             // No live data yet - load from EEPROM if it is from today
             int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
             if (np_stored_date == todayYYYYMMDD && np_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
-                int backBuffer = 1 - hotPacketActiveBuffer;
+                int backBuffer = 1 - hotPacketActiveBufferNp;
                 hotPacketBuffer_live_venue_event_data[backBuffer] = np_stored_data.substring(HOT_PKT_HEADER_OFFSET);
                 String npTimestamp = (np_stored_timestamp.length() > 0)
                     ? np_stored_timestamp : gpsTimestamp;
                 hotPacketBuffer_np_rcv_time[backBuffer] = npTimestamp;
                 bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(10)) == pdTRUE);
                 if (haveMutex || hotPacketMutex == NULL) {
-                    hotPacketActiveBuffer = backBuffer;
+                    hotPacketActiveBufferNp = backBuffer;
                     if (haveMutex) xSemaphoreGive(hotPacketMutex);
                     live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];
                     np_data_is_stored = true;  // Flag getter to append " (stored)"

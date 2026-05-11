@@ -28,19 +28,21 @@ extern SemaphoreHandle_t eepromMutex;
 extern SemaphoreHandle_t displayMutex;
 extern SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping (not data reads)
 extern SemaphoreHandle_t chatBufferMutex;  // Guards the chat ring buffer
+extern SemaphoreHandle_t firstRenderDone;  // Given by gui_task after first render; espnow_task waits on it before WiFi init
 extern QueueHandle_t eepromWriteQueue;
 extern QueueHandle_t meshtasticCallbackQueue;
 extern QueueHandle_t espnowRecvQueue;
 extern QueueHandle_t gpsConfigCallbackQueue;
 extern QueueHandle_t chatTxQueue;       // UI -> meshtasticTask send pipe
-extern QueueHandle_t kbContextQueue;    // RX -> GUI marshaling for keyboard/hub context
 
 // Double buffering for hot packet data (eliminates blocking reads)
 // Parser writes to back buffer, swaps atomically, GUI reads from front buffer
-// Front buffer = hotPacketBuffer_xxx[hotPacketActiveBuffer] (current data for GUI reads)
-// Back buffer = hotPacketBuffer_xxx[1 - hotPacketActiveBuffer] (next data being written by parser)
+// Front buffer = hotPacketBuffer_xxx[hotPacketActiveBuffer_Wx/Np] (current data for GUI reads)
+// Back buffer = hotPacketBuffer_xxx[1 - hotPacketActiveBuffer_Wx/Np] (next data being written)
+// Weather and venue use SEPARATE indices so a weather swap never disturbs the venue front buffer.
 // Only the buffer pointer swap is protected by mutex (~10ms), not the data reads/writes
-extern volatile int hotPacketActiveBuffer;  // 0 or 1, atomic swap under mutex
+extern volatile int hotPacketActiveBufferWx;  // 0 or 1, weather fields only
+extern volatile int hotPacketActiveBufferNp;  // 0 or 1, venue/event data only
 extern String hotPacketBuffer_wx_rcv_time[2];
 extern String hotPacketBuffer_cur_temp[2];
 extern String hotPacketBuffer_fcast_hr1[2];

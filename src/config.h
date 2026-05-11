@@ -107,15 +107,21 @@
 
 // Chat / messaging UI
 #define CHAT_BUFFER_SIZE 32       // Ring depth for chat history (RAM-only)
+#define CHAT_MAX_DISPLAY_ROWS 10  // Max rows rendered at once. Screen body ~200px, rows
+                                  // 22px → 9 visible; 10 gives 1 extra scroll row. Rows
+                                  // lazy-allocated on first Messages visit. 20 rows caused
+                                  // OOM crash: ~15KB rows + ~30KB LVGL render transient
+                                  // exhausted the ~46KB available at screen entry.
 #define CANNED_REPLY_COUNT 8      // Number of canned reply slots
 #define CANNED_REPLY_MAXLEN 60    // Max chars per canned reply (fits 64-byte stringVal)
+// Shorter than MAX_MESHTASTIC_PAYLOAD (237) — chat rows are truncated to fit a 22 px
+// display row anyway, and HoT/GC packets become ~12-char tags via chatAbbreviate().
+// Saves ~7.5 KB of BSS (two 32-slot arrays) + ~2 KB of queue heap vs using 237.
+#define CHAT_TEXT_SIZE 120        // Max text stored per chat message / TX / KB context
 
 // Heap monitoring (set DEBUG_HEAP to 0 to remove all logging once stable)
 #define DEBUG_HEAP 1
-// Diagnostic mode: 2 s while bringing up the chat UI so we can see
-// runtime heap drift after WiFi/ESP-NOW init. Bump back to 30000 once
-// stable.
-#define DEBUG_HEAP_INTERVAL_MS 2000
+#define DEBUG_HEAP_INTERVAL_MS 30000
 
 // Task Stack Sizes (in bytes)
 #define GPS_TASK_STACK_SIZE 4096
