@@ -35,7 +35,6 @@ void meshtasticCallbackTask(void *parameter) {
             cm.channel   = item.channel;
             cm.timestamp = item.timestamp ? item.timestamp : (uint32_t)time(NULL);
             cm.outgoing  = false;
-            cm.deleted   = false;
             strncpy(cm.text, item.text, sizeof(cm.text) - 1);
             cm.text[sizeof(cm.text) - 1] = '\0';
             chatBufferAppend(&cm);

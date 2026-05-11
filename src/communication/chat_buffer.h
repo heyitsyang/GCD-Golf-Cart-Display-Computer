@@ -22,12 +22,8 @@
 // as short tags in the chat list.
 void chatBufferAppend(const chatMessage_t *msg);
 
-// Tombstone a message by id. Returns true if found.
-bool chatBufferDelete(uint32_t id);
-
-// Copy up to maxN non-deleted messages matching `filter` into out[],
-// in chronological order (oldest first, newest last). Returns the
-// number of entries written.
+// Copy up to maxN messages matching `filter` into out[], in chronological
+// order (oldest first, newest last). Returns the number of entries written.
 size_t chatBufferSnapshot(uint8_t filter, chatMessage_t *out, size_t maxN);
 
 // Look up by id. Returns true if found and not tombstoned.

@@ -35,13 +35,12 @@ typedef struct {
 
 // Chat ring-buffer entry (RAM-only; lost on reboot)
 typedef struct {
-    uint32_t id;          // monotonic; used for delete + selection
+    uint32_t id;          // monotonic; used for selection
     uint32_t from;        // node ID; 0 means us (outgoing)
     uint32_t to;          // dest node ID
     uint8_t  channel;
     uint32_t timestamp;   // epoch (time(NULL)) at receive/send
     bool     outgoing;
-    bool     deleted;     // tombstone — slot kept for ordering
     char     text[CHAT_TEXT_SIZE];
 } chatMessage_t;
 

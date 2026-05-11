@@ -99,7 +99,6 @@ void chatBufferAppend(const chatMessage_t *msg) {
     slot->channel   = msg->channel;
     slot->timestamp = (msg->timestamp != 0) ? msg->timestamp : (uint32_t)time(NULL);
     slot->outgoing  = msg->outgoing;
-    slot->deleted   = false;
     chatAbbreviate(msg->text, slot->text, sizeof(slot->text));
 
     s_head = (s_head + 1) % CHAT_BUFFER_SIZE;
@@ -121,20 +120,6 @@ void chatBufferAppend(const chatMessage_t *msg) {
 #endif
 }
 
-bool chatBufferDelete(uint32_t id) {
-    bool found = false;
-    if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) return false;
-    for (size_t i = 0; i < s_count; i++) {
-        if (s_buffer[i].id == id) {
-            s_buffer[i].deleted = true;
-            found = true;
-            break;
-        }
-    }
-    xSemaphoreGive(chatBufferMutex);
-    return found;
-}
-
 size_t chatBufferSnapshot(uint8_t filter, chatMessage_t *out, size_t maxN) {
     if (!out || maxN == 0) return 0;
     if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) return 0;
@@ -147,7 +132,6 @@ size_t chatBufferSnapshot(uint8_t filter, chatMessage_t *out, size_t maxN) {
     size_t matches = 0;
     for (size_t i = 0; i < s_count; i++) {
         const chatMessage_t *m = &s_buffer[(start + i) % CHAT_BUFFER_SIZE];
-        if (m->deleted) continue;
         if (matchesFilter(m, filter)) matches++;
     }
 
@@ -156,7 +140,6 @@ size_t chatBufferSnapshot(uint8_t filter, chatMessage_t *out, size_t maxN) {
     size_t seen = 0;
     for (size_t i = 0; i < s_count && out_idx < maxN; i++) {
         const chatMessage_t *m = &s_buffer[(start + i) % CHAT_BUFFER_SIZE];
-        if (m->deleted) continue;
         if (!matchesFilter(m, filter)) continue;
         if (seen++ < skip) continue;
         out[out_idx++] = *m;
@@ -171,7 +154,7 @@ bool chatBufferGetById(uint32_t id, chatMessage_t *out) {
     bool found = false;
     if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) return false;
     for (size_t i = 0; i < s_count; i++) {
-        if (s_buffer[i].id == id && !s_buffer[i].deleted) {
+        if (s_buffer[i].id == id) {
             *out = s_buffer[i];
             found = true;
             break;

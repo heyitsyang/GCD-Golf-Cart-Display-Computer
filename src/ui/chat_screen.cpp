@@ -12,7 +12,6 @@
 
 #define ROW_HEIGHT_PX        22
 #define DOUBLE_TAP_WINDOW_MS 600
-#define LONG_PRESS_MS        600
 
 // Below this threshold, time(NULL) hasn't been seeded by GPS, so any
 // formatted "time" would just be uptime since boot. ~July 2017.
@@ -25,11 +24,6 @@ static int32_t       s_lastBuiltFilter = -1;
 static lv_obj_t *s_selectedRow   = nullptr;
 static lv_obj_t *s_lastTapTarget = nullptr;
 static uint32_t  s_lastTapTime   = 0;
-
-// Delete-confirm overlay (created once, shown/hidden as needed)
-static lv_obj_t *s_deleteOverlay = nullptr;
-static lv_obj_t *s_deletePreview = nullptr;
-static uint32_t  s_pendingDeleteId = 0;
 
 // Row pool — lazy-allocated on first Messages visit (not at boot).
 // Boot-time pre-allocation consumed 16 KB which starved LVGL glyph rendering
@@ -115,22 +109,6 @@ static void openReplyForRow(lv_obj_t *row) {
                          LV_SCR_LOAD_ANIM_NONE, 200, 0);
 }
 
-static void showDeleteOverlay(lv_obj_t *row) {
-    if (!s_deleteOverlay) return;
-    uint32_t id = (uint32_t)(uintptr_t)lv_obj_get_user_data(row);
-    chatMessage_t m;
-    if (!chatBufferGetById(id, &m)) return;
-
-    s_pendingDeleteId = id;
-    if (s_deletePreview) {
-        char preview[128];
-        snprintf(preview, sizeof(preview), "Delete:\n%.96s", m.text);
-        lv_label_set_text(s_deletePreview, preview);
-    }
-    lv_obj_clear_flag(s_deleteOverlay, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_move_foreground(s_deleteOverlay);
-}
-
 static void rowClickedCb(lv_event_t *e) {
     lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
     uint32_t now = millis();
@@ -145,25 +123,6 @@ static void rowClickedCb(lv_event_t *e) {
     }
 }
 
-static void rowLongPressedCb(lv_event_t *e) {
-    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
-    showDeleteOverlay(target);
-}
-
-static void deleteConfirmCb(lv_event_t *e) {
-    if (s_pendingDeleteId != 0) {
-        chatBufferDelete(s_pendingDeleteId);
-        s_pendingDeleteId = 0;
-    }
-    if (s_deleteOverlay) lv_obj_add_flag(s_deleteOverlay, LV_OBJ_FLAG_HIDDEN);
-    chatScreenRequestRefresh();
-}
-
-static void deleteCancelCb(lv_event_t *e) {
-    s_pendingDeleteId = 0;
-    if (s_deleteOverlay) lv_obj_add_flag(s_deleteOverlay, LV_OBJ_FLAG_HIDDEN);
-}
-
 static void filterChangedCb(lv_event_t *e) {
     if (!objects.filter_dropdown) return;
     int32_t idx = lv_dropdown_get_selected(objects.filter_dropdown);
@@ -176,41 +135,6 @@ static void filterChangedCb(lv_event_t *e) {
 
 static void newComposeClickedCb(lv_event_t *e) {
     cannedScreenSetNewMode();
-}
-
-static lv_obj_t *createDeleteOverlay(lv_obj_t *parent) {
-    lv_obj_t *overlay = lv_obj_create(parent);
-    lv_obj_set_size(overlay, 280, 120);
-    lv_obj_align(overlay, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_bg_color(overlay, lv_color_hex(0x202020), LV_PART_MAIN);
-    lv_obj_set_style_border_color(overlay, lv_color_white(), LV_PART_MAIN);
-    lv_obj_set_style_border_width(overlay, 2, LV_PART_MAIN);
-    lv_obj_set_style_text_color(overlay, lv_color_white(), LV_PART_MAIN);
-    lv_obj_add_flag(overlay, LV_OBJ_FLAG_HIDDEN);
-
-    s_deletePreview = lv_label_create(overlay);
-    lv_label_set_long_mode(s_deletePreview, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(s_deletePreview, 260);
-    lv_obj_align(s_deletePreview, LV_ALIGN_TOP_MID, 0, 4);
-    lv_label_set_text(s_deletePreview, "");
-
-    lv_obj_t *btnDel = lv_btn_create(overlay);
-    lv_obj_set_size(btnDel, 110, 28);
-    lv_obj_align(btnDel, LV_ALIGN_BOTTOM_LEFT, 4, -4);
-    lv_obj_t *lblDel = lv_label_create(btnDel);
-    lv_label_set_text(lblDel, "Delete");
-    lv_obj_center(lblDel);
-    lv_obj_add_event_cb(btnDel, deleteConfirmCb, LV_EVENT_CLICKED, nullptr);
-
-    lv_obj_t *btnCxl = lv_btn_create(overlay);
-    lv_obj_set_size(btnCxl, 110, 28);
-    lv_obj_align(btnCxl, LV_ALIGN_BOTTOM_RIGHT, -4, -4);
-    lv_obj_t *lblCxl = lv_label_create(btnCxl);
-    lv_label_set_text(lblCxl, "Cancel");
-    lv_obj_center(lblCxl);
-    lv_obj_add_event_cb(btnCxl, deleteCancelCb, LV_EVENT_CLICKED, nullptr);
-
-    return overlay;
 }
 
 // Allocates the row pool on first entry to the Messages screen.
@@ -229,8 +153,7 @@ static void ensureRowsAllocated() {
         lv_obj_set_style_pad_all(row, 1, LV_PART_MAIN);
         lv_obj_set_style_radius(row, 0, LV_PART_MAIN);
         lv_obj_set_user_data(row, (void *)(uintptr_t)0);
-        lv_obj_add_event_cb(row, rowClickedCb,     LV_EVENT_CLICKED,      nullptr);
-        lv_obj_add_event_cb(row, rowLongPressedCb, LV_EVENT_LONG_PRESSED, nullptr);
+        lv_obj_add_event_cb(row, rowClickedCb, LV_EVENT_CLICKED, nullptr);
         lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
 
         lv_obj_t *lbl = lv_label_create(row);
@@ -276,9 +199,6 @@ void chatScreenInit() {
                             LV_EVENT_CLICKED, nullptr);
     }
 
-    if (objects.meshtastic_messages) {
-        s_deleteOverlay = createDeleteOverlay(objects.meshtastic_messages);
-    }
 }
 
 void chatScreenRefresh() {

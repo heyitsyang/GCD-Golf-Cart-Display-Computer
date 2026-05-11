@@ -3,6 +3,7 @@
 #include "communication/chat_buffer.h"
 #include "config.h"
 #include "globals.h"
+#include "ui/chat_screen.h"
 #include "ui_eez/screens.h"
 #include "ui_eez/eez-flow.h"
 #include <Meshtastic.h>
@@ -46,10 +47,10 @@ static void enqueueTx(uint8_t channel, uint32_t dest, const char *text) {
     cm.channel   = channel;
     cm.timestamp = (uint32_t)time(NULL);
     cm.outgoing  = true;
-    cm.deleted   = false;
     strncpy(cm.text, text, sizeof(cm.text) - 1);
     cm.text[sizeof(cm.text) - 1] = '\0';
     chatBufferAppend(&cm);
+    chatScreenRequestRefresh();
 }
 
 static void slotClickedCb(lv_event_t *e) {
