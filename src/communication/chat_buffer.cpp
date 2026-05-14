@@ -35,11 +35,11 @@ void chatAbbreviate(const char *src, char *dst, size_t dstSize) {
     // Type digits live at text[2..3] (matches parseHotPacketType()).
     if (src[0] == '|') {
         if (src[1] == '#' && src[2] == '0' && src[3] == '1') {
-            snprintf(dst, dstSize, "<WX_BCAST>");
+            snprintf(dst, dstSize, "[WX_BCAST]");
         } else if (src[1] == '#' && src[2] == '0' && src[3] == '2') {
-            snprintf(dst, dstSize, "<ENT_BCAST>");
+            snprintf(dst, dstSize, "[ENT_BCAST]");
         } else {
-            snprintf(dst, dstSize, "<HOT_PACKET>");
+            snprintf(dst, dstSize, "[HoT_PACKET]");
         }
         return;
     }
@@ -82,6 +82,7 @@ void chatAbbreviate(const char *src, char *dst, size_t dstSize) {
 
 void chatBufferAppend(const chatMessage_t *msg) {
     if (!msg) return;
+    if (!msg->outgoing && !dmPredicate(msg) && !matchesFilter(msg, (uint8_t)mesh_filter)) return;
 
     if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
         Serial.println("chatBufferAppend: mutex timeout, dropping");
@@ -169,7 +170,7 @@ size_t chatBufferDmCount(void) {
     if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) return 0;
     size_t count = 0;
     for (size_t i = 0; i < s_count; i++) {
-        if (dmPredicate(&s_buffer[i])) count++;
+        if (!s_buffer[i].outgoing && s_buffer[i].to == my_node_num) count++;
     }
     xSemaphoreGive(chatBufferMutex);
     return count;

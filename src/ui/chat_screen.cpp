@@ -10,7 +10,8 @@
 #include <lvgl.h>
 #include <time.h>
 
-#define ROW_HEIGHT_PX        22
+#define ROW_HEIGHT_PX        32
+#define PREFIX_WIDTH_PX      52
 #define DOUBLE_TAP_WINDOW_MS 600
 
 // Below this threshold, time(NULL) hasn't been seeded by GPS, so any
@@ -31,6 +32,7 @@ static uint32_t  s_lastTapTime   = 0;
 // LVGL v9 uses LV_STDLIB_CLIB: all objects come from system heap; rows are
 // created once and reused (show/hide + label update) on every refresh.
 static lv_obj_t *s_rows[CHAT_MAX_DISPLAY_ROWS];
+static lv_obj_t *s_rowPrefixLabels[CHAT_MAX_DISPLAY_ROWS];
 static lv_obj_t *s_rowLabels[CHAT_MAX_DISPLAY_ROWS];
 static bool      s_rowsInitialized = false;
 
@@ -54,24 +56,29 @@ static void buildTimeStr(const chatMessage_t *m, char *out, size_t outSize) {
     snprintf(out, outSize, "%d:%02d%c", h12, tmv.tm_min, ap);
 }
 
-// Direction is conveyed by row reverse-video styling, not by an
-// arrow glyph. The first character of the text is the channel digit.
-static void formatRowText(const chatMessage_t *m, char *out, size_t outSize) {
+// Prefix: channel + time on line 1, address on line 2 (in smaller font).
+// Direction is conveyed by row reverse-video styling.
+static void buildPrefixStr(const chatMessage_t *m, char *out, size_t outSize) {
     char hhmm[10];
     buildTimeStr(m, hhmm, sizeof(hhmm));
+    uint32_t addr = m->outgoing ? m->to : m->from;
+    snprintf(out, outSize, "%u %s\n!%04x",
+             (unsigned)m->channel, hhmm,
+             (unsigned)(addr & 0xFFFF));
+}
 
-    if (m->outgoing) {
-        snprintf(out, outSize, "%u %s %s", (unsigned)m->channel, hhmm, m->text);
-    } else {
-        snprintf(out, outSize, "%u %s !%04x %s",
-                 (unsigned)m->channel, hhmm,
-                 (unsigned)(m->from & 0xFFFF), m->text);
+static lv_obj_t *msgLabelForRow(lv_obj_t *row) {
+    for (int i = 0; i < CHAT_MAX_DISPLAY_ROWS; i++) {
+        if (s_rows[i] == row) return s_rowLabels[i];
     }
+    return nullptr;
 }
 
 static void clearSelection() {
     if (s_selectedRow) {
         lv_obj_set_style_border_width(s_selectedRow, 0, LV_PART_MAIN);
+        lv_obj_t *lbl = msgLabelForRow(s_selectedRow);
+        if (lbl) lv_label_set_long_mode(lbl, LV_LABEL_LONG_DOT);
         s_selectedRow = nullptr;
     }
 }
@@ -81,6 +88,8 @@ static void applySelection(lv_obj_t *row) {
     s_selectedRow = row;
     lv_obj_set_style_border_color(row, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_border_width(row, 2, LV_PART_MAIN);
+    lv_obj_t *lbl = msgLabelForRow(row);
+    if (lbl) lv_label_set_long_mode(lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
 }
 
 static void openReplyForRow(lv_obj_t *row) {
@@ -88,23 +97,18 @@ static void openReplyForRow(lv_obj_t *row) {
     chatMessage_t m;
     if (!chatBufferGetById(id, &m)) return;
 
-    // Keep the reply-context strip short: long strings make
-    // lv_textarea_set_text request a larger realloc that often
-    // fails in the fragmented runtime heap. Cap message preview
-    // at 60 chars; the user already saw the full row text on the
-    // chat list before tapping.
-    char ctx[96];
-    char sender[10];
-    if (m.outgoing) {
-        snprintf(sender, sizeof(sender), "ME");
+    // Mirror the reply mode of the source message: DM replies go back
+    // to the originating node; channel messages broadcast on that channel.
+    uint32_t replyDest;
+    if (!m.outgoing && m.to == my_node_num) {
+        replyDest = m.from;
+    } else if (m.outgoing && m.to != BROADCAST_ADDR) {
+        replyDest = m.to;
     } else {
-        snprintf(sender, sizeof(sender), "!%04x", (unsigned)(m.from & 0xFFFF));
+        replyDest = BROADCAST_ADDR;
     }
-    snprintf(ctx, sizeof(ctx), "%s Ch%u: %.60s",
-             sender, (unsigned)m.channel, m.text);
 
-    // v1: replies are broadcast on the source channel (D5 deferred).
-    cannedScreenSetReplyMode(m.channel, BROADCAST_ADDR, ctx);
+    cannedScreenSetReplyMode(m.channel, replyDest, &m);
     eez_flow_push_screen(SCREEN_ID_MESHTASTIC_CANNED_MESSAGES,
                          LV_SCR_LOAD_ANIM_NONE, 200, 0);
 }
@@ -151,26 +155,42 @@ static void ensureRowsAllocated() {
         lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_width(row, 0, LV_PART_MAIN);
         lv_obj_set_style_pad_all(row, 1, LV_PART_MAIN);
+        lv_obj_set_style_pad_column(row, 2, LV_PART_MAIN);
         lv_obj_set_style_radius(row, 0, LV_PART_MAIN);
         lv_obj_set_user_data(row, (void *)(uintptr_t)0);
         lv_obj_add_event_cb(row, rowClickedCb, LV_EVENT_CLICKED, nullptr);
         lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
 
+        // Prefix: "ch time\n!addr" in small font — channel, stacked time+address
+        lv_obj_t *prefix = lv_label_create(row);
+        lv_obj_set_width(prefix, PREFIX_WIDTH_PX);
+        lv_obj_set_height(prefix, LV_SIZE_CONTENT);
+        lv_obj_set_style_text_font(prefix, &lv_font_montserrat_12, LV_PART_MAIN);
+        lv_obj_set_style_text_color(prefix, lv_color_white(), LV_PART_MAIN);
+        lv_label_set_long_mode(prefix, LV_LABEL_LONG_CLIP);
+        lv_label_set_text(prefix, "");
+
+        // Message text — grows to fill remaining row width
         lv_obj_t *lbl = lv_label_create(row);
+        lv_obj_set_flex_grow(lbl, 1);
+        lv_obj_set_height(lbl, LV_SIZE_CONTENT);
         lv_obj_set_style_text_color(lbl, lv_color_white(), LV_PART_MAIN);
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_DOT);
-        lv_obj_set_width(lbl, lv_pct(100));
         lv_label_set_text(lbl, "");
 
-        s_rows[i]      = row;
-        s_rowLabels[i] = lbl;
+        s_rows[i]            = row;
+        s_rowPrefixLabels[i] = prefix;
+        s_rowLabels[i]       = lbl;
     }
     s_rowsInitialized = true;
 }
 
 void chatScreenInit() {
-    memset(s_rows,      0, sizeof(s_rows));
-    memset(s_rowLabels, 0, sizeof(s_rowLabels));
+    memset(s_rows,            0, sizeof(s_rows));
+    memset(s_rowPrefixLabels, 0, sizeof(s_rowPrefixLabels));
+    memset(s_rowLabels,       0, sizeof(s_rowLabels));
     s_rowsInitialized = false;
 
     if (objects.messages_container_body) {
@@ -233,12 +253,14 @@ void chatScreenRefresh() {
 
             lv_color_t row_bg   = m->outgoing ? lv_color_white() : lv_color_black();
             lv_color_t row_text = m->outgoing ? lv_color_black() : lv_color_white();
-            lv_obj_set_style_bg_color(s_rows[i],      row_bg,   LV_PART_MAIN);
-            lv_obj_set_style_text_color(s_rowLabels[i], row_text, LV_PART_MAIN);
+            lv_obj_set_style_bg_color(s_rows[i], row_bg, LV_PART_MAIN);
+            lv_obj_set_style_text_color(s_rowPrefixLabels[i], row_text, LV_PART_MAIN);
+            lv_obj_set_style_text_color(s_rowLabels[i],       row_text, LV_PART_MAIN);
 
-            char rowText[CHAT_TEXT_SIZE + 64];
-            formatRowText(m, rowText, sizeof(rowText));
-            lv_label_set_text(s_rowLabels[i], rowText);
+            char prefix[24];
+            buildPrefixStr(m, prefix, sizeof(prefix));
+            lv_label_set_text(s_rowPrefixLabels[i], prefix);
+            lv_label_set_text(s_rowLabels[i], m->text);
 
             lv_obj_clear_flag(s_rows[i], LV_OBJ_FLAG_HIDDEN);
         } else {

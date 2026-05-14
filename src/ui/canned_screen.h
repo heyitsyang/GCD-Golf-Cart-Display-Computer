@@ -2,13 +2,14 @@
 #define CANNED_SCREEN_H
 
 #include <Arduino.h>
+#include "communication/chat_buffer.h"
 
 // One-time wiring. Call from setup() AFTER ui_init().
 void cannedScreenInit();
 
-// Set hub state to "reply to existing message". Channel and dest
-// come from the source message; contextText is shown in the strip.
-void cannedScreenSetReplyMode(uint8_t channel, uint32_t dest, const char *contextText);
+// Set hub state to "reply to existing message". channel and dest set
+// the TX target; srcMsg is the original message shown in the context strip.
+void cannedScreenSetReplyMode(uint8_t channel, uint32_t dest, const chatMessage_t *srcMsg);
 
 // Set hub state to "new compose". The hub shows its in-hub channel
 // selector; dest defaults to BROADCAST_ADDR.

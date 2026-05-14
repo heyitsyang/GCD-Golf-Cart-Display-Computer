@@ -10,20 +10,50 @@
 #include <lvgl.h>
 #include <time.h>
 
+#define TIMESTAMP_VALID_MIN 1500000000U
+#define CTX_PREFIX_WIDTH    52
+#define CTX_ROW_HEIGHT      32
+
 typedef enum { HUB_MODE_REPLY, HUB_MODE_NEW } hub_mode_t;
 
-static hub_mode_t s_mode      = HUB_MODE_NEW;
-static uint8_t    s_channel   = 0;
-static uint32_t   s_dest      = BROADCAST_ADDR;
-static String     s_context;
+static hub_mode_t  s_mode      = HUB_MODE_NEW;
+static uint8_t     s_channel   = 0;
+static uint32_t    s_dest      = BROADCAST_ADDR;
+static chatMessage_t s_srcMsg  = {};
+static bool        s_hasSrcMsg = false;
 
 // Hand-coded LVGL children of canned_msgs_container_body. Built
 // lazily on first navigation to the canned hub.
-static lv_obj_t *s_contextStrip = nullptr;
+static lv_obj_t *s_contextRow    = nullptr;
+static lv_obj_t *s_contextPrefix = nullptr;
+static lv_obj_t *s_contextMsg   = nullptr;
 static lv_obj_t *s_channelBtn   = nullptr;
 static lv_obj_t *s_channelLabel = nullptr;
 static lv_obj_t *s_slotBtns[CANNED_REPLY_COUNT]   = {nullptr};
 static lv_obj_t *s_slotLabels[CANNED_REPLY_COUNT] = {nullptr};
+
+static void buildContextPrefix(const chatMessage_t *m, char *out, size_t outSize) {
+    char hhmm[10];
+    if (m->timestamp < TIMESTAMP_VALID_MIN) {
+        snprintf(hhmm, sizeof(hhmm), "--:--");
+    } else {
+        time_t t = (time_t)m->timestamp;
+        struct tm tmv;
+        if (localtime_r(&t, &tmv)) {
+            int h = tmv.tm_hour;
+            char ap = (h < 12) ? 'a' : 'p';
+            int h12 = h % 12;
+            if (h12 == 0) h12 = 12;
+            snprintf(hhmm, sizeof(hhmm), "%d:%02d%c", h12, tmv.tm_min, ap);
+        } else {
+            snprintf(hhmm, sizeof(hhmm), "--:--");
+        }
+    }
+    uint32_t addr = m->outgoing ? m->to : m->from;
+    snprintf(out, outSize, "%u %s\n!%04x",
+             (unsigned)m->channel, hhmm,
+             (unsigned)(addr & 0xFFFF));
+}
 
 static volatile bool s_uiDirty   = true;
 static bool          s_bodyBuilt = false;
@@ -80,19 +110,38 @@ static void buildBody() {
     lv_obj_set_style_pad_all(body, 2, LV_PART_MAIN);
     lv_obj_set_style_border_width(body, 0, LV_PART_MAIN);
 
-    // Context strip — read-only textarea at top of body.
-    s_contextStrip = lv_textarea_create(body);
-    lv_obj_set_pos(s_contextStrip, 0, 0);
-    lv_obj_set_size(s_contextStrip, 316, 38);
-    lv_textarea_set_one_line(s_contextStrip, false);
-    lv_textarea_set_text(s_contextStrip, "");
-    lv_obj_add_state(s_contextStrip, LV_STATE_DISABLED);
-    lv_obj_set_style_text_color(s_contextStrip, lv_color_white(), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_contextStrip, lv_color_hex(0x101010), LV_PART_MAIN);
+    // Context row — flex-row with prefix (montserrat_12) + scrolling message.
+    // Shown in REPLY mode; hidden in NEW mode.
+    s_contextRow = lv_obj_create(body);
+    lv_obj_set_pos(s_contextRow, 0, 0);
+    lv_obj_set_size(s_contextRow, 316, CTX_ROW_HEIGHT);
+    lv_obj_set_style_bg_color(s_contextRow, lv_color_hex(0x101010), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s_contextRow, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(s_contextRow, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(s_contextRow, 0, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(s_contextRow, 1, LV_PART_MAIN);
+    lv_obj_set_style_pad_column(s_contextRow, 2, LV_PART_MAIN);
+    lv_obj_set_flex_flow(s_contextRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(s_contextRow, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
+
+    s_contextPrefix = lv_label_create(s_contextRow);
+    lv_obj_set_width(s_contextPrefix, CTX_PREFIX_WIDTH);
+    lv_obj_set_height(s_contextPrefix, LV_SIZE_CONTENT);
+    lv_obj_set_style_text_font(s_contextPrefix, &lv_font_montserrat_12, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_contextPrefix, lv_color_white(), LV_PART_MAIN);
+    lv_label_set_long_mode(s_contextPrefix, LV_LABEL_LONG_CLIP);
+    lv_label_set_text(s_contextPrefix, "");
+
+    s_contextMsg = lv_label_create(s_contextRow);
+    lv_obj_set_flex_grow(s_contextMsg, 1);
+    lv_obj_set_height(s_contextMsg, LV_SIZE_CONTENT);
+    lv_obj_set_style_text_color(s_contextMsg, lv_color_white(), LV_PART_MAIN);
+    lv_label_set_long_mode(s_contextMsg, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_text(s_contextMsg, "");
 
     // Channel cycler (NEW mode only).
     s_channelBtn = lv_btn_create(body);
-    lv_obj_set_pos(s_channelBtn, 0, 42);
+    lv_obj_set_pos(s_channelBtn, 0, 34);
     lv_obj_set_size(s_channelBtn, 70, 22);
     s_channelLabel = lv_label_create(s_channelBtn);
     lv_label_set_text(s_channelLabel, "Ch 0");
@@ -101,7 +150,7 @@ static void buildBody() {
 
     // 8 slot buttons in 2 cols × 4 rows.
     const int gridX0 = 0;
-    const int gridY0 = 68;
+    const int gridY0 = 58;
     const int colW   = 156;
     const int rowH   = 24;
     const int hgap   = 4;
@@ -137,8 +186,16 @@ void cannedScreenInit() {
 }
 
 static void applyModeUI() {
-    if (s_contextStrip) {
-        lv_textarea_set_text(s_contextStrip, s_context.c_str());
+    if (s_contextRow) {
+        if (s_mode == HUB_MODE_REPLY && s_hasSrcMsg) {
+            char prefix[24];
+            buildContextPrefix(&s_srcMsg, prefix, sizeof(prefix));
+            lv_label_set_text(s_contextPrefix, prefix);
+            lv_label_set_text(s_contextMsg, s_srcMsg.text);
+            lv_obj_clear_flag(s_contextRow, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(s_contextRow, LV_OBJ_FLAG_HIDDEN);
+        }
     }
     if (s_channelBtn) {
         if (s_mode == HUB_MODE_NEW) {
@@ -154,19 +211,20 @@ static void applyModeUI() {
     }
 }
 
-void cannedScreenSetReplyMode(uint8_t channel, uint32_t dest, const char *contextText) {
-    s_mode    = HUB_MODE_REPLY;
-    s_channel = channel;
-    s_dest    = dest;
-    s_context = contextText ? contextText : "";
-    s_uiDirty = true;
+void cannedScreenSetReplyMode(uint8_t channel, uint32_t dest, const chatMessage_t *srcMsg) {
+    s_mode      = HUB_MODE_REPLY;
+    s_channel   = channel;
+    s_dest      = dest;
+    s_hasSrcMsg = (srcMsg != nullptr);
+    if (srcMsg) s_srcMsg = *srcMsg;
+    s_uiDirty   = true;
 }
 
 void cannedScreenSetNewMode() {
-    s_mode    = HUB_MODE_NEW;
-    s_dest    = BROADCAST_ADDR;
-    s_context = "";
-    s_uiDirty = true;
+    s_mode      = HUB_MODE_NEW;
+    s_dest      = BROADCAST_ADDR;
+    s_hasSrcMsg = false;
+    s_uiDirty   = true;
 }
 
 void cannedScreenPump() {
