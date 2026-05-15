@@ -3,6 +3,7 @@
 
 #include "meshtastic/config.pb.h"
 #include "meshtastic/mesh.pb.h"
+#include "meshtastic/channel.pb.h"
 
 // Callback function for position config responses
 // This will be called from mt_protocol.cpp when a position config is received
@@ -16,6 +17,10 @@ extern void handleDeviceMetadata(meshtastic_DeviceMetadata *metadata);
 // Callback function for my node info (node ID, reboot count, etc.)
 // This will be called from mt_protocol.cpp when my node info is received
 extern void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo);
+
+// Callback function for channel info received from GCM (boot config dump or admin response)
+// Called from handle_channel_tag() in mt_protocol.cpp for each FromRadio_channel_tag packet
+extern void handleChannelResponse(meshtastic_Channel *channel);
 
 // Callback function for GCM reboot detection
 // This will be called from mt_protocol.cpp when rebooted_tag is received

@@ -29,6 +29,10 @@ static lv_obj_t *s_contextPrefix = nullptr;
 static lv_obj_t *s_contextMsg   = nullptr;
 static lv_obj_t *s_channelBtn   = nullptr;
 static lv_obj_t *s_channelLabel = nullptr;
+
+#define GCM_MAX_CHANNELS 8
+static char    s_chanNames[GCM_MAX_CHANNELS][12] = {};
+static uint8_t s_chanCount = 3;
 static lv_obj_t *s_slotBtns[CANNED_REPLY_COUNT]   = {nullptr};
 static lv_obj_t *s_slotLabels[CANNED_REPLY_COUNT] = {nullptr};
 
@@ -92,13 +96,36 @@ static void slotClickedCb(lv_event_t *e) {
     eez_flow_pop_screen(LV_SCR_LOAD_ANIM_NONE, 200, 0);
 }
 
-static void channelCycleCb(lv_event_t *e) {
-    s_channel = (s_channel + 1) % 3;
-    if (s_channelLabel) {
-        char buf[8];
+void cannedScreenOnChannelResponse(const meshtastic_Channel *ch) {
+    if (!ch || ch->index < 0 || ch->index >= GCM_MAX_CHANNELS) return;
+    if (ch->role == meshtastic_Channel_Role_DISABLED) return;
+    const char *name = (ch->settings.name[0] != '\0') ? ch->settings.name : "LongFast";
+    strncpy(s_chanNames[ch->index], name, 11);
+    s_chanNames[ch->index][11] = '\0';
+    if ((uint8_t)(ch->index + 1) > s_chanCount)
+        s_chanCount = (uint8_t)(ch->index + 1);
+    s_uiDirty = true;
+}
+
+void cannedScreenResetChannelNames() {
+    memset(s_chanNames, 0, sizeof(s_chanNames));
+    s_chanCount = 3;
+}
+
+static void updateChannelLabel() {
+    if (!s_channelLabel) return;
+    char buf[32];
+    const char *name = s_chanNames[s_channel];
+    if (name[0] != '\0')
+        snprintf(buf, sizeof(buf), "Ch %u: %s", (unsigned)s_channel, name);
+    else
         snprintf(buf, sizeof(buf), "Ch %u", (unsigned)s_channel);
-        lv_label_set_text(s_channelLabel, buf);
-    }
+    lv_label_set_text(s_channelLabel, buf);
+}
+
+static void channelCycleCb(lv_event_t *e) {
+    s_channel = (s_channel + 1) % s_chanCount;
+    updateChannelLabel();
 }
 
 static void buildBody() {
@@ -142,19 +169,23 @@ static void buildBody() {
     // Channel cycler (NEW mode only).
     s_channelBtn = lv_btn_create(body);
     lv_obj_set_pos(s_channelBtn, 0, 34);
-    lv_obj_set_size(s_channelBtn, 70, 22);
+    lv_obj_set_size(s_channelBtn, 160, 22);
+    lv_obj_set_style_pad_all(s_channelBtn, 2, LV_PART_MAIN);
     lv_obj_set_style_bg_color(s_channelBtn, lv_color_hex(0x003c6b), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_color(s_channelBtn, lv_color_hex(0x003c6b), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(s_channelBtn, lv_color_hex(0x002d50), LV_PART_MAIN | LV_STATE_PRESSED);
     lv_obj_set_style_border_color(s_channelBtn, lv_color_hex(0x002d50), LV_PART_MAIN | LV_STATE_PRESSED);
     s_channelLabel = lv_label_create(s_channelBtn);
+    lv_obj_set_style_text_font(s_channelLabel, &lv_font_montserrat_12, LV_PART_MAIN);
+    lv_label_set_long_mode(s_channelLabel, LV_LABEL_LONG_DOT);
+    lv_obj_set_width(s_channelLabel, 156);
+    lv_obj_set_style_text_align(s_channelLabel, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_text(s_channelLabel, "Ch 0");
-    lv_obj_center(s_channelLabel);
     lv_obj_add_event_cb(s_channelBtn, channelCycleCb, LV_EVENT_CLICKED, nullptr);
 
     // 8 slot buttons in 2 cols × 4 rows.
     const int gridX0 = 0;
-    const int gridY0 = 58;
+    const int gridY0 = 70;
     const int colW   = 156;
     const int rowH   = 24;
     const int hgap   = 4;
@@ -208,11 +239,7 @@ static void applyModeUI() {
             lv_obj_add_flag(s_channelBtn, LV_OBJ_FLAG_HIDDEN);
         }
     }
-    if (s_channelLabel) {
-        char buf[8];
-        snprintf(buf, sizeof(buf), "Ch %u", (unsigned)s_channel);
-        lv_label_set_text(s_channelLabel, buf);
-    }
+    updateChannelLabel();
 }
 
 void cannedScreenSetReplyMode(uint8_t channel, uint32_t dest, const chatMessage_t *srcMsg) {

@@ -310,6 +310,7 @@ bool handle_channel_tag(meshtastic_Channel *channel) {
   d("ChannelTag:index: %d\r\n", channel->index);
   d("ChannelTag:has_settings: %d\r\n", channel->has_settings);
   d("ChannelTag:role: %d\r\n", channel->role);
+  handleChannelResponse(channel);
   return true;
 }
 

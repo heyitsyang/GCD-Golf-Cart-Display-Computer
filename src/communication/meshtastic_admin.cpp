@@ -7,6 +7,7 @@
 #include "pb_encode.h"
 #include "pb_decode.h"
 #include "globals.h"
+#include "ui/canned_screen.h"
 
 // External declarations from mt_protocol.cpp in meshtastic library
 extern uint32_t my_node_num;
@@ -58,6 +59,12 @@ static bool sendAdminMessage(meshtastic_AdminMessage *adminMsg) {
     toRadio.packet = meshPacket;
 
     return _mt_send_toRadio(toRadio);
+}
+
+// Called from handle_channel_tag() in mt_protocol.cpp for each channel received
+// from the GCM (both during the boot config dump and in response to get_channel_request)
+void handleChannelResponse(meshtastic_Channel *channel) {
+    cannedScreenOnChannelResponse(channel);
 }
 
 bool mt_send_admin_reboot(int32_t seconds) {
@@ -201,6 +208,9 @@ void handleGcmRebooted() {
     // Reset wake/request flags so they will be sent again on reconnection
     wakeNotificationSent = false;
     reqWxEntSent = false;
+
+    // Clear stale channel names so the canned screen shows "Ch N" until re-fetch completes
+    cannedScreenResetChannelNames();
 }
 
 void initGpsConfigOnBoot() {

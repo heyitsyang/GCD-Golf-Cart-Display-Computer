@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "communication/chat_buffer.h"
+#include "meshtastic/channel.pb.h"
 
 // One-time wiring. Call from setup() AFTER ui_init().
 void cannedScreenInit();
@@ -17,5 +18,11 @@ void cannedScreenSetNewMode();
 
 // GUI-task drain hook: apply pending mode/context updates.
 void cannedScreenPump();
+
+// Called from meshtastic_admin admin_portnum_callback when a get_channel_response arrives.
+void cannedScreenOnChannelResponse(const meshtastic_Channel *ch);
+
+// Called from handleGcmRebooted() to clear stale channel names before re-fetch.
+void cannedScreenResetChannelNames();
 
 #endif // CANNED_SCREEN_H
