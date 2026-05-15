@@ -143,6 +143,10 @@ static void buildBody() {
     s_channelBtn = lv_btn_create(body);
     lv_obj_set_pos(s_channelBtn, 0, 34);
     lv_obj_set_size(s_channelBtn, 70, 22);
+    lv_obj_set_style_bg_color(s_channelBtn, lv_color_hex(0x003c6b), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(s_channelBtn, lv_color_hex(0x003c6b), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(s_channelBtn, lv_color_hex(0x002d50), LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_border_color(s_channelBtn, lv_color_hex(0x002d50), LV_PART_MAIN | LV_STATE_PRESSED);
     s_channelLabel = lv_label_create(s_channelBtn);
     lv_label_set_text(s_channelLabel, "Ch 0");
     lv_obj_center(s_channelLabel);
