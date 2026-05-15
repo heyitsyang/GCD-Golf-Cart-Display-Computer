@@ -36,6 +36,11 @@ static lv_obj_t *s_rowPrefixLabels[CHAT_MAX_DISPLAY_ROWS];
 static lv_obj_t *s_rowLabels[CHAT_MAX_DISPLAY_ROWS];
 static bool      s_rowsInitialized = false;
 
+// Snapshot of the last chatBufferSnapshot() call — module-scope so that
+// clearSelection() can re-truncate after the marquee restores full text.
+static chatMessage_t s_snapshot[CHAT_MAX_DISPLAY_ROWS];
+static size_t        s_snapshotCount = 0;
+
 // 12-hour HH:MMa/p, lowercase. "--:--" if timestamp not synced (GPS
 // hasn't seeded the RTC yet).
 static void buildTimeStr(const chatMessage_t *m, char *out, size_t outSize) {
@@ -67,18 +72,73 @@ static void buildPrefixStr(const chatMessage_t *m, char *out, size_t outSize) {
              (unsigned)(addr & 0xFFFF));
 }
 
-static lv_obj_t *msgLabelForRow(lv_obj_t *row) {
+static int rowIndexFor(lv_obj_t *row) {
     for (int i = 0; i < CHAT_MAX_DISPLAY_ROWS; i++) {
-        if (s_rows[i] == row) return s_rowLabels[i];
+        if (s_rows[i] == row) return i;
     }
-    return nullptr;
+    return -1;
+}
+
+// Set the message label for row i.  In marquee mode the full text is loaded
+// for SCROLL_CIRCULAR.  Otherwise we measure the pixel width and append ">"
+// at the exact cutoff when the text overflows the available label width.
+static void applyMsgText(int i, bool marquee) {
+    lv_obj_t *lbl = s_rowLabels[i];
+    if (!lbl || (size_t)i >= s_snapshotCount) return;
+    const char *text = s_snapshot[i].text;
+
+    if (marquee) {
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_label_set_text(lbl, text);
+        return;
+    }
+
+    // Available pixel width: use actual content width after first layout;
+    // fall back to a calculated constant before the first render pass.
+    // Row padding: pad_all=1 each side, pad_column=2 between prefix and label.
+    // Label width ≈ body_width − PREFIX_WIDTH_PX − 2×1 − 2 = body_width − 56.
+    // For the 320 px CYD screen the body fills the screen → ~264 px.
+    int32_t avail = lv_obj_get_content_width(lbl);
+    if (avail <= 0) avail = 264;
+
+    const lv_font_t *font = lv_obj_get_style_text_font(lbl, LV_PART_MAIN);
+    int32_t          ls   = lv_obj_get_style_text_letter_space(lbl, LV_PART_MAIN);
+
+    size_t  len    = strlen(text);
+    int32_t full_w = lv_text_get_width(text, (uint32_t)len, font, ls);
+
+    if (full_w <= avail) {
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
+        lv_label_set_text(lbl, text);
+        return;
+    }
+
+    // Overflow: binary-search for the longest byte prefix that fits with ">".
+    int32_t suffix_w = lv_text_get_width(">", 1, font, ls);
+    int32_t budget   = avail - suffix_w;
+
+    size_t lo = 0, hi = len;
+    while (lo < hi) {
+        size_t  mid = (lo + hi + 1) / 2;
+        int32_t w   = lv_text_get_width(text, (uint32_t)mid, font, ls);
+        if (w <= budget) lo = mid;
+        else             hi = mid - 1;
+    }
+
+    char buf[CHAT_TEXT_SIZE + 2];
+    memcpy(buf, text, lo);
+    buf[lo]     = '>';
+    buf[lo + 1] = '\0';
+
+    lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
+    lv_label_set_text(lbl, buf);
 }
 
 static void clearSelection() {
     if (s_selectedRow) {
         lv_obj_set_style_border_width(s_selectedRow, 0, LV_PART_MAIN);
-        lv_obj_t *lbl = msgLabelForRow(s_selectedRow);
-        if (lbl) lv_label_set_long_mode(lbl, LV_LABEL_LONG_DOT);
+        int idx = rowIndexFor(s_selectedRow);
+        if (idx >= 0) applyMsgText(idx, false);
         s_selectedRow = nullptr;
     }
 }
@@ -88,8 +148,8 @@ static void applySelection(lv_obj_t *row) {
     s_selectedRow = row;
     lv_obj_set_style_border_color(row, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_border_width(row, 2, LV_PART_MAIN);
-    lv_obj_t *lbl = msgLabelForRow(row);
-    if (lbl) lv_label_set_long_mode(lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    int idx = rowIndexFor(row);
+    if (idx >= 0) applyMsgText(idx, true);
 }
 
 static void openReplyForRow(lv_obj_t *row) {
@@ -177,7 +237,7 @@ static void ensureRowsAllocated() {
         lv_obj_set_flex_grow(lbl, 1);
         lv_obj_set_height(lbl, LV_SIZE_CONTENT);
         lv_obj_set_style_text_color(lbl, lv_color_white(), LV_PART_MAIN);
-        lv_label_set_long_mode(lbl, LV_LABEL_LONG_DOT);
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
         lv_label_set_text(lbl, "");
 
         s_rows[i]            = row;
@@ -239,16 +299,15 @@ void chatScreenRefresh() {
     clearSelection();
     s_lastTapTarget = nullptr;
 
-    static chatMessage_t snapshot[CHAT_MAX_DISPLAY_ROWS];
     uint8_t filter = (uint8_t)((mesh_filter >= 0 && mesh_filter <= 4) ? mesh_filter : 0);
-    size_t n = chatBufferSnapshot(filter, snapshot, CHAT_MAX_DISPLAY_ROWS);
+    s_snapshotCount = chatBufferSnapshot(filter, s_snapshot, CHAT_MAX_DISPLAY_ROWS);
 
     // Update pre-allocated rows in-place — no LVGL object creation or
     // destruction. LVGL v9 flex excludes hidden objects from layout.
     for (int i = 0; i < CHAT_MAX_DISPLAY_ROWS; i++) {
         if (!s_rows[i]) continue;
-        if ((size_t)i < n) {
-            const chatMessage_t *m = &snapshot[i];
+        if ((size_t)i < s_snapshotCount) {
+            const chatMessage_t *m = &s_snapshot[i];
             lv_obj_set_user_data(s_rows[i], (void *)(uintptr_t)m->id);
 
             lv_color_t row_bg   = m->outgoing ? lv_color_white() : lv_color_black();
@@ -260,7 +319,7 @@ void chatScreenRefresh() {
             char prefix[24];
             buildPrefixStr(m, prefix, sizeof(prefix));
             lv_label_set_text(s_rowPrefixLabels[i], prefix);
-            lv_label_set_text(s_rowLabels[i], m->text);
+            applyMsgText(i, false);
 
             lv_obj_clear_flag(s_rows[i], LV_OBJ_FLAG_HIDDEN);
         } else {
