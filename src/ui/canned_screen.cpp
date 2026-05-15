@@ -27,8 +27,8 @@ static bool        s_hasSrcMsg = false;
 static lv_obj_t *s_contextRow    = nullptr;
 static lv_obj_t *s_contextPrefix = nullptr;
 static lv_obj_t *s_contextMsg   = nullptr;
-static lv_obj_t *s_channelBtn   = nullptr;
-static lv_obj_t *s_channelLabel = nullptr;
+static lv_obj_t *s_channelDd = nullptr;
+// s_destDd goes here in the future destination-dropdown effort
 
 #define GCM_MAX_CHANNELS 8
 static char    s_chanNames[GCM_MAX_CHANNELS][12] = {};
@@ -112,20 +112,52 @@ void cannedScreenResetChannelNames() {
     s_chanCount = 3;
 }
 
-static void updateChannelLabel() {
-    if (!s_channelLabel) return;
-    char buf[32];
-    const char *name = s_chanNames[s_channel];
-    if (name[0] != '\0')
-        snprintf(buf, sizeof(buf), "Ch %u: %s", (unsigned)s_channel, name);
-    else
-        snprintf(buf, sizeof(buf), "Ch %u", (unsigned)s_channel);
-    lv_label_set_text(s_channelLabel, buf);
+// Creates and styles a selector dropdown (channel, and future destination).
+// Caller sets options and wires LV_EVENT_VALUE_CHANGED.
+static lv_obj_t *makeSelectorDropdown(lv_obj_t *parent, int x, int w) {
+    lv_obj_t *dd = lv_dropdown_create(parent);
+    lv_obj_set_pos(dd, x, 34);
+    lv_obj_set_size(dd, w, 28);
+    lv_obj_set_style_pad_all(dd, 2, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(dd, lv_color_hex(0x003c6b), LV_PART_MAIN);
+    lv_obj_set_style_border_color(dd, lv_color_hex(0x888888), LV_PART_MAIN);
+    lv_obj_set_style_border_width(dd, 1, LV_PART_MAIN);
+    lv_obj_set_style_text_font(dd, &lv_font_montserrat_12, LV_PART_MAIN);
+    lv_obj_set_style_text_color(dd, lv_color_white(), LV_PART_MAIN);
+    lv_dropdown_set_dir(dd, LV_DIR_TOP);
+    // Prevent the parent container from scrolling to reveal this widget on focus/click.
+    lv_obj_clear_flag(dd, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+    // Prevent scroll events inside the list from propagating to the parent container.
+    lv_obj_t *list = lv_dropdown_get_list(dd);
+    if (list) {
+        lv_obj_clear_flag(list, LV_OBJ_FLAG_SCROLL_CHAIN_HOR);
+        lv_obj_clear_flag(list, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
+    }
+    return dd;
 }
 
-static void channelCycleCb(lv_event_t *e) {
-    s_channel = (s_channel + 1) % s_chanCount;
-    updateChannelLabel();
+// Rebuilds s_channelDd option list from s_chanNames. Call from GUI task only.
+static void rebuildChannelOptions() {
+    if (!s_channelDd) return;
+    char opts[GCM_MAX_CHANNELS * 20 + 1];
+    size_t pos = 0;
+    for (uint8_t i = 0; i < s_chanCount && pos < sizeof(opts) - 1; i++) {
+        if (i > 0 && pos < sizeof(opts) - 1) opts[pos++] = '\n';
+        int n;
+        if (s_chanNames[i][0] != '\0')
+            n = snprintf(opts + pos, sizeof(opts) - pos, "Ch %u: %s", (unsigned)i, s_chanNames[i]);
+        else
+            n = snprintf(opts + pos, sizeof(opts) - pos, "Ch %u", (unsigned)i);
+        if (n > 0) pos += (size_t)n;
+    }
+    opts[pos] = '\0';
+    lv_dropdown_set_options(s_channelDd, opts);
+    if (s_channel >= s_chanCount) s_channel = 0;
+    lv_dropdown_set_selected(s_channelDd, s_channel);
+}
+
+static void channelChangedCb(lv_event_t *e) {
+    s_channel = (uint8_t)lv_dropdown_get_selected(s_channelDd);
 }
 
 static void buildBody() {
@@ -166,28 +198,18 @@ static void buildBody() {
     lv_label_set_long_mode(s_contextMsg, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(s_contextMsg, "");
 
-    // Channel cycler (NEW mode only).
-    s_channelBtn = lv_btn_create(body);
-    lv_obj_set_pos(s_channelBtn, 0, 34);
-    lv_obj_set_size(s_channelBtn, 160, 22);
-    lv_obj_set_style_pad_all(s_channelBtn, 2, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_channelBtn, lv_color_hex(0x003c6b), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_color(s_channelBtn, lv_color_hex(0x003c6b), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(s_channelBtn, lv_color_hex(0x002d50), LV_PART_MAIN | LV_STATE_PRESSED);
-    lv_obj_set_style_border_color(s_channelBtn, lv_color_hex(0x002d50), LV_PART_MAIN | LV_STATE_PRESSED);
-    s_channelLabel = lv_label_create(s_channelBtn);
-    lv_obj_set_style_text_font(s_channelLabel, &lv_font_montserrat_12, LV_PART_MAIN);
-    lv_label_set_long_mode(s_channelLabel, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(s_channelLabel, 156);
-    lv_obj_set_style_text_align(s_channelLabel, LV_TEXT_ALIGN_CENTER, 0);
-    lv_label_set_text(s_channelLabel, "Ch 0");
-    lv_obj_add_event_cb(s_channelBtn, channelCycleCb, LV_EVENT_CLICKED, nullptr);
+    // Channel selector dropdown (NEW mode only).
+    // Width 152 reserves right side for the future Destination dropdown.
+    s_channelDd = makeSelectorDropdown(body, 0, 152);
+    rebuildChannelOptions();
+    lv_obj_add_event_cb(s_channelDd, channelChangedCb, LV_EVENT_VALUE_CHANGED, nullptr);
 
     // 8 slot buttons in 2 cols × 4 rows.
+    // gridY0=70, rowH=28: grid bottom = 70+(4*28+3*4)=194px, body content=196px, 2px margin.
     const int gridX0 = 0;
     const int gridY0 = 70;
     const int colW   = 156;
-    const int rowH   = 24;
+    const int rowH   = 28;
     const int hgap   = 4;
     const int vgap   = 4;
     for (uint8_t i = 0; i < CANNED_REPLY_COUNT; i++) {
@@ -232,14 +254,14 @@ static void applyModeUI() {
             lv_obj_add_flag(s_contextRow, LV_OBJ_FLAG_HIDDEN);
         }
     }
-    if (s_channelBtn) {
+    if (s_channelDd) {
         if (s_mode == HUB_MODE_NEW) {
-            lv_obj_clear_flag(s_channelBtn, LV_OBJ_FLAG_HIDDEN);
+            rebuildChannelOptions();
+            lv_obj_clear_flag(s_channelDd, LV_OBJ_FLAG_HIDDEN);
         } else {
-            lv_obj_add_flag(s_channelBtn, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(s_channelDd, LV_OBJ_FLAG_HIDDEN);
         }
     }
-    updateChannelLabel();
 }
 
 void cannedScreenSetReplyMode(uint8_t channel, uint32_t dest, const chatMessage_t *srcMsg) {
