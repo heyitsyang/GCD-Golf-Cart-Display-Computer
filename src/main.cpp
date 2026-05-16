@@ -27,6 +27,7 @@
 
 // Storage
 #include "storage/preferences_manager.h"
+#include "storage/favorites.h"
 
 // Communication
 #include "Meshtastic.h"
@@ -105,6 +106,7 @@ void setup() {
     // Initialize storage and load preferences
     initPreferences();
     loadPreferences();
+    favoritesLoad();
     HEAP_LOG("after loadPreferences");
 
     // Initialize display

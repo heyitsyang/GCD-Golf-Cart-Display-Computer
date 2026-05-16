@@ -1,8 +1,10 @@
 #include "chat_screen.h"
 #include "canned_screen.h"
 #include "communication/chat_buffer.h"
+#include "communication/meshtastic_admin.h"
 #include "config.h"
 #include "globals.h"
+#include "storage/favorites.h"
 #include "storage/preferences_manager.h"
 #include "ui_eez/screens.h"
 #include "ui_eez/eez-flow.h"
@@ -10,9 +12,8 @@
 #include <lvgl.h>
 #include <time.h>
 
-#define ROW_HEIGHT_PX        32
-#define PREFIX_WIDTH_PX      52
-#define DOUBLE_TAP_WINDOW_MS 600
+#define ROW_HEIGHT_PX   32
+#define PREFIX_WIDTH_PX 52
 
 // Below this threshold, time(NULL) hasn't been seeded by GPS, so any
 // formatted "time" would just be uptime since boot. ~July 2017.
@@ -21,10 +22,7 @@
 static volatile bool s_refreshPending = true;
 static int32_t       s_lastBuiltFilter = -1;
 
-// Selection / double-tap tracking
-static lv_obj_t *s_selectedRow   = nullptr;
-static lv_obj_t *s_lastTapTarget = nullptr;
-static uint32_t  s_lastTapTime   = 0;
+static lv_obj_t *s_selectedRow = nullptr;
 
 // Row pool — lazy-allocated on first Messages visit (not at boot).
 // Boot-time pre-allocation consumed 16 KB which starved LVGL glyph rendering
@@ -173,18 +171,52 @@ static void openReplyForRow(lv_obj_t *row) {
                          LV_SCR_LOAD_ANIM_NONE, 200, 0);
 }
 
-static void rowClickedCb(lv_event_t *e) {
-    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
-    uint32_t now = millis();
-    if (target == s_lastTapTarget && (now - s_lastTapTime) <= DOUBLE_TAP_WINDOW_MS) {
-        s_lastTapTarget = nullptr;
-        s_lastTapTime = 0;
-        openReplyForRow(target);
-    } else {
-        s_lastTapTarget = target;
-        s_lastTapTime = now;
-        applySelection(target);
+// Left zone (prefix label): tap toggles favorite for incoming message sender.
+static void rowLeftClickedCb(lv_event_t *e) {
+    lv_obj_t *prefix = (lv_obj_t *)lv_event_get_current_target(e);
+    lv_obj_t *row    = lv_obj_get_parent(prefix);
+    uint32_t  id     = (uint32_t)(uintptr_t)lv_obj_get_user_data(row);
+
+    chatMessage_t m;
+    if (!chatBufferGetById(id, &m) || m.outgoing) {
+        lv_event_stop_bubbling(e);
+        return;
     }
+    uint32_t nodeId = m.from;
+    if (nodeId == 0 || nodeId == BROADCAST_ADDR) {
+        lv_event_stop_bubbling(e);
+        return;
+    }
+
+    bool nowFav;
+    if (favoritesContains(nodeId)) {
+        favoritesRemove(nodeId);
+        nowFav = false;
+    } else {
+        const char* nm = nodeNameCacheLookup(nodeId);
+        if (!favoritesAdd(nodeId, nm)) {
+            lv_event_stop_bubbling(e);
+            return;
+        }
+        nowFav = true;
+    }
+    lv_color_t color = nowFav ? lv_color_hex(0xFFFF00) : lv_color_white();
+    lv_obj_set_style_text_color(prefix, color, LV_PART_MAIN);
+    lv_event_stop_bubbling(e);
+}
+
+// Right zone (message label): tap selects row and starts marquee.
+static void rowRightClickedCb(lv_event_t *e) {
+    lv_obj_t *lbl = (lv_obj_t *)lv_event_get_current_target(e);
+    applySelection(lv_obj_get_parent(lbl));
+    lv_event_stop_bubbling(e);
+}
+
+// Right zone (message label): long press navigates to Canned Messages (reply).
+static void rowLongPressedCb(lv_event_t *e) {
+    lv_obj_t *lbl = (lv_obj_t *)lv_event_get_current_target(e);
+    openReplyForRow(lv_obj_get_parent(lbl));
+    lv_event_stop_bubbling(e);
 }
 
 static void filterChangedCb(lv_event_t *e) {
@@ -218,12 +250,12 @@ static void ensureRowsAllocated() {
         lv_obj_set_style_pad_column(row, 2, LV_PART_MAIN);
         lv_obj_set_style_radius(row, 0, LV_PART_MAIN);
         lv_obj_set_user_data(row, (void *)(uintptr_t)0);
-        lv_obj_add_event_cb(row, rowClickedCb, LV_EVENT_CLICKED, nullptr);
         lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
 
-        // Prefix: "ch time\n!addr" in small font — channel, stacked time+address
+        // Prefix: "ch time\n!addr" in small font — channel, stacked time+address.
+        // Tap zone: toggles favorite for incoming message sender (yellow = favorited).
         lv_obj_t *prefix = lv_label_create(row);
         lv_obj_set_width(prefix, PREFIX_WIDTH_PX);
         lv_obj_set_height(prefix, LV_SIZE_CONTENT);
@@ -231,14 +263,20 @@ static void ensureRowsAllocated() {
         lv_obj_set_style_text_color(prefix, lv_color_white(), LV_PART_MAIN);
         lv_label_set_long_mode(prefix, LV_LABEL_LONG_CLIP);
         lv_label_set_text(prefix, "");
+        lv_obj_add_flag(prefix, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(prefix, rowLeftClickedCb, LV_EVENT_CLICKED, nullptr);
 
-        // Message text — grows to fill remaining row width
+        // Message text — grows to fill remaining row width.
+        // Tap: select + marquee. Long press: open reply screen.
         lv_obj_t *lbl = lv_label_create(row);
         lv_obj_set_flex_grow(lbl, 1);
         lv_obj_set_height(lbl, LV_SIZE_CONTENT);
         lv_obj_set_style_text_color(lbl, lv_color_white(), LV_PART_MAIN);
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
         lv_label_set_text(lbl, "");
+        lv_obj_add_flag(lbl, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(lbl, rowRightClickedCb, LV_EVENT_CLICKED, nullptr);
+        lv_obj_add_event_cb(lbl, rowLongPressedCb, LV_EVENT_LONG_PRESSED, nullptr);
 
         s_rows[i]            = row;
         s_rowPrefixLabels[i] = prefix;
@@ -297,7 +335,6 @@ void chatScreenRefresh() {
     lv_obj_t *body = objects.messages_container_body;
 
     clearSelection();
-    s_lastTapTarget = nullptr;
 
     uint8_t filter = (uint8_t)((mesh_filter >= 0 && mesh_filter <= 4) ? mesh_filter : 0);
     s_snapshotCount = chatBufferSnapshot(filter, s_snapshot, CHAT_MAX_DISPLAY_ROWS);
@@ -310,11 +347,19 @@ void chatScreenRefresh() {
             const chatMessage_t *m = &s_snapshot[i];
             lv_obj_set_user_data(s_rows[i], (void *)(uintptr_t)m->id);
 
-            lv_color_t row_bg   = m->outgoing ? lv_color_white() : lv_color_black();
-            lv_color_t row_text = m->outgoing ? lv_color_black() : lv_color_white();
+            lv_color_t row_bg  = m->outgoing ? lv_color_white() : lv_color_black();
+            lv_color_t msg_col = m->outgoing ? lv_color_black() : lv_color_white();
+            lv_color_t pfx_col;
+            if (m->outgoing) {
+                pfx_col = lv_color_black();
+            } else {
+                pfx_col = favoritesContains(m->from)
+                              ? lv_color_hex(0xFFFF00)
+                              : lv_color_white();
+            }
             lv_obj_set_style_bg_color(s_rows[i], row_bg, LV_PART_MAIN);
-            lv_obj_set_style_text_color(s_rowPrefixLabels[i], row_text, LV_PART_MAIN);
-            lv_obj_set_style_text_color(s_rowLabels[i],       row_text, LV_PART_MAIN);
+            lv_obj_set_style_text_color(s_rowPrefixLabels[i], pfx_col, LV_PART_MAIN);
+            lv_obj_set_style_text_color(s_rowLabels[i],       msg_col, LV_PART_MAIN);
 
             char prefix[24];
             buildPrefixStr(m, prefix, sizeof(prefix));

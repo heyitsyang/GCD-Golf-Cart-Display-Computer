@@ -67,4 +67,8 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo);
 // Reset state to allow re-requesting metadata after reconnection
 void handleGcmRebooted();
 
+// Look up a node's short name (4 chars) from the passive name cache.
+// Returns "" if the node has not been seen in a NodeInfo broadcast yet.
+const char* nodeNameCacheLookup(uint32_t nodeNum);
+
 #endif // MESHTASTIC_ADMIN_H

@@ -267,6 +267,71 @@ def apply_fromradio_tag_descriptions():
         return False
 
 
+def apply_node_info_hook():
+    """
+    Remove the early-exit guard in handle_node_info() and add a
+    handleNodeInfo() call so the short-name cache is updated for every
+    NodeInfo broadcast, not just during an active get_node_list request.
+
+    Without this patch, spontaneous NodeInfo packets (neighbours announcing
+    themselves) are silently discarded when node_report_callback is NULL,
+    so we never learn their short names.
+    """
+    print("🔧 Applying handle_node_info hook (short-name cache)...")
+
+    protocol_file = MESHTASTIC_LIB / "mt_protocol.cpp"
+
+    if not protocol_file.exists():
+        print(f"  ❌ File not found: {protocol_file}")
+        return False
+
+    with open(protocol_file, 'r') as f:
+        content = f.read()
+
+    if "handleNodeInfo(nodeInfo->num, node.short_name);" in content:
+        print("  ✅ Patch already applied")
+        return True
+
+    old_code = """bool handle_node_info(meshtastic_NodeInfo *nodeInfo) {
+  if (node_report_callback == NULL) {
+    d("Got a node report, but we don't have a callback");
+    return false;
+  }
+  node.node_num = nodeInfo->num;
+  node.is_mine = nodeInfo->num == my_node_num;
+  node.last_heard_from = nodeInfo->last_heard;
+  node.has_user = nodeInfo->has_user;
+  if (node.has_user) {
+    memcpy(node.user_id, nodeInfo->user.id, MAX_USER_ID_LEN);
+    memcpy(node.long_name, nodeInfo->user.long_name, MAX_LONG_NAME_LEN);
+    memcpy(node.short_name, nodeInfo->user.short_name, MAX_SHORT_NAME_LEN);
+  }"""
+
+    new_code = """bool handle_node_info(meshtastic_NodeInfo *nodeInfo) {
+  // Process all node info regardless of node_report_callback state so
+  // handleNodeInfo() can keep the short-name cache up to date.
+  node.node_num = nodeInfo->num;
+  node.is_mine = nodeInfo->num == my_node_num;
+  node.last_heard_from = nodeInfo->last_heard;
+  node.has_user = nodeInfo->has_user;
+  if (node.has_user) {
+    memcpy(node.user_id, nodeInfo->user.id, MAX_USER_ID_LEN);
+    memcpy(node.long_name, nodeInfo->user.long_name, MAX_LONG_NAME_LEN);
+    memcpy(node.short_name, nodeInfo->user.short_name, MAX_SHORT_NAME_LEN);
+    handleNodeInfo(nodeInfo->num, node.short_name);
+  }"""
+
+    if old_code in content:
+        content = content.replace(old_code, new_code)
+        with open(protocol_file, 'w') as f:
+            f.write(content)
+        print("  ✅ Successfully applied node_info hook")
+        return True
+    else:
+        print("  ⚠️  Code pattern not found - file may have changed")
+        return False
+
+
 def main():
     """Apply all required patches"""
     print("🚀 Applying Meshtastic patches for Golf Cart Project")
@@ -285,6 +350,9 @@ def main():
         success = False
 
     if not apply_fromradio_tag_descriptions():
+        success = False
+
+    if not apply_node_info_hook():
         success = False
 
     print("=" * 60)

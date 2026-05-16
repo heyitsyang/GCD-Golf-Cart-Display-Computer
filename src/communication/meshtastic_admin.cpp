@@ -61,6 +61,39 @@ static bool sendAdminMessage(meshtastic_AdminMessage *adminMsg) {
     return _mt_send_toRadio(toRadio);
 }
 
+// Passive node short-name cache. Populated by handleNodeInfo() from every
+// NodeInfo broadcast that arrives over the mesh. Ring buffer — oldest entry
+// overwritten when full. All accesses are from the meshtastic callback task;
+// no mutex needed.
+#define NODE_NAME_CACHE_SIZE 24
+static struct { uint32_t nodeNum; char shortName[5]; } s_nodeNameCache[NODE_NAME_CACHE_SIZE];
+static uint8_t s_nodeNameCacheCount = 0;
+static uint8_t s_nodeNameCacheNext  = 0;
+
+void handleNodeInfo(uint32_t nodeNum, const char* shortName) {
+    if (!shortName || !shortName[0]) return;
+    for (uint8_t i = 0; i < s_nodeNameCacheCount; i++) {
+        if (s_nodeNameCache[i].nodeNum == nodeNum) {
+            strncpy(s_nodeNameCache[i].shortName, shortName, 4);
+            s_nodeNameCache[i].shortName[4] = '\0';
+            return;
+        }
+    }
+    uint8_t idx = s_nodeNameCacheNext;
+    s_nodeNameCache[idx].nodeNum = nodeNum;
+    strncpy(s_nodeNameCache[idx].shortName, shortName, 4);
+    s_nodeNameCache[idx].shortName[4] = '\0';
+    s_nodeNameCacheNext = (s_nodeNameCacheNext + 1) % NODE_NAME_CACHE_SIZE;
+    if (s_nodeNameCacheCount < NODE_NAME_CACHE_SIZE) s_nodeNameCacheCount++;
+}
+
+const char* nodeNameCacheLookup(uint32_t nodeNum) {
+    for (uint8_t i = 0; i < s_nodeNameCacheCount; i++) {
+        if (s_nodeNameCache[i].nodeNum == nodeNum) return s_nodeNameCache[i].shortName;
+    }
+    return "";
+}
+
 // Called from handle_channel_tag() in mt_protocol.cpp for each channel received
 // from the GCM (both during the boot config dump and in response to get_channel_request)
 void handleChannelResponse(meshtastic_Channel *channel) {

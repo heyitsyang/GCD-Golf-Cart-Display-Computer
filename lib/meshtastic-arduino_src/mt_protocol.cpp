@@ -545,10 +545,8 @@ bool handle_my_info(meshtastic_MyNodeInfo *myNodeInfo) {
 }
 
 bool handle_node_info(meshtastic_NodeInfo *nodeInfo) {
-  if (node_report_callback == NULL) {
-    d("Got a node report, but we don't have a callback");
-    return false;
-  }
+  // Process all node info regardless of node_report_callback state so
+  // handleNodeInfo() can keep the short-name cache up to date.
   node.node_num = nodeInfo->num;
   node.is_mine = nodeInfo->num == my_node_num;
   node.last_heard_from = nodeInfo->last_heard;
@@ -557,6 +555,7 @@ bool handle_node_info(meshtastic_NodeInfo *nodeInfo) {
     memcpy(node.user_id, nodeInfo->user.id, MAX_USER_ID_LEN);
     memcpy(node.long_name, nodeInfo->user.long_name, MAX_LONG_NAME_LEN);
     memcpy(node.short_name, nodeInfo->user.short_name, MAX_SHORT_NAME_LEN);
+    handleNodeInfo(nodeInfo->num, node.short_name);
   }
 
   if (nodeInfo->has_position) {

@@ -26,6 +26,10 @@ extern void handleChannelResponse(meshtastic_Channel *channel);
 // This will be called from mt_protocol.cpp when rebooted_tag is received
 extern void handleGcmRebooted();
 
+// Callback for node info packets — updates the short-name cache.
+// Called from handle_node_info() for every NodeInfo packet that has a user record.
+extern void handleNodeInfo(uint32_t nodeNum, const char* shortName);
+
 // Callback function for handshake completion
 // Called from mt_protocol.cpp when config_complete_id (tag 7) is received
 // Signals that GCM is ready to route packets OTA
