@@ -26,26 +26,26 @@ QueueHandle_t chatTxQueue;
 // Double buffering for hot packet data (eliminates blocking reads)
 volatile int hotPacketActiveBufferWx = 0;  // 0 or 1, weather fields only
 volatile int hotPacketActiveBufferNp = 0;  // 0 or 1, venue/event data only
-String hotPacketBuffer_wx_rcv_time[2];
-String hotPacketBuffer_cur_temp[2];
-String hotPacketBuffer_fcast_hr1[2];
-String hotPacketBuffer_fcast_glyph1[2];
-String hotPacketBuffer_fcast_temp1[2];
-String hotPacketBuffer_fcast_precip1[2];
-String hotPacketBuffer_fcast_hr2[2];
-String hotPacketBuffer_fcast_glyph2[2];
-String hotPacketBuffer_fcast_temp2[2];
-String hotPacketBuffer_fcast_precip2[2];
-String hotPacketBuffer_fcast_hr3[2];
-String hotPacketBuffer_fcast_glyph3[2];
-String hotPacketBuffer_fcast_temp3[2];
-String hotPacketBuffer_fcast_precip3[2];
-String hotPacketBuffer_fcast_hr4[2];
-String hotPacketBuffer_fcast_glyph4[2];
-String hotPacketBuffer_fcast_temp4[2];
-String hotPacketBuffer_fcast_precip4[2];
-String hotPacketBuffer_np_rcv_time[2];
-String hotPacketBuffer_live_venue_event_data[2];
+char hotPacketBuffer_wx_rcv_time[2][HP_RCV_TIME_SIZE];
+char hotPacketBuffer_cur_temp[2][HP_CUR_TEMP_SIZE];
+char hotPacketBuffer_fcast_hr1[2][HP_FCAST_HR_SIZE];
+char hotPacketBuffer_fcast_glyph1[2][HP_FCAST_GLYPH_SIZE];
+char hotPacketBuffer_fcast_temp1[2][HP_FCAST_TEMP_SIZE];
+char hotPacketBuffer_fcast_precip1[2][HP_FCAST_PRECIP_SIZE];
+char hotPacketBuffer_fcast_hr2[2][HP_FCAST_HR_SIZE];
+char hotPacketBuffer_fcast_glyph2[2][HP_FCAST_GLYPH_SIZE];
+char hotPacketBuffer_fcast_temp2[2][HP_FCAST_TEMP_SIZE];
+char hotPacketBuffer_fcast_precip2[2][HP_FCAST_PRECIP_SIZE];
+char hotPacketBuffer_fcast_hr3[2][HP_FCAST_HR_SIZE];
+char hotPacketBuffer_fcast_glyph3[2][HP_FCAST_GLYPH_SIZE];
+char hotPacketBuffer_fcast_temp3[2][HP_FCAST_TEMP_SIZE];
+char hotPacketBuffer_fcast_precip3[2][HP_FCAST_PRECIP_SIZE];
+char hotPacketBuffer_fcast_hr4[2][HP_FCAST_HR_SIZE];
+char hotPacketBuffer_fcast_glyph4[2][HP_FCAST_GLYPH_SIZE];
+char hotPacketBuffer_fcast_temp4[2][HP_FCAST_TEMP_SIZE];
+char hotPacketBuffer_fcast_precip4[2][HP_FCAST_PRECIP_SIZE];
+char hotPacketBuffer_np_rcv_time[2][HP_RCV_TIME_SIZE];
+char hotPacketBuffer_live_venue_event_data[2][HP_VENUE_DATA_SIZE];
 
 // Display objects
 SPIClass touchscreenSpi = SPIClass(VSPI);

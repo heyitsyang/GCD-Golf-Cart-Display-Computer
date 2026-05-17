@@ -105,6 +105,15 @@
 // EEPROM write debounce (prevents excessive writes when adjusting UI sliders/spinners)
 #define EEPROM_DEBOUNCE_MS 2000  // Wait 2 seconds after last change before writing
 
+// Hot packet double-buffer field sizes (char[] BSS, not heap String)
+#define HP_RCV_TIME_SIZE     32   // "05/15/2026  4:43PM" + null
+#define HP_CUR_TEMP_SIZE     12   // validated max 10 chars
+#define HP_FCAST_HR_SIZE      8   // "12pm" max 6 chars
+#define HP_FCAST_GLYPH_SIZE   4   // single digit, max 2 chars
+#define HP_FCAST_TEMP_SIZE   12   // validated max 10 chars
+#define HP_FCAST_PRECIP_SIZE  8   // "99.99" max 6 chars
+#define HP_VENUE_DATA_SIZE  240   // MAX_MESHTASTIC_PAYLOAD(237) - HOT_PKT_HEADER_OFFSET(5) + margin
+
 // Chat / messaging UI
 #define CHAT_BUFFER_SIZE 32       // Ring depth for chat history (RAM-only)
 #define CHAT_MAX_DISPLAY_ROWS 10  // Max rows rendered at once. Screen body ~200px, rows

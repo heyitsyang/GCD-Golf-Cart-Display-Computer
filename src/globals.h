@@ -1,6 +1,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include "config.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
@@ -43,26 +44,26 @@ extern QueueHandle_t chatTxQueue;       // UI -> meshtasticTask send pipe
 // Only the buffer pointer swap is protected by mutex (~10ms), not the data reads/writes
 extern volatile int hotPacketActiveBufferWx;  // 0 or 1, weather fields only
 extern volatile int hotPacketActiveBufferNp;  // 0 or 1, venue/event data only
-extern String hotPacketBuffer_wx_rcv_time[2];
-extern String hotPacketBuffer_cur_temp[2];
-extern String hotPacketBuffer_fcast_hr1[2];
-extern String hotPacketBuffer_fcast_glyph1[2];
-extern String hotPacketBuffer_fcast_temp1[2];
-extern String hotPacketBuffer_fcast_precip1[2];
-extern String hotPacketBuffer_fcast_hr2[2];
-extern String hotPacketBuffer_fcast_glyph2[2];
-extern String hotPacketBuffer_fcast_temp2[2];
-extern String hotPacketBuffer_fcast_precip2[2];
-extern String hotPacketBuffer_fcast_hr3[2];
-extern String hotPacketBuffer_fcast_glyph3[2];
-extern String hotPacketBuffer_fcast_temp3[2];
-extern String hotPacketBuffer_fcast_precip3[2];
-extern String hotPacketBuffer_fcast_hr4[2];
-extern String hotPacketBuffer_fcast_glyph4[2];
-extern String hotPacketBuffer_fcast_temp4[2];
-extern String hotPacketBuffer_fcast_precip4[2];
-extern String hotPacketBuffer_np_rcv_time[2];
-extern String hotPacketBuffer_live_venue_event_data[2];
+extern char hotPacketBuffer_wx_rcv_time[2][HP_RCV_TIME_SIZE];
+extern char hotPacketBuffer_cur_temp[2][HP_CUR_TEMP_SIZE];
+extern char hotPacketBuffer_fcast_hr1[2][HP_FCAST_HR_SIZE];
+extern char hotPacketBuffer_fcast_glyph1[2][HP_FCAST_GLYPH_SIZE];
+extern char hotPacketBuffer_fcast_temp1[2][HP_FCAST_TEMP_SIZE];
+extern char hotPacketBuffer_fcast_precip1[2][HP_FCAST_PRECIP_SIZE];
+extern char hotPacketBuffer_fcast_hr2[2][HP_FCAST_HR_SIZE];
+extern char hotPacketBuffer_fcast_glyph2[2][HP_FCAST_GLYPH_SIZE];
+extern char hotPacketBuffer_fcast_temp2[2][HP_FCAST_TEMP_SIZE];
+extern char hotPacketBuffer_fcast_precip2[2][HP_FCAST_PRECIP_SIZE];
+extern char hotPacketBuffer_fcast_hr3[2][HP_FCAST_HR_SIZE];
+extern char hotPacketBuffer_fcast_glyph3[2][HP_FCAST_GLYPH_SIZE];
+extern char hotPacketBuffer_fcast_temp3[2][HP_FCAST_TEMP_SIZE];
+extern char hotPacketBuffer_fcast_precip3[2][HP_FCAST_PRECIP_SIZE];
+extern char hotPacketBuffer_fcast_hr4[2][HP_FCAST_HR_SIZE];
+extern char hotPacketBuffer_fcast_glyph4[2][HP_FCAST_GLYPH_SIZE];
+extern char hotPacketBuffer_fcast_temp4[2][HP_FCAST_TEMP_SIZE];
+extern char hotPacketBuffer_fcast_precip4[2][HP_FCAST_PRECIP_SIZE];
+extern char hotPacketBuffer_np_rcv_time[2][HP_RCV_TIME_SIZE];
+extern char hotPacketBuffer_live_venue_event_data[2][HP_VENUE_DATA_SIZE];
 
 // Display objects
 extern SPIClass touchscreenSpi;

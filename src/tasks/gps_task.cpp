@@ -189,11 +189,12 @@ static void updateTimeDisplay(const gps_fix& fix) {
         wx_eeprom_loaded = true;
         String gpsTimestamp = cur_date + "  " + hhmm_str + am_pm_str;
         int activeBuffer = hotPacketActiveBufferWx;
-        if (hotPacketBuffer_wx_rcv_time[activeBuffer] == "TIMESTAMP UNAVAILABLE") {
+        if (strcmp(hotPacketBuffer_wx_rcv_time[activeBuffer], "TIMESTAMP UNAVAILABLE") == 0) {
             // Live data arrived before GPS - fix up the timestamp in-place
-            hotPacketBuffer_wx_rcv_time[activeBuffer] = gpsTimestamp;
+            strncpy(hotPacketBuffer_wx_rcv_time[activeBuffer], gpsTimestamp.c_str(), HP_RCV_TIME_SIZE - 1);
+            hotPacketBuffer_wx_rcv_time[activeBuffer][HP_RCV_TIME_SIZE - 1] = '\0';
             wx_rcv_time = gpsTimestamp;
-        } else if (hotPacketBuffer_wx_rcv_time[activeBuffer].length() == 0) {
+        } else if (hotPacketBuffer_wx_rcv_time[activeBuffer][0] == '\0') {
             // No live data yet - load from EEPROM if it is from today
             int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
             if (wx_stored_date == todayYYYYMMDD && wx_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
@@ -220,19 +221,22 @@ static void updateTimeDisplay(const gps_fix& fix) {
         np_eeprom_loaded = true;
         String gpsTimestamp = cur_date + "  " + hhmm_str + am_pm_str;
         int activeBuffer = hotPacketActiveBufferNp;
-        if (hotPacketBuffer_np_rcv_time[activeBuffer] == "TIMESTAMP UNAVAILABLE") {
+        if (strcmp(hotPacketBuffer_np_rcv_time[activeBuffer], "TIMESTAMP UNAVAILABLE") == 0) {
             // Live data arrived before GPS - fix up the timestamp in-place
-            hotPacketBuffer_np_rcv_time[activeBuffer] = gpsTimestamp;
+            strncpy(hotPacketBuffer_np_rcv_time[activeBuffer], gpsTimestamp.c_str(), HP_RCV_TIME_SIZE - 1);
+            hotPacketBuffer_np_rcv_time[activeBuffer][HP_RCV_TIME_SIZE - 1] = '\0';
             np_rcv_time = gpsTimestamp;
-        } else if (hotPacketBuffer_np_rcv_time[activeBuffer].length() == 0) {
+        } else if (hotPacketBuffer_np_rcv_time[activeBuffer][0] == '\0') {
             // No live data yet - load from EEPROM if it is from today
             int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
             if (np_stored_date == todayYYYYMMDD && np_stored_data.length() > (size_t)HOT_PKT_HEADER_OFFSET) {
                 int backBuffer = 1 - hotPacketActiveBufferNp;
-                hotPacketBuffer_live_venue_event_data[backBuffer] = np_stored_data.substring(HOT_PKT_HEADER_OFFSET);
+                strncpy(hotPacketBuffer_live_venue_event_data[backBuffer], np_stored_data.c_str() + HOT_PKT_HEADER_OFFSET, HP_VENUE_DATA_SIZE - 1);
+                hotPacketBuffer_live_venue_event_data[backBuffer][HP_VENUE_DATA_SIZE - 1] = '\0';
                 String npTimestamp = (np_stored_timestamp.length() > 0)
                     ? np_stored_timestamp : gpsTimestamp;
-                hotPacketBuffer_np_rcv_time[backBuffer] = npTimestamp;
+                strncpy(hotPacketBuffer_np_rcv_time[backBuffer], npTimestamp.c_str(), HP_RCV_TIME_SIZE - 1);
+                hotPacketBuffer_np_rcv_time[backBuffer][HP_RCV_TIME_SIZE - 1] = '\0';
                 bool haveMutex = (hotPacketMutex != NULL && xSemaphoreTake(hotPacketMutex, pdMS_TO_TICKS(10)) == pdTRUE);
                 if (haveMutex || hotPacketMutex == NULL) {
                     hotPacketActiveBufferNp = backBuffer;

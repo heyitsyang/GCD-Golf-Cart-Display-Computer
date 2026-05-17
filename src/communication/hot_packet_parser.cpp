@@ -123,8 +123,10 @@ void processHotPacket(const char* text) {
                     timestamp = "TIMESTAMP UNAVAILABLE";
                 }
 
-                hotPacketBuffer_np_rcv_time[backBuffer] = timestamp;
-                hotPacketBuffer_live_venue_event_data[backBuffer] = String(&text[HOT_PKT_HEADER_OFFSET]);
+                strncpy(hotPacketBuffer_np_rcv_time[backBuffer], timestamp.c_str(), HP_RCV_TIME_SIZE - 1);
+                hotPacketBuffer_np_rcv_time[backBuffer][HP_RCV_TIME_SIZE - 1] = '\0';
+                strncpy(hotPacketBuffer_live_venue_event_data[backBuffer], &text[HOT_PKT_HEADER_OFFSET], HP_VENUE_DATA_SIZE - 1);
+                hotPacketBuffer_live_venue_event_data[backBuffer][HP_VENUE_DATA_SIZE - 1] = '\0';
 
                 // Atomically swap buffers (very fast, no blocking for GUI)
                 // Mutex only protects the pointer swap, not data reads
@@ -271,27 +273,28 @@ int parseWeatherData(char* input, const String& timestamp) {
     int backBuffer = 1 - hotPacketActiveBufferWx;
 
     // SAFEGUARD #1: Clear back buffer before parsing to prevent stale data contamination
-    hotPacketBuffer_wx_rcv_time[backBuffer] = "";
-    hotPacketBuffer_cur_temp[backBuffer] = "";
-    hotPacketBuffer_fcast_hr1[backBuffer] = "";
-    hotPacketBuffer_fcast_glyph1[backBuffer] = "";
-    hotPacketBuffer_fcast_temp1[backBuffer] = "";
-    hotPacketBuffer_fcast_precip1[backBuffer] = "";
-    hotPacketBuffer_fcast_hr2[backBuffer] = "";
-    hotPacketBuffer_fcast_glyph2[backBuffer] = "";
-    hotPacketBuffer_fcast_temp2[backBuffer] = "";
-    hotPacketBuffer_fcast_precip2[backBuffer] = "";
-    hotPacketBuffer_fcast_hr3[backBuffer] = "";
-    hotPacketBuffer_fcast_glyph3[backBuffer] = "";
-    hotPacketBuffer_fcast_temp3[backBuffer] = "";
-    hotPacketBuffer_fcast_precip3[backBuffer] = "";
-    hotPacketBuffer_fcast_hr4[backBuffer] = "";
-    hotPacketBuffer_fcast_glyph4[backBuffer] = "";
-    hotPacketBuffer_fcast_temp4[backBuffer] = "";
-    hotPacketBuffer_fcast_precip4[backBuffer] = "";
+    hotPacketBuffer_wx_rcv_time[backBuffer][0] = '\0';
+    hotPacketBuffer_cur_temp[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_hr1[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_glyph1[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_temp1[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_precip1[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_hr2[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_glyph2[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_temp2[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_precip2[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_hr3[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_glyph3[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_temp3[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_precip3[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_hr4[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_glyph4[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_temp4[backBuffer][0] = '\0';
+    hotPacketBuffer_fcast_precip4[backBuffer][0] = '\0';
 
     // Write timestamp to back buffer
-    hotPacketBuffer_wx_rcv_time[backBuffer] = timestamp;
+    strncpy(hotPacketBuffer_wx_rcv_time[backBuffer], timestamp.c_str(), HP_RCV_TIME_SIZE - 1);
+    hotPacketBuffer_wx_rcv_time[backBuffer][HP_RCV_TIME_SIZE - 1] = '\0';
 
     // SAFEGUARD #4: Transaction-style parsing - use tmp variables, only commit if all fields valid
     String tmp_cur_temp, tmp_hr1, tmp_glyph1, tmp_temp1, tmp_precip1;
@@ -445,23 +448,23 @@ int parseWeatherData(char* input, const String& timestamp) {
     ptr = ptr + strlen(&input[ptr]) + 1;
 
     // SAFEGUARD #4: All fields parsed successfully - commit to back buffer atomically
-    hotPacketBuffer_cur_temp[backBuffer] = tmp_cur_temp;
-    hotPacketBuffer_fcast_hr1[backBuffer] = tmp_hr1;
-    hotPacketBuffer_fcast_glyph1[backBuffer] = tmp_glyph1;
-    hotPacketBuffer_fcast_temp1[backBuffer] = tmp_temp1;
-    hotPacketBuffer_fcast_precip1[backBuffer] = tmp_precip1;
-    hotPacketBuffer_fcast_hr2[backBuffer] = tmp_hr2;
-    hotPacketBuffer_fcast_glyph2[backBuffer] = tmp_glyph2;
-    hotPacketBuffer_fcast_temp2[backBuffer] = tmp_temp2;
-    hotPacketBuffer_fcast_precip2[backBuffer] = tmp_precip2;
-    hotPacketBuffer_fcast_hr3[backBuffer] = tmp_hr3;
-    hotPacketBuffer_fcast_glyph3[backBuffer] = tmp_glyph3;
-    hotPacketBuffer_fcast_temp3[backBuffer] = tmp_temp3;
-    hotPacketBuffer_fcast_precip3[backBuffer] = tmp_precip3;
-    hotPacketBuffer_fcast_hr4[backBuffer] = tmp_hr4;
-    hotPacketBuffer_fcast_glyph4[backBuffer] = tmp_glyph4;
-    hotPacketBuffer_fcast_temp4[backBuffer] = tmp_temp4;
-    hotPacketBuffer_fcast_precip4[backBuffer] = tmp_precip4;
+    strncpy(hotPacketBuffer_cur_temp[backBuffer],     tmp_cur_temp.c_str(), HP_CUR_TEMP_SIZE - 1);   hotPacketBuffer_cur_temp[backBuffer][HP_CUR_TEMP_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_hr1[backBuffer],    tmp_hr1.c_str(),      HP_FCAST_HR_SIZE - 1);    hotPacketBuffer_fcast_hr1[backBuffer][HP_FCAST_HR_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_glyph1[backBuffer], tmp_glyph1.c_str(),   HP_FCAST_GLYPH_SIZE - 1); hotPacketBuffer_fcast_glyph1[backBuffer][HP_FCAST_GLYPH_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_temp1[backBuffer],  tmp_temp1.c_str(),    HP_FCAST_TEMP_SIZE - 1);  hotPacketBuffer_fcast_temp1[backBuffer][HP_FCAST_TEMP_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_precip1[backBuffer],tmp_precip1.c_str(),  HP_FCAST_PRECIP_SIZE - 1);hotPacketBuffer_fcast_precip1[backBuffer][HP_FCAST_PRECIP_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_hr2[backBuffer],    tmp_hr2.c_str(),      HP_FCAST_HR_SIZE - 1);    hotPacketBuffer_fcast_hr2[backBuffer][HP_FCAST_HR_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_glyph2[backBuffer], tmp_glyph2.c_str(),   HP_FCAST_GLYPH_SIZE - 1); hotPacketBuffer_fcast_glyph2[backBuffer][HP_FCAST_GLYPH_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_temp2[backBuffer],  tmp_temp2.c_str(),    HP_FCAST_TEMP_SIZE - 1);  hotPacketBuffer_fcast_temp2[backBuffer][HP_FCAST_TEMP_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_precip2[backBuffer],tmp_precip2.c_str(),  HP_FCAST_PRECIP_SIZE - 1);hotPacketBuffer_fcast_precip2[backBuffer][HP_FCAST_PRECIP_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_hr3[backBuffer],    tmp_hr3.c_str(),      HP_FCAST_HR_SIZE - 1);    hotPacketBuffer_fcast_hr3[backBuffer][HP_FCAST_HR_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_glyph3[backBuffer], tmp_glyph3.c_str(),   HP_FCAST_GLYPH_SIZE - 1); hotPacketBuffer_fcast_glyph3[backBuffer][HP_FCAST_GLYPH_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_temp3[backBuffer],  tmp_temp3.c_str(),    HP_FCAST_TEMP_SIZE - 1);  hotPacketBuffer_fcast_temp3[backBuffer][HP_FCAST_TEMP_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_precip3[backBuffer],tmp_precip3.c_str(),  HP_FCAST_PRECIP_SIZE - 1);hotPacketBuffer_fcast_precip3[backBuffer][HP_FCAST_PRECIP_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_hr4[backBuffer],    tmp_hr4.c_str(),      HP_FCAST_HR_SIZE - 1);    hotPacketBuffer_fcast_hr4[backBuffer][HP_FCAST_HR_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_glyph4[backBuffer], tmp_glyph4.c_str(),   HP_FCAST_GLYPH_SIZE - 1); hotPacketBuffer_fcast_glyph4[backBuffer][HP_FCAST_GLYPH_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_temp4[backBuffer],  tmp_temp4.c_str(),    HP_FCAST_TEMP_SIZE - 1);  hotPacketBuffer_fcast_temp4[backBuffer][HP_FCAST_TEMP_SIZE - 1] = '\0';
+    strncpy(hotPacketBuffer_fcast_precip4[backBuffer],tmp_precip4.c_str(),  HP_FCAST_PRECIP_SIZE - 1);hotPacketBuffer_fcast_precip4[backBuffer][HP_FCAST_PRECIP_SIZE - 1] = '\0';
 
     // Atomically swap buffers (very fast, no blocking for GUI)
     // Mutex only protects the pointer swap, not data reads (10ms timeout is very short)

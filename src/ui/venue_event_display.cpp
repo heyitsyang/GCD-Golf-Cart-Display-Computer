@@ -124,9 +124,9 @@ extern "C" void action_display_now_playing(lv_event_t *e) {
 
     // Read from active buffer (no mutex needed - double buffering ensures lock-free reads)
     int activeBuffer = hotPacketActiveBufferNp;  // Snapshot current buffer
-    if (gpsHasSynced && hotPacketBuffer_live_venue_event_data[activeBuffer].length() > 0) {
+    if (gpsHasSynced && hotPacketBuffer_live_venue_event_data[activeBuffer][0] != '\0') {
         Serial.println(np_data_is_stored ? "Using stored venue/event data from EEPROM" : "Using live venue/event data from Meshtastic");
-        displayVenueEventTable(hotPacketBuffer_live_venue_event_data[activeBuffer].c_str());
+        displayVenueEventTable(hotPacketBuffer_live_venue_event_data[activeBuffer]);
     } else if (gpsHasSynced && live_venue_event_data.length() > 0) {
         // Fallback to cached variable
         Serial.println("Using cached venue/event data from Meshtastic");
@@ -158,8 +158,8 @@ void checkAndUpdateNowPlayingScreen() {
 
     // Read from active buffer (no mutex needed - double buffering ensures lock-free reads)
     int activeBuffer = hotPacketActiveBufferNp;  // Snapshot current buffer
-    if (gpsHasSynced && hotPacketBuffer_live_venue_event_data[activeBuffer].length() > 0) {
-        currentData = hotPacketBuffer_live_venue_event_data[activeBuffer].c_str();
+    if (gpsHasSynced && hotPacketBuffer_live_venue_event_data[activeBuffer][0] != '\0') {
+        currentData = hotPacketBuffer_live_venue_event_data[activeBuffer];
     } else if (gpsHasSynced && live_venue_event_data.length() > 0) {
         // Fallback to legacy variable
         currentData = live_venue_event_data.c_str();
