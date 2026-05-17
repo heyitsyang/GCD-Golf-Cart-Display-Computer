@@ -19,6 +19,9 @@ void cannedScreenSetNewMode();
 // GUI-task drain hook: apply pending mode/context updates.
 void cannedScreenPump();
 
+// Free the lazily-allocated recipient cycle-button. Called on Canned screen exit.
+void cannedScreenFreeRecipientBtn();
+
 // Called from meshtastic_admin admin_portnum_callback when a get_channel_response arrives.
 void cannedScreenOnChannelResponse(const meshtastic_Channel *ch);
 

@@ -340,3 +340,11 @@ void cannedScreenPump() {
     s_uiDirty = false;
     applyModeUI();
 }
+
+void cannedScreenFreeRecipientBtn() {
+    if (!s_recipientBtn) return;
+    lv_obj_del(s_recipientBtn);
+    s_recipientBtn = nullptr;
+    s_recipientLbl = nullptr;
+    s_uiDirty = true;
+}

@@ -260,6 +260,14 @@ static void ensureRowsAllocated() {
     lv_obj_t *body = objects.messages_container_body;
     for (int i = 0; i < CHAT_MAX_DISPLAY_ROWS; i++) {
         lv_obj_t *row = lv_btn_create(body);
+        if (!row) {
+            for (int j = 0; j < i; j++) {
+                if (s_rows[j]) { lv_obj_del(s_rows[j]); s_rows[j] = nullptr; }
+                s_rowPrefixLabels[j] = nullptr;
+                s_rowLabels[j]       = nullptr;
+            }
+            return;
+        }
         lv_obj_set_width(row, lv_pct(100));
         lv_obj_set_height(row, ROW_HEIGHT_PX);
         lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_PART_MAIN);
@@ -403,6 +411,22 @@ void chatScreenRefresh() {
 
 void chatScreenRequestRefresh() {
     s_refreshPending = true;
+}
+
+void chatScreenFreeRows() {
+    s_selectedRow  = nullptr;
+    s_snapshotCount = 0;
+    if (!s_rowsInitialized) return;
+    for (int i = 0; i < CHAT_MAX_DISPLAY_ROWS; i++) {
+        if (s_rows[i]) {
+            lv_obj_del(s_rows[i]);
+            s_rows[i]            = nullptr;
+            s_rowPrefixLabels[i] = nullptr;
+            s_rowLabels[i]       = nullptr;
+        }
+    }
+    s_rowsInitialized = false;
+    s_refreshPending  = true;
 }
 
 void chatScreenPump() {

@@ -18,4 +18,9 @@ void chatScreenRequestRefresh();
 // pending OR if filter changed since last build.
 void chatScreenPump();
 
+// Free the lazy-allocated row pool. Call when leaving the Messages screen
+// so ~11 KB is reclaimed while the screen is not active. Rows are
+// re-created by ensureRowsAllocated() on next screen entry.
+void chatScreenFreeRows();
+
 #endif // CHAT_SCREEN_H

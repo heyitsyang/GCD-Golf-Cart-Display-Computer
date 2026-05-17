@@ -130,6 +130,12 @@ void guiTask(void *parameter) {
             if (previous_screen == objects.now_playing && current_screen != objects.now_playing) {
                 onNowPlayingScreenExit();
             }
+            if (previous_screen == objects.meshtastic_messages && current_screen != objects.meshtastic_messages) {
+                chatScreenFreeRows();
+            }
+            if (previous_screen == objects.meshtastic_canned_messages && current_screen != objects.meshtastic_canned_messages) {
+                cannedScreenFreeRecipientBtn();
+            }
 
             previous_screen = current_screen;
             // Reset countdown when entering a new screen (except splash)
