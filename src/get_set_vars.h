@@ -238,7 +238,6 @@ extern String fcast_hr4;
 extern String fcast_glyph4;
 extern String fcast_temp4;
 extern String fcast_precip4;
-extern String np_rcv_time;
 extern String espnow_status;
 extern String espnow_last_received;
 extern String text_message;

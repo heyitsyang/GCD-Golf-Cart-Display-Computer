@@ -225,7 +225,6 @@ static void updateTimeDisplay(const gps_fix& fix) {
             // Live data arrived before GPS - fix up the timestamp in-place
             strncpy(hotPacketBuffer_np_rcv_time[activeBuffer], gpsTimestamp.c_str(), HP_RCV_TIME_SIZE - 1);
             hotPacketBuffer_np_rcv_time[activeBuffer][HP_RCV_TIME_SIZE - 1] = '\0';
-            np_rcv_time = gpsTimestamp;
         } else if (hotPacketBuffer_np_rcv_time[activeBuffer][0] == '\0') {
             // No live data yet - load from EEPROM if it is from today
             int todayYYYYMMDD = localYear * 10000 + localMonth * 100 + localDay;
@@ -241,9 +240,7 @@ static void updateTimeDisplay(const gps_fix& fix) {
                 if (haveMutex || hotPacketMutex == NULL) {
                     hotPacketActiveBufferNp = backBuffer;
                     if (haveMutex) xSemaphoreGive(hotPacketMutex);
-                    live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];
                     np_data_is_stored = true;  // Flag getter to append " (stored)"
-                    np_rcv_time = hotPacketBuffer_np_rcv_time[backBuffer];
                     new_rx_data_flag = true;
                 }
             } else {

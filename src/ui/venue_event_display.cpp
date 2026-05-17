@@ -5,7 +5,7 @@
 
 // Static variables to track table state
 static lv_obj_t* current_venue_table_container = nullptr;
-static String last_displayed_data = "";
+static char last_displayed_data[HP_VENUE_DATA_SIZE];
 static bool is_now_playing_screen_active = false;
 
 void displayVenueEventTable(const char* dataString) {
@@ -109,7 +109,8 @@ void displayVenueEventTable(const char* dataString) {
     }
     
     // Store what we just displayed
-    last_displayed_data = String(dataString);
+    strncpy(last_displayed_data, dataString, HP_VENUE_DATA_SIZE - 1);
+    last_displayed_data[HP_VENUE_DATA_SIZE - 1] = '\0';
 
     Serial.printf("Table created with %d rows\n", maxEvents);
 }
@@ -127,10 +128,6 @@ extern "C" void action_display_now_playing(lv_event_t *e) {
     if (gpsHasSynced && hotPacketBuffer_live_venue_event_data[activeBuffer][0] != '\0') {
         Serial.println(np_data_is_stored ? "Using stored venue/event data from EEPROM" : "Using live venue/event data from Meshtastic");
         displayVenueEventTable(hotPacketBuffer_live_venue_event_data[activeBuffer]);
-    } else if (gpsHasSynced && live_venue_event_data.length() > 0) {
-        // Fallback to cached variable
-        Serial.println("Using cached venue/event data from Meshtastic");
-        displayVenueEventTable(live_venue_event_data.c_str());
     } else {
         Serial.println("No venue/event data available - showing NO DATA YET");
     }
@@ -160,13 +157,10 @@ void checkAndUpdateNowPlayingScreen() {
     int activeBuffer = hotPacketActiveBufferNp;  // Snapshot current buffer
     if (gpsHasSynced && hotPacketBuffer_live_venue_event_data[activeBuffer][0] != '\0') {
         currentData = hotPacketBuffer_live_venue_event_data[activeBuffer];
-    } else if (gpsHasSynced && live_venue_event_data.length() > 0) {
-        // Fallback to legacy variable
-        currentData = live_venue_event_data.c_str();
     }
 
     // Only refresh if data is available and has changed
-    if (currentData && last_displayed_data != String(currentData)) {
+    if (currentData && strcmp(last_displayed_data, currentData) != 0) {
         Serial.println("Now Playing screen: Refreshing with new data");
         displayVenueEventTable(currentData);
     }
@@ -178,5 +172,5 @@ void onNowPlayingScreenExit() {
         lv_obj_del(current_venue_table_container);
         current_venue_table_container = nullptr;
     }
-    last_displayed_data = "";
+    last_displayed_data[0] = '\0';
 }

@@ -137,9 +137,6 @@ void processHotPacket(const char* text) {
 
                     // Live packet received - clear stored flag
                     np_data_is_stored = false;
-                    // Update legacy variables for compatibility
-                    np_rcv_time = hotPacketBuffer_np_rcv_time[backBuffer];
-                    live_venue_event_data = hotPacketBuffer_live_venue_event_data[backBuffer];
 
                     // Persist to EEPROM if GPS date is valid
                     if (gpsYear != 0) {
@@ -502,5 +499,5 @@ int parseWeatherData(char* input, const String& timestamp) {
 
 void parseVenueEventData(const char* input) {
     // This function can be expanded to parse venue/event data into structured format
-    // For now, the raw data is stored in live_venue_event_data
+    // Raw data is stored in hotPacketBuffer_live_venue_event_data double-buffer
 }

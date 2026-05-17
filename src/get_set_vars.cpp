@@ -34,7 +34,6 @@ String fcast_hr4;
 String fcast_glyph4;
 String fcast_temp4;
 String fcast_precip4;
-String np_rcv_time;
 String espnow_status;
 String espnow_last_received;
 String gcm_node_id;
@@ -428,16 +427,17 @@ void set_var_fcast_precip4(const char* value) {
 }
 
 const char* get_var_np_rcv_time() {
-    if (np_data_is_stored) {
-        static String storedStr;
-        storedStr = np_rcv_time + " (stored)";
-        return storedStr.c_str();
+    const char* t = hotPacketBuffer_np_rcv_time[hotPacketActiveBufferNp];
+    if (np_data_is_stored && t[0] != '\0') {
+        static char storedBuf[HP_RCV_TIME_SIZE + 10];
+        snprintf(storedBuf, sizeof(storedBuf), "%s (stored)", t);
+        return storedBuf;
     }
-    return np_rcv_time.c_str();
+    return t;
 }
 
 void set_var_np_rcv_time(const char* value) {
-    np_rcv_time = String(value);
+    (void)value;
 }
 
 

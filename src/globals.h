@@ -113,7 +113,6 @@ extern bool old_flip_screen;
 extern float old_temperature_adj;
 
 // Now playing variables (NOT in get_set_vars.h)
-extern String live_venue_event_data;
 extern int np_stored_date;          // YYYYMMDD of entertainment data in NVS (0 = none)
 extern String np_stored_data;       // Raw entertainment packet loaded from NVS at boot
 extern String np_stored_timestamp;  // Receive timestamp of entertainment data in NVS

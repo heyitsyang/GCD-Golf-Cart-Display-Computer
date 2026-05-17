@@ -110,7 +110,6 @@ int32_t old_svc_interval_hrs = 100;
 float old_temperature_adj = 0.0;
 
 // Now playing variables
-String live_venue_event_data = "";
 int np_stored_date = 0;
 String np_stored_data = "";
 String np_stored_timestamp = "";

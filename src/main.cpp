@@ -145,7 +145,7 @@ void setup() {
     cur_date = String("NO GPS");
     cur_temp = String("--");
     wx_rcv_time = String("        NO DATA YET");
-    np_rcv_time = String("        NO DATA YET");
+    strncpy(hotPacketBuffer_np_rcv_time[0], "        NO DATA YET", HP_RCV_TIME_SIZE - 1);
     espnow_status = "Not initialized";
     espnow_last_received = "";
 
