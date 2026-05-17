@@ -9,6 +9,14 @@
 #include "ui/chat_screen.h"
 #include "ui/canned_screen.h"
 #include "get_set_vars.h"
+#include "hardware/display.h"
+
+// Set by LV_EVENT_SCREEN_LOADED on objects.home — fires after FADE_IN animation
+// completes, guaranteeing home screen pixels are fully rendered before the beep.
+static bool s_homeScreenLoaded = false;
+static void homeScreenLoadedCb(lv_event_t *) {
+    s_homeScreenLoaded = true;
+}
 
 void updateEspnowIndicatorColor() {
     static bool last_espnow_connected_state = false;
@@ -109,6 +117,10 @@ void guiTask(void *parameter) {
 
     static bool first_render_signaled = false;
 
+    // LV_EVENT_SCREEN_LOADED fires after the FADE_IN animation finishes —
+    // home pixels are guaranteed visible when s_homeScreenLoaded becomes true.
+    lv_obj_add_event_cb(objects.home, homeScreenLoadedCb, LV_EVENT_SCREEN_LOADED, nullptr);
+
     while (true) {
         uint32_t now = millis();
 
@@ -121,6 +133,14 @@ void guiTask(void *parameter) {
             if (firstRenderDone) xSemaphoreGive(firstRenderDone);
         }
         ui_tick();
+
+        // Fire one double-beep after restored DMs are visible on the home screen.
+        // s_homeScreenLoaded is set by homeScreenLoadedCb via LV_EVENT_SCREEN_LOADED,
+        // which LVGL fires at the end of the FADE_IN animation — guaranteed post-render.
+        if (pendingDmRestoreBeep && s_homeScreenLoaded) {
+            pendingDmRestoreBeep = false;
+            tone_message();
+        }
 
         // Drain chat / messaging UI updates queued from other tasks.
         chatScreenPump();

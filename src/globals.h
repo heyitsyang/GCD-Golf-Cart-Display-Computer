@@ -173,6 +173,9 @@ extern uint32_t last_activity_time_ms;
 extern uint32_t gci_disconnect_time_ms;  // 0 = GCI connected, non-zero = time of disconnect
 extern int32_t old_backlight_timeout;
 
+// Pending audio notification: one double-beep after splash exits if DMs were restored from NVS
+extern bool pendingDmRestoreBeep;
+
 // EEPROM debounce timestamps (0 = no pending write, non-zero = time of last change)
 extern uint32_t debounce_day_backlight;
 extern uint32_t debounce_night_backlight;

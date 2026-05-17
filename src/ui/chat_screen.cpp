@@ -209,16 +209,31 @@ static void rowLeftClickedCb(lv_event_t *e) {
 }
 
 // Right zone (message label): tap selects row and starts marquee.
+// Also marks the message read and immediately updates the text color.
 static void rowRightClickedCb(lv_event_t *e) {
     lv_obj_t *lbl = (lv_obj_t *)lv_event_get_current_target(e);
-    applySelection(lv_obj_get_parent(lbl));
+    lv_obj_t *row = lv_obj_get_parent(lbl);
+    uint32_t  id  = (uint32_t)(uintptr_t)lv_obj_get_user_data(row);
+    chatBufferMarkRead(id);
+    eepromWriteItem_t nvsItem = {};
+    nvsItem.type = EEPROM_SAVE_DMS;
+    xQueueSend(eepromWriteQueue, &nvsItem, 0);
+    lv_obj_set_style_text_color(lbl, lv_color_white(), LV_PART_MAIN);
+    applySelection(row);
     lv_event_stop_bubbling(e);
 }
 
 // Right zone (message label): long press navigates to Canned Messages (reply).
+// Marks the message read before navigating; Messages screen refreshes on return.
 static void rowLongPressedCb(lv_event_t *e) {
     lv_obj_t *lbl = (lv_obj_t *)lv_event_get_current_target(e);
-    openReplyForRow(lv_obj_get_parent(lbl));
+    lv_obj_t *row = lv_obj_get_parent(lbl);
+    uint32_t  id  = (uint32_t)(uintptr_t)lv_obj_get_user_data(row);
+    chatBufferMarkRead(id);
+    eepromWriteItem_t nvsItem = {};
+    nvsItem.type = EEPROM_SAVE_DMS;
+    xQueueSend(eepromWriteQueue, &nvsItem, 0);
+    openReplyForRow(row);
     lv_event_stop_bubbling(e);
 }
 
@@ -351,7 +366,14 @@ void chatScreenRefresh() {
             lv_obj_set_user_data(s_rows[i], (void *)(uintptr_t)m->id);
 
             lv_color_t row_bg  = m->outgoing ? lv_color_white() : lv_color_black();
-            lv_color_t msg_col = m->outgoing ? lv_color_black() : lv_color_white();
+            lv_color_t msg_col;
+            if (m->outgoing) {
+                msg_col = lv_color_black();
+            } else if (!m->read && m->to == my_node_num) {
+                msg_col = lv_color_hex(0x00FFFF);  // cyan = unread DM
+            } else {
+                msg_col = lv_color_white();
+            }
             lv_color_t pfx_col;
             if (m->outgoing) {
                 pfx_col = lv_color_black();

@@ -706,11 +706,11 @@ void set_var_sunset_time_str(const char* value) {
     sunset_time_str = String(value);
 }
 
-int32_t get_var_num_direct_msgs_avail() {
-    return (int32_t)chatBufferDmCount();
+int32_t get_var_num_unread_direct_msgs() {
+    return (int32_t)chatBufferUnreadDmCount();
 }
 
-void set_var_num_direct_msgs_avail(int32_t value) {
+void set_var_num_unread_direct_msgs(int32_t value) {
     (void)value;
 }
 

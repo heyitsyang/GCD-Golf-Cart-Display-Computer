@@ -189,6 +189,11 @@ void setup() {
     firstRenderDone = xSemaphoreCreateBinary();  // espnow_task waits on this before WiFi init
     HEAP_LOG("after mutex/queue create");
 
+    // Restore unread DMs from previous GCI sleep cycle (no-op on first boot or non-GCI use).
+    // Must run after chatBufferMutex is created and after initSpeaker() so beeps work.
+    loadDmsFromNvs();
+    HEAP_LOG("after loadDmsFromNvs");
+
     // Create all FreeRTOS tasks (including ESP-NOW)
     createAllTasks();
     HEAP_LOG("after createAllTasks");

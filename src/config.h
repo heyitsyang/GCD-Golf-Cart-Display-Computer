@@ -137,7 +137,7 @@
 #define GUI_TASK_STACK_SIZE 8192
 #define MESHTASTIC_TASK_STACK_SIZE 4096
 #define MESHTASTIC_CALLBACK_TASK_STACK_SIZE 6144
-#define EEPROM_TASK_STACK_SIZE 2048
+#define EEPROM_TASK_STACK_SIZE 4096  // saveDmsToNvs() needs ~1.2KB beyond base overhead
 #define SYSTEM_TASK_STACK_SIZE 4096  // Increased for GPS config init with debug output
 #define ESPNOW_TASK_STACK_SIZE 4096
 

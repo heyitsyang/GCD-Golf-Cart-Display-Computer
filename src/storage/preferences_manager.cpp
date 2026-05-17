@@ -2,6 +2,8 @@
 #include "config.h"
 #include "globals.h"
 #include "types.h"
+#include "communication/chat_buffer.h"
+#include <Meshtastic.h>
 
 void initPreferences() {
     prefs.begin("eeprom", false);
@@ -142,4 +144,72 @@ void clearAllPreferences() {
     prefs.clear();
     Serial.println("All preferences cleared. Restarting system...");
     ESP.restart();
+}
+
+// NVS layout for one persisted DM (outgoing=false and read=false are implied on restore)
+typedef struct __attribute__((packed)) {
+    uint32_t from;
+    uint32_t to;
+    uint8_t  channel;
+    uint32_t timestamp;
+    char     text[CHAT_TEXT_SIZE];
+} nvsDmEntry_t;
+
+#define NVS_DM_MAX 4
+
+void saveDmsToNvs(void) {
+    chatMessage_t buf[NVS_DM_MAX];
+    size_t n = chatBufferSnapshotUnreadDms(buf, NVS_DM_MAX);
+
+    prefs.putUInt("my_nd_num", my_node_num);  // restored at load so dmPredicate filter works
+    prefs.putInt("dm_count", (int)n);
+    for (size_t i = 0; i < n; i++) {
+        char key[6];
+        snprintf(key, sizeof(key), "dm_%u", (unsigned)i);
+        nvsDmEntry_t entry;
+        entry.from      = buf[i].from;
+        entry.to        = buf[i].to;
+        entry.channel   = buf[i].channel;
+        entry.timestamp = buf[i].timestamp;
+        memcpy(entry.text, buf[i].text, CHAT_TEXT_SIZE);
+        prefs.putBytes(key, &entry, sizeof(nvsDmEntry_t));
+    }
+    Serial.printf("saveDmsToNvs: saved %u unread DM(s)\n", (unsigned)n);
+}
+
+void loadDmsFromNvs(void) {
+    int n = prefs.getInt("dm_count", 0);
+    if (n <= 0) return;
+    if (n > NVS_DM_MAX) n = NVS_DM_MAX;
+
+    // Restore node num so chatBufferAppend's dmPredicate filter accepts these messages.
+    // The real value arrives from GCM shortly after boot and overwrites this.
+    uint32_t stored_node_num = prefs.getUInt("my_nd_num", 0);
+    if (stored_node_num != 0) my_node_num = stored_node_num;
+
+    // NVS is NOT cleared here. saveDmsToNvs() writes dm_count=0 only when
+    // the user marks all DMs read, so unread DMs survive any unexpected power loss.
+
+    int restored = 0;
+    for (int i = 0; i < n; i++) {
+        char key[6];
+        snprintf(key, sizeof(key), "dm_%u", (unsigned)i);
+        nvsDmEntry_t entry;
+        size_t bytes_read = prefs.getBytes(key, &entry, sizeof(nvsDmEntry_t));
+        if (bytes_read != sizeof(nvsDmEntry_t)) continue;
+
+        chatMessage_t cm = {};
+        cm.from      = entry.from;
+        cm.to        = entry.to;
+        cm.channel   = entry.channel;
+        cm.timestamp = entry.timestamp;
+        cm.outgoing  = false;
+        cm.read      = false;
+        memcpy(cm.text, entry.text, CHAT_TEXT_SIZE);
+        chatBufferAppend(&cm);
+        restored++;
+    }
+
+    if (restored > 0) pendingDmRestoreBeep = true;
+    Serial.printf("loadDmsFromNvs: restored %d unread DM(s)\n", restored);
 }

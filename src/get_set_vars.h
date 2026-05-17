@@ -200,8 +200,8 @@ void set_var_sunset_time_str(const char* value);
 int32_t get_var_mesh_filter();
 void set_var_mesh_filter(int32_t value);
 
-int32_t get_var_num_direct_msgs_avail();
-void set_var_num_direct_msgs_avail(int32_t value);
+int32_t get_var_num_unread_direct_msgs();
+void set_var_num_unread_direct_msgs(int32_t value);
 
 #ifdef __cplusplus
 }

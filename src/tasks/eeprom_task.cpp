@@ -2,6 +2,7 @@
 #include "config.h"
 #include "globals.h"
 #include "types.h"
+#include "storage/preferences_manager.h"
 
 void eepromTask(void *parameter) {
     eepromWriteItem_t item;
@@ -49,6 +50,10 @@ void eepromTask(void *parameter) {
 #if DEBUG_EEPROM == 1
                         Serial.printf("> %s saved: %s\n", item.key, item.value.boolVal ? "true" : "false");
 #endif
+                        break;
+
+                    case EEPROM_SAVE_DMS:
+                        saveDmsToNvs();
                         break;
                 }
                 xSemaphoreGive(eepromMutex);

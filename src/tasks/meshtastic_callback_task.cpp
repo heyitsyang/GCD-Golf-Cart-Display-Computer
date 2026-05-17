@@ -42,6 +42,9 @@ void meshtasticCallbackTask(void *parameter) {
 
             if (item.to == my_node_num && my_node_num != 0) {
                 tone_message();
+                eepromWriteItem_t nvsItem = {};
+                nvsItem.type = EEPROM_SAVE_DMS;
+                xQueueSend(eepromWriteQueue, &nvsItem, 0);
             }
 
             chatScreenRequestRefresh();

@@ -10,7 +10,8 @@ typedef enum {
     EEPROM_FLOAT,
     EEPROM_INT,
     EEPROM_STRING,
-    EEPROM_BOOL
+    EEPROM_BOOL,
+    EEPROM_SAVE_DMS  // no key/value; eeprom_task calls saveDmsToNvs()
 } eepromType_t;
 
 typedef struct {
@@ -41,6 +42,7 @@ typedef struct {
     uint8_t  channel;
     uint32_t timestamp;   // epoch (time(NULL)) at receive/send
     bool     outgoing;
+    bool     read;        // true once user has tapped or replied (DMs only)
     char     text[CHAT_TEXT_SIZE];
 } chatMessage_t;
 
