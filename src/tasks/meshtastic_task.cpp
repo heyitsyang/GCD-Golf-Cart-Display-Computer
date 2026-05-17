@@ -83,6 +83,12 @@ void meshtasticTask(void *parameter) {
               }
           }
 
+          // Refresh node list when a favorite was added without a known short name.
+          if (can_send && nodeListRefreshRequested) {
+              nodeListRefreshRequested = false;
+              mt_request_node_report(nullptr);
+          }
+
           // Drain user-initiated chat TX (canned + typed) onto the radio.
           if (can_send && chatTxQueue) {
               chatTxItem_t tx;

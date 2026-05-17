@@ -198,6 +198,9 @@ static void rowLeftClickedCb(lv_event_t *e) {
             lv_event_stop_bubbling(e);
             return;
         }
+        // Name not yet known — request a full node list refresh from the Meshtastic task
+        // so the name gets populated once the GCM responds.
+        if (!nm || !nm[0]) nodeListRefreshRequested = true;
         nowFav = true;
     }
     lv_color_t color = nowFav ? lv_color_hex(0xFFFF00) : lv_color_white();

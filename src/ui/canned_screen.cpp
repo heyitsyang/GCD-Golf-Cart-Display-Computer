@@ -187,6 +187,10 @@ static void rebuildDestOptions(uint32_t tempDest) {
         if (!nm || !nm[0]) {
             // Name was empty at favorite-add time; try the live cache now.
             const char* cached = nodeNameCacheLookup(nid);
+#if DEBUG_GCM_MESSAGES
+            Serial.printf("[CANNED] fav[%u] nid=%08x stored=\"%s\" cache=\"%s\"\n",
+                          (unsigned)i, (unsigned)nid, nm ? nm : "(null)", cached ? cached : "(null)");
+#endif
             if (cached && cached[0]) {
                 favoritesUpdateName(nid, cached);  // persist lazily from GUI task
                 nm = cached;

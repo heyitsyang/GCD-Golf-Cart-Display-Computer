@@ -133,6 +133,7 @@ bool reqWxEntNeeded = false;
 bool reqWxEntSent = false;
 bool gpsConfigAttempted = false;
 bool handshakeComplete = false;
+bool nodeListRefreshRequested = false;
 
 // Inactivity timeout variables
 uint32_t lastTouchActivity = 0;

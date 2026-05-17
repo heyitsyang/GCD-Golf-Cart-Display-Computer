@@ -8,6 +8,7 @@
 #include "pb_decode.h"
 #include "globals.h"
 #include "ui/canned_screen.h"
+#include "storage/favorites.h"
 
 // External declarations from mt_protocol.cpp in meshtastic library
 extern uint32_t my_node_num;
@@ -65,13 +66,17 @@ static bool sendAdminMessage(meshtastic_AdminMessage *adminMsg) {
 // NodeInfo broadcast that arrives over the mesh. Ring buffer — oldest entry
 // overwritten when full. All accesses are from the meshtastic callback task;
 // no mutex needed.
-#define NODE_NAME_CACHE_SIZE 24
+#define NODE_NAME_CACHE_SIZE 8
 static struct { uint32_t nodeNum; char shortName[5]; } s_nodeNameCache[NODE_NAME_CACHE_SIZE];
 static uint8_t s_nodeNameCacheCount = 0;
 static uint8_t s_nodeNameCacheNext  = 0;
 
 void handleNodeInfo(uint32_t nodeNum, const char* shortName) {
     if (!shortName || !shortName[0]) return;
+    if (!favoritesContains(nodeNum)) return;
+#if DEBUG_GCM_MESSAGES
+    Serial.printf("[NODEINFO] nodeNum=%08x name=\"%.4s\"\n", (unsigned)nodeNum, shortName);
+#endif
     for (uint8_t i = 0; i < s_nodeNameCacheCount; i++) {
         if (s_nodeNameCache[i].nodeNum == nodeNum) {
             strncpy(s_nodeNameCache[i].shortName, shortName, 4);

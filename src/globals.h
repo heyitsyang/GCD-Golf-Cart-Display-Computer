@@ -135,6 +135,7 @@ extern bool reqWxEntNeeded;
 extern bool reqWxEntSent;
 extern bool gpsConfigAttempted;
 extern bool handshakeComplete;
+extern bool nodeListRefreshRequested;
 
 // Inactivity timeout variables (NOT in get_set_vars.h)
 extern uint32_t lastTouchActivity;
