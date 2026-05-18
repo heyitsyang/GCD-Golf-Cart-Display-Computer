@@ -200,6 +200,7 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo) {
     // Tag 3 = GCM serial interface is ready for commands
     if (!handshakeComplete) {
         handshakeComplete = true;
+        not_yet_connected = false;
         Serial.println("GCM handshake complete (tag 3) - sends enabled");
     }
 
