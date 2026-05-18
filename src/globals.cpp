@@ -148,7 +148,7 @@ int outdoorLuminosity = -99;
 float rawAirTemperature = -99;
 float airTemperature = -99;
 float battVoltage = -99;
-float fuelLevel = -99;
+float fuelLevel = 100;  // set to 100% by default to prevent false low fuel warnings, will be updated if GCI data received and valid
 float fuel_low_percent = 20.0f;
 float old_fuel_low_percent = 20.0f;
 structMsgFromGci dataFromGci;
