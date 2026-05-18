@@ -123,6 +123,16 @@ void systemTask(void *parameter) {
             debounce_temperature_adj = 0;
         }
 
+        // Fuel low threshold - debounced
+        if (fuel_low_percent != old_fuel_low_percent) {
+            old_fuel_low_percent = fuel_low_percent;
+            debounce_fuel_low_percent = now;
+        }
+        if (debounceElapsed(debounce_fuel_low_percent)) {
+            queuePreferenceWrite("fuel_low_pct", fuel_low_percent);
+            debounce_fuel_low_percent = 0;
+        }
+
         // Backlight timeout - debounced
         if (backlight_timeout != old_backlight_timeout) {
             old_backlight_timeout = backlight_timeout;

@@ -60,6 +60,10 @@ void loadPreferences() {
     set_var_temperature_adj(temperature_adj);
     old_temperature_adj = temperature_adj;
 
+    fuel_low_percent = prefs.getFloat("fuel_low_pct", 20.0);
+    set_var_fuel_low_percent(fuel_low_percent);
+    old_fuel_low_percent = fuel_low_percent;
+
     // Load touchscreen calibration coefficients if available
     touch_alpha_x = prefs.getFloat("touch_alpha_x", 0.0);
     touch_beta_x = prefs.getFloat("touch_beta_x", 0.0);

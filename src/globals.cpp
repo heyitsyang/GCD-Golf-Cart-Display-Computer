@@ -149,6 +149,8 @@ float rawAirTemperature = -99;
 float airTemperature = -99;
 float battVoltage = -99;
 float fuelLevel = -99;
+float fuel_low_percent = 20.0f;
+float old_fuel_low_percent = 20.0f;
 structMsgFromGci dataFromGci;
 
 // Golf cart interface variables for outbound data
@@ -174,6 +176,7 @@ uint32_t debounce_speaker_volume = 0;
 uint32_t debounce_svc_interval_hrs = 0;
 uint32_t debounce_temperature_adj = 0;
 uint32_t debounce_backlight_timeout = 0;
+uint32_t debounce_fuel_low_percent = 0;
 
 // Note: All EEZ Studio shared variables (cur_date, version, etc.)
 // are defined in get_set_vars.cpp via get_set_vars.h

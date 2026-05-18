@@ -167,6 +167,12 @@ void set_var_espnow_pair_gci(bool value);
 float get_var_temperature_adj();
 void set_var_temperature_adj(float value);
 
+float get_var_fuel_level();
+void set_var_fuel_level(float value);
+
+float get_var_fuel_low_percent();
+void set_var_fuel_low_percent(float value);
+
 bool get_var_reboot_meshtastic();
 void set_var_reboot_meshtastic(bool value);
 

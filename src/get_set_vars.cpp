@@ -609,6 +609,22 @@ void set_var_temperature_adj(float value) {
     temperature_adj = value;
 }
 
+float get_var_fuel_level() {
+    return fuelLevel;  // -99 = no sensor installed or data not yet valid; EEZ trigger must guard this
+}
+
+void set_var_fuel_level(float value) {
+    fuelLevel = value;
+}
+
+float get_var_fuel_low_percent() {
+    return fuel_low_percent;
+}
+
+void set_var_fuel_low_percent(float value) {
+    fuel_low_percent = value;
+}
+
 bool get_var_reboot_meshtastic() {
     return reboot_meshtastic;
 }

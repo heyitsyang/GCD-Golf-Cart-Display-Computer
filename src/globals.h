@@ -152,6 +152,8 @@ extern float rawAirTemperature;
 extern float airTemperature;
 extern float battVoltage;
 extern float fuelLevel;
+extern float fuel_low_percent;
+extern float old_fuel_low_percent;
 extern structMsgFromGci dataFromGci;
 
 // Golf cart interface variables for outbound data
@@ -183,6 +185,7 @@ extern uint32_t debounce_speaker_volume;
 extern uint32_t debounce_svc_interval_hrs;
 extern uint32_t debounce_temperature_adj;
 extern uint32_t debounce_backlight_timeout;
+extern uint32_t debounce_fuel_low_percent;
 
 // All EEZ Studio variables are defined in get_set_vars.h
 // Include it here so all files can access them
