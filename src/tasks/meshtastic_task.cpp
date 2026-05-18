@@ -5,6 +5,7 @@
 #include "communication/meshtastic_admin.h"
 #include "get_set_vars.h"
 #include "types.h"
+#include "prototypes.h"
 
 void meshtasticTask(void *parameter) {
     static bool old_reboot_meshtastic = false;
@@ -47,6 +48,13 @@ void meshtasticTask(void *parameter) {
           bool can_send = false;
           if (mesh_serial_enabled) {
               can_send = mt_loop(now);
+          }
+
+          // Retry node report request if GCM powered on after us (connected_callback never fired)
+          static uint32_t lastNodeReportRetry = 0;
+          if (can_send && not_yet_connected && (now - lastNodeReportRetry >= 5000)) {
+              mt_request_node_report(connected_callback);
+              lastNodeReportRetry = now;
           }
 
           // Send AWAKE once after handshake (tag 3) + GPS config

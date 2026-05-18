@@ -14,7 +14,7 @@
 #define DEBUG_SLEEP_STATE 0             // Sleep state machine transitions
 #define DEBUG_MESHTASTIC_CONNECTION 0   // GCM connection/reconnection events
 #define DEBUG_GCM_MESSAGES 0            // GCM (Meshtastic) messages sent and received
-#define DEBUG_ESPNOW 1                  // ESP-NOW verbose messages (pairing & telemetry always shown)
+#define DEBUG_ESPNOW 0                  // ESP-NOW verbose messages (pairing & telemetry always shown)
 #define DEBUG_OTA_TX_TEST 0             // Periodic T1,T2,T3... OTA test messages every 30s
 #define DEBUG_OTA_TX_TEST_CHANNEL 3     // Channel to send OTA test messages on (corresponds to UI channel selector)
 
@@ -129,7 +129,7 @@
 #define CHAT_TEXT_SIZE 120        // Max text stored per chat message / TX / KB context
 
 // Heap monitoring (set DEBUG_HEAP to 0 to remove all logging once stable)
-#define DEBUG_HEAP 1
+#define DEBUG_HEAP 0
 #define DEBUG_HEAP_INTERVAL_MS 5000
 
 // Task Stack Sizes (in bytes)
