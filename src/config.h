@@ -3,7 +3,7 @@
 
 // Debug Settings
 #define DEBUG_TOUCH_SCREEN 0
-#define DEBUG_GPS 1
+#define DEBUG_GPS 0
 // MT_DEBUGGING - LEAVE UNDEFINED (not 0) to disable low-level Meshtastic protocol debugging
 // Upstream code uses #ifdef (not #if), so defining it to 0 still enables it!
 // To enable: uncomment and set to 1
