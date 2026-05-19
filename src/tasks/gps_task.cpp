@@ -411,6 +411,23 @@ static void updateHomeLocation(const gps_fix& fix) {
  * Update location-related data from GPS fix
  */
 static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset_t) {
+    updateHdop(fix);
+
+    // Update satellite count regardless of location validity
+    if (fix.valid.satellites) {
+        if (fix.satellites > 0) {
+            lastValidSatCount = fix.satellites;
+            zeroSatConsecutiveCount = 0;
+            sats_hdop = String(fix.satellites) + "/" + String(hdop, 2);
+        } else {
+            zeroSatConsecutiveCount++;
+            if (zeroSatConsecutiveCount >= ZERO_SAT_THRESHOLD) {
+                lastValidSatCount = 0;
+                sats_hdop = "0/" + String(hdop, 2);
+            }
+        }
+    }
+
     if (!fix.valid.location) return;
 
     // Update both old and new coordinate variables
@@ -421,26 +438,6 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
 
     if (fix.valid.altitude) {
         altitude = String(fix.altitude(), 2);
-    }
-
-    updateHdop(fix);
-
-    // Update satellite count with persistence to filter brief dropouts
-    if (fix.valid.satellites) {
-        if (fix.satellites > 0) {
-            // Valid non-zero count - update display and reset dropout counter
-            lastValidSatCount = fix.satellites;
-            zeroSatConsecutiveCount = 0;
-            sats_hdop = String(fix.satellites) + "/" + String(hdop, 2);
-        } else {
-            // Zero satellites reported - only update display after consecutive zeros
-            zeroSatConsecutiveCount++;
-            if (zeroSatConsecutiveCount >= ZERO_SAT_THRESHOLD) {
-                lastValidSatCount = 0;
-                sats_hdop = "0/" + String(hdop, 2);
-            }
-            // Otherwise keep showing lastValidSatCount (display unchanged)
-        }
     }
 
     updateBacklight(sunrise_t, sunset_t);
@@ -632,8 +629,9 @@ void gpsTask(void *parameter) {
 
 #if DEBUG_GPS == 1
                 if (!fix.valid.location) {
-                    Serial.printf("[GPS] Acquiring: sats=%u time=%s\n",
-                        fix.valid.satellites ? (unsigned)fix.satellites : 0u,
+                    Serial.printf("[GPS] Acquiring: fix_sats=%u(valid=%d) display_sats=%u time=%s\n",
+                        (unsigned)fix.satellites, (int)fix.valid.satellites,
+                        (unsigned)lastValidSatCount,
                         (fix.valid.date && fix.valid.time) ? "valid" : "none");
                 }
 #endif
