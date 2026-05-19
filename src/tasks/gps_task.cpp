@@ -585,7 +585,7 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
     Serial.println(avg_speed);
     Serial.print("DIRECTION = ");
     Serial.println(heading);
-    Serial.print("Sats/HDOP = ");
+    Serial.print("Sats_used/HDOP = ");
     Serial.println(sats_hdop);
     if (hasLastLocation) {
         Serial.print("Pos distance (mi) = ");
@@ -629,8 +629,8 @@ void gpsTask(void *parameter) {
 
 #if DEBUG_GPS == 1
                 if (!fix.valid.location) {
-                    Serial.printf("[GPS] Acquiring: fix_sats=%u(valid=%d) display_sats=%u time=%s\n",
-                        (unsigned)fix.satellites, (int)fix.valid.satellites,
+                    Serial.printf("[GPS] Acquiring: sats_used_valid=%d display_sats_used=%u time=%s\n",
+                        (int)fix.valid.satellites,
                         (unsigned)lastValidSatCount,
                         (fix.valid.date && fix.valid.time) ? "valid" : "none");
                 }
