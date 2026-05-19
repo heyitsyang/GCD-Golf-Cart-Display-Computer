@@ -579,10 +579,6 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
         }
     }
 
-    // Update last location for next iteration
-    lastLocation = fix.location;
-    hasLastLocation = true;
-
 #if DEBUG_GPS == 1
     Serial.print("\nLAT: ");
     Serial.println(latitude);
@@ -601,6 +597,10 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
         Serial.println(accum_distance, 3);
     }
 #endif
+
+    // Update last location for next iteration
+    lastLocation = fix.location;
+    hasLastLocation = true;
 }
 
 /**
@@ -629,6 +629,14 @@ void gpsTask(void *parameter) {
                 updateTimeDisplay(fix);
                 updateLocation(fix, sunrise_t, sunset_t);
                 updateHomeLocation(fix);
+
+#if DEBUG_GPS == 1
+                if (!fix.valid.location) {
+                    Serial.printf("[GPS] Acquiring: sats=%u time=%s\n",
+                        fix.valid.satellites ? (unsigned)fix.satellites : 0u,
+                        (fix.valid.date && fix.valid.time) ? "valid" : "none");
+                }
+#endif
             }
 
             xSemaphoreGive(gpsMutex);
