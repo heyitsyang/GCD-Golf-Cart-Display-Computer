@@ -50,10 +50,17 @@ void meshtasticTask(void *parameter) {
               can_send = mt_loop(now);
           }
 
-          // Retry node report request if GCM powered on after us (connected_callback never fired)
+          // Retry connection if GCM was already running when GCD booted, or if GCM rebooted mid-session.
+          // After initial GPS config (gpsConfigAttempted=true) we had a prior connection, so use the
+          // lightweight SPECIAL_NONCE request (skips node database). Before that, use the full node
+          // report to populate the short-name cache for favorites on first connect.
           static uint32_t lastNodeReportRetry = 0;
           if (can_send && not_yet_connected && (now - lastNodeReportRetry >= 5000)) {
-              mt_request_node_report(connected_callback);
+              if (gpsConfigAttempted) {
+                  mt_request_my_node_info();  // Post-reboot: lightweight, skips node database
+              } else {
+                  mt_request_node_report(connected_callback);  // Initial connect: full dump
+              }
               lastNodeReportRetry = now;
           }
 

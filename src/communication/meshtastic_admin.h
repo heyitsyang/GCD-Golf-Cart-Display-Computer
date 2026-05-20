@@ -32,6 +32,10 @@ void initGpsConfigOnBoot();
 // Note: Only node ID is available - GCM firmware doesn't send DeviceMetadata messages
 void requestMetadataOnce();
 
+// Request GCM to resend only my_info (tag 3), skipping the full node database.
+// Use after a mid-session GCM reboot instead of mt_request_node_report.
+bool mt_request_my_node_info();
+
 // Reset GPS update interval to default before entering sleep mode
 // Sets gps_update_interval to 0 (which resets to default 2 minute interval)
 // Should be called after SLEEP_PIN goes HIGH, before entering deep sleep

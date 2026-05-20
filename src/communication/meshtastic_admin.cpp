@@ -230,6 +230,7 @@ void handleGcmRebooted() {
 
     // Block all sends until new tag 3 arrives
     handshakeComplete = false;
+    not_yet_connected = true;  // re-enable retry loop in case tag 3 is slow to arrive
 
     // Clear the stored node ID to indicate stale data
     set_var_gcm_node_id("");
@@ -317,6 +318,16 @@ void requestMetadataOnce() {
             nodeIdCaptured = true;
         }
     }
+}
+
+// Send a lightweight want_config_id request that asks GCM to resend only my_info (tag 3),
+// skipping the full node database. Uses SPECIAL_NONCE (69420) defined in mt_protocol.cpp.
+// Use this after a mid-session GCM reboot instead of mt_request_node_report.
+bool mt_request_my_node_info() {
+    meshtastic_ToRadio toRadio = meshtastic_ToRadio_init_default;
+    toRadio.which_payload_variant = meshtastic_ToRadio_want_config_id_tag;
+    toRadio.want_config_id = 69420;  // SPECIAL_NONCE from mt_protocol.cpp
+    return _mt_send_toRadio(toRadio);
 }
 
 bool resetGpsIntervalBeforeSleep() {
