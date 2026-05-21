@@ -79,11 +79,7 @@ static void heapAllocFailedCallback(size_t size, uint32_t caps, const char *func
  *****************/
 
 void setup() {
-    // Initialize Serial for debug output only (TX on pin 1)
-    Serial.begin(GPS_BAUD, SERIAL_8N1, 3, 1);  // RX=3 (GPS), TX=1 (debug)
-
-    // Disable Serial RX to prevent conflicts
-    Serial.end();
+    // UART0 split: RX=3 (GPS input), TX=1 (debug output)
     Serial.begin(GPS_BAUD, SERIAL_8N1, 3, 1);
 
 #if DEBUG_HEAP

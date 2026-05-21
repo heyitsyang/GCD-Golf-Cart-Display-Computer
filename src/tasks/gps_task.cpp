@@ -610,12 +610,35 @@ static void updateLocation(const gps_fix& fix, time_t& sunrise_t, time_t& sunset
 void gpsTask(void *parameter) {
     time_t sunrise_t, sunset_t;
 
+    // Drain bytes accumulated in UART0 RX during boot (before this task started).
+    // NeoGPS EXPLICIT_MERGING mode needs a clean sentence boundary to return fixes;
+    // stale mid-sentence bytes would cause it to wait indefinitely for RMC.
+    while (gpsSerial.available()) gpsSerial.read();
+
+#if DEBUG_GPS == 1
+    Serial.println("[GPS] task started, RX flushed");
+#endif
+
 #if DEBUG_INIT == 1
     Serial.println("GPS Task started");
 #endif
 
     while (true) {
         if (xSemaphoreTake(gpsMutex, portMAX_DELAY)) {
+
+#if DEBUG_GPS == 1
+            {
+                static uint32_t s_lastRaw = 0;
+                static uint32_t s_rawTotal = 0;
+                s_rawTotal += (uint32_t)gpsSerial.available();
+                uint32_t now = millis();
+                if (now - s_lastRaw >= 5000) {
+                    Serial.printf("[GPS] raw_bytes/5s=%lu\n", s_rawTotal);
+                    s_rawTotal = 0;
+                    s_lastRaw = now;
+                }
+            }
+#endif
 
             // Process all available merged fixes
             while (gps.available(gpsSerial)) {
