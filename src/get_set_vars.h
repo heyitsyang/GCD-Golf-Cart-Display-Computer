@@ -209,6 +209,18 @@ void set_var_mesh_filter(int32_t value);
 int32_t get_var_num_unread_direct_msgs();
 void set_var_num_unread_direct_msgs(int32_t value);
 
+bool get_var_headlights_on();
+void set_var_headlights_on(bool value);
+
+int32_t get_var_lux_now();
+void set_var_lux_now(int32_t value);
+
+int32_t get_var_lux_lights_on();
+void set_var_lux_lights_on(int32_t value);
+
+int32_t get_var_lux_lights_off();
+void set_var_lux_lights_off(int32_t value);
+
 #ifdef __cplusplus
 }
 #endif
@@ -279,6 +291,10 @@ extern String cur_long;
 extern String sunrise_time_str;
 extern String sunset_time_str;
 extern int32_t mesh_filter;  // Chat-list filter dropdown selection (0..4)
+extern bool headlights_on;
+extern int32_t lux_now;
+extern int32_t lux_lights_on;
+extern int32_t lux_lights_off;
 
 #endif // __cplusplus
 

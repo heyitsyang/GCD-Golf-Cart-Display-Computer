@@ -70,6 +70,10 @@ String cur_long;
 String sunrise_time_str = "_:__";
 String sunset_time_str  = "_:__";
 int32_t mesh_filter = 0;  // 0 = DIRECT MSGS
+bool headlights_on = false;
+int32_t lux_now = -99;
+int32_t lux_lights_on  = 200;  // Default: turn headlights on below 200 lux
+int32_t lux_lights_off = 400;  // Default: turn headlights off above 400 lux
 
 // Static buffers for C string returns
 static char temp_buffer[256];
@@ -728,6 +732,44 @@ int32_t get_var_num_unread_direct_msgs() {
 
 void set_var_num_unread_direct_msgs(int32_t value) {
     (void)value;
+}
+
+bool get_var_headlights_on() {
+    return headlights_on;
+}
+
+void set_var_headlights_on(bool value) {
+    headlights_on = value;
+}
+
+int32_t get_var_lux_now() {
+    return lux_now;
+}
+
+void set_var_lux_now(int32_t value) {
+    lux_now = value;
+}
+
+int32_t get_var_lux_lights_on() {
+    return lux_lights_on;
+}
+
+void set_var_lux_lights_on(int32_t value) {
+    if (lux_lights_on != value) {
+        lux_lights_on = value;
+        queuePreferenceWrite("lux_lights_on", (int)value);
+    }
+}
+
+int32_t get_var_lux_lights_off() {
+    return lux_lights_off;
+}
+
+void set_var_lux_lights_off(int32_t value) {
+    if (lux_lights_off != value) {
+        lux_lights_off = value;
+        queuePreferenceWrite("lux_lights_off", (int)value);
+    }
 }
 
 } // extern "C"

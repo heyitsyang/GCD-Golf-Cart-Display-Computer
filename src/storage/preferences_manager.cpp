@@ -94,6 +94,10 @@ void loadPreferences() {
     // Chat / messaging UI
     mesh_filter = prefs.getInt("mesh_filter", 0);  // default = DIRECT MSGS
 
+    // Headlight auto-on/off lux thresholds
+    lux_lights_on  = prefs.getInt("lux_lights_on",  200);
+    lux_lights_off = prefs.getInt("lux_lights_off", 400);
+
 #if DEBUG_EEPROM == 1
     Serial.println("EEPROM values loaded:");
     Serial.printf("  day_backlight=%d, night_backlight=%d\n", day_backlight, night_backlight);
