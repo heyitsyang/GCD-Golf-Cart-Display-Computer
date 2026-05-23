@@ -74,6 +74,8 @@ static void heapAllocFailedCallback(size_t size, uint32_t caps, const char *func
 #endif
 
 
+void* glyph_guard = nullptr;  // Freed by gui_task before first render — see globals.h
+
 /*****************
  *     SETUP     *
  *****************/
@@ -145,6 +147,19 @@ void setup() {
     espnow_status = "Not initialized";
     espnow_last_received = "";
 
+    // Reserve a 26 KB block before creating any LVGL objects.
+    // With LV_STDLIB_CLIB, lv_malloc() is system malloc. The 14-screen ui_init()
+    // makes ~300 small allocations that fragment the heap; the 172px splash-screen
+    // glyph renderer then needs 24 KB contiguous and sometimes can't find it.
+    // This block is held through ALL of setup (mutexes, queues, task stacks, etc.)
+    // and freed by gui_task immediately before the first lv_timer_handler() call,
+    // so nothing else can fragment it between the free and the render.
+    glyph_guard = malloc(26000);
+    HEAP_LOG("after glyph_guard malloc(26000)");
+#if DEBUG_HEAP
+    Serial.printf("[HEAP] glyph_guard=%p\n", glyph_guard);
+#endif
+
     // Initialize UI from EEZ Studio
     ui_init();
     HEAP_LOG("after ui_init");
@@ -156,6 +171,8 @@ void setup() {
     HEAP_LOG("after chatScreenInit");
     cannedScreenInit();
     HEAP_LOG("after cannedScreenInit");
+
+    // glyph_guard is NOT freed here — gui_task frees it before the first lv_timer_handler().
     // Initialize Meshtastic
     mt_serial_init(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);
     randomSeed(micros());

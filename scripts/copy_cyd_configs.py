@@ -1,11 +1,11 @@
 #
 # Library updates overwrite configuration file with defaults, so this copy
 # program copies customized configuration files lv_conf.h and User_Setup.h
-# into their proper folders.  
-# 
-# lv_conf.h only copies if the destination file does not already exist.  
+# into their proper folders.
+#
+# lv_conf.h only copies if the destination file does not already exist.
 # This mechanism prevents this program from endlessly copying (platformio build flag
-# doesn't work as you would expect), so delete the destination .pio/libdeps/cyd/lv.conf 
+# doesn't work as you would expect), so delete the destination .pio/libdeps/cyd/lv.conf
 # file first to cause a copy before the next build.
 #
 # Customizations to should be applied to the files in the NECESSARY TEMPLATE FILES folder

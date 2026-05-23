@@ -30,6 +30,7 @@ extern SemaphoreHandle_t displayMutex;
 extern SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping (not data reads)
 extern SemaphoreHandle_t chatBufferMutex;  // Guards the chat ring buffer
 extern SemaphoreHandle_t firstRenderDone;  // Given by gui_task after first render; espnow_task waits on it before WiFi init
+extern void* glyph_guard;  // 26KB heap reservation freed by gui_task before first render (see main.cpp)
 extern QueueHandle_t eepromWriteQueue;
 extern QueueHandle_t meshtasticCallbackQueue;
 extern QueueHandle_t espnowRecvQueue;

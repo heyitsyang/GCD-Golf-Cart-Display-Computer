@@ -85,6 +85,19 @@ void guiTask(void *parameter) {
 
     static bool first_render_signaled = false;
 
+    // Free the heap reservation held since setup(). Doing it here — right before
+    // the first lv_timer_handler() — ensures nothing else allocates into the freed
+    // 26 KB gap between the free and LVGL's 24 KB glyph draw-buffer request.
+#if DEBUG_HEAP
+    Serial.printf("[HEAP] guiTask pre-free: glyph_guard=%p free=%u max=%u\n",
+                  glyph_guard, (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
+#endif
+    if (glyph_guard) { free(glyph_guard); glyph_guard = nullptr; }
+#if DEBUG_HEAP
+    Serial.printf("[HEAP] guiTask post-free: free=%u max=%u\n",
+                  (unsigned)ESP.getFreeHeap(), (unsigned)ESP.getMaxAllocHeap());
+#endif
+
     // LV_EVENT_SCREEN_LOADED fires after the FADE_IN animation finishes —
     // home pixels are guaranteed visible when s_homeScreenLoaded becomes true.
     lv_obj_add_event_cb(objects.home, homeScreenLoadedCb, LV_EVENT_SCREEN_LOADED, nullptr);

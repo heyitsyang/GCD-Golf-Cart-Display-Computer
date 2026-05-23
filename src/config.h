@@ -77,6 +77,17 @@
 #define MAX_GPS_TIME_STALENESS_SECS 60  // Show "NO GPS" if no time update for this many seconds
 #define MIN_SPEED_FILTER_MPH 2.5        // Speeds below this are treated as 0 to filter GPS dither
 
+// i2c configuration
+#define I2C_SDA_PIN 21
+#define I2C_SCL_PIN 22
+#define I2C_FREQUENCY 100000  // purposely keep at 100kHz to allow longer bus
+
+// Relay output configuration
+#define RELAY1_PIN 25 // used for headlights
+#define RELAY2_PIN 26 // unused
+#define RELAY3_PIN 27 // unused
+#define RELAY4_PIN 14 // unused
+
 // ESP-NOW configuration
 #define ESPNOW_CHANNEL 1
 #define ESPNOW_MAX_PEER_NUM 6
