@@ -1,9 +1,9 @@
 /********************************************************************************************
-*    GCD Tone Tester - Standalone program to test and tune alert tones                    *
+*    GCD Tone Tester - Standalone program to test and tune alert tones                      *
 *                                                                                           *
 *    Usage:                                                                                 *
-*    Build and upload: pio run -e tone_test --target upload && pio device monitor -e tone_test
-*    Press number keys to test different tones                                              *
+*    Build and upload: pio run -e tone_test --target upload && pio device monitor -e tone_test 
+*    Use a terminal program to press number keys to test different tones                    *
 *    Edit tone parameters below and re-upload to tune                                       *
 *                                                                                           *
 ********************************************************************************************/
@@ -35,12 +35,11 @@ struct TonePattern {
 TonePattern tones[] = {
     // name,   beeps, freq, dur, pause, vol%, description
     {"STARTUP",    1, 2500,  40,   0,  70,    "Single mid-high beep - system ready"},
-    {"SLEEP",      1, 2500, 500,   0,  50,    "Single long mid-high beep - entering sleep"},
-    {"MESSAGE",    2, 2500, 100, 100,  80,    "Double soft beeps - message received"},
+    {"MESSAGE",    2, 2200,  50, 150,  80,    "Double soft beeps - message received"},
     {"ALERT",      1, 1500, 250, 100,  50,    "One long mid beep - reminder warning"},
     {"URGENT",     4, 1500, 200, 100,  80,    "Quad rapid mid beeps - urgent attention required"},
     {"CONFIRM",    1, 2200,  50,   0,  60,    "Quick chirp - action confirmed"},
-    {"CLICK",      1,  20,   51,   0,  60,    "Click - haptic feedback"},
+    {"CLICK",      1,  20,   51,   0,  40,    "Click - haptic feedback"},
     {"ERROR",      1,  90,  150,   0,  10,    "Single low beep - action not allowed"}
 };
 
@@ -238,8 +237,8 @@ void setup() {
     delay(1000);
 
     Serial.println("\n\n\n");
-    Serial.println("╔════════════════════════════════════════════════════════════════╗");
-    Serial.println("║                  GCD Tone Tester Starting...                  ║");
+    Serial.println("╔═══════════════════════════════════════════════════════════════════╗");
+    Serial.println("║  GCD Tone Tester Starting. Access using terminal program (PuTTY) ║");
     Serial.println("╚════════════════════════════════════════════════════════════════╝");
 
     initSpeaker();
