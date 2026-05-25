@@ -2,6 +2,7 @@
 #include "config.h"
 #include "globals.h"
 #include "get_set_vars.h"
+#include "../hardware/display.h"
 #include <esp_wifi.h>
 
 // Global instance
@@ -418,7 +419,13 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             rawAirTemperature = dataFromGci.airTemp;
             airTemperature = rawAirTemperature + temperature_adj;  // Apply temperature offset
             battVoltage = dataFromGci.battVolts;
+
+            bool wasFuelLow = (fuelLevel <= fuel_low_percent);
             fuelLevel = dataFromGci.fuel;
+            bool isFuelLow = (fuelLevel <= fuel_low_percent);
+            if (isFuelLow && !wasFuelLow) {
+                tone_alert();
+            }
 
             // Always show telemetry (confirms GCI communication is working)
             Serial.printf("Telemetry: Lights=%d Lum=%d Temp=%.1f Batt=%.2f Fuel=%.1f\n",

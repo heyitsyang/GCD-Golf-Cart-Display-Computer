@@ -57,6 +57,9 @@ void handlePositionConfigResponse(meshtastic_Config_PositionConfig *config);
 // Returns true and copies config to *out if captured, false otherwise
 bool getRadioPositionConfig(meshtastic_Config_PositionConfig *out);
 
+// Returns true if position config has been received from the GCM (tag 5 in config dump)
+bool isPositionConfigCaptured();
+
 // Callback from mt_protocol.cpp when FromRadio.metadata is received
 // Called by mt_protocol.cpp line 488 when metadata is received from radio
 // Note: Currently unused - GCM firmware doesn't send metadata

@@ -17,12 +17,11 @@ void espnowTask(void *parameter) {
     String saved_mac_addr = "";
     bool pairing_succeeded = false;
 
-    // Block until gui_task completes its first render. esp_wifi_start() (called
-    // from ESPNowHandler::init()) spawns the WiFi task at IDF priority 23 on
-    // core 0. If that task runs concurrently with LVGL's first lv_timer_handler()
-    // it fragments the heap below the 24 KB draw-buffer threshold and crashes.
-    // 5-second timeout is a safety fallback; normal path is gui_task signals quickly.
-    if (firstRenderDone) xSemaphoreTake(firstRenderDone, pdMS_TO_TICKS(5000));
+    // Block until home screen has loaded (~3-4s). WiFi init (esp_wifi_start) fragments
+    // the heap below the 24KB draw-buffer threshold needed for the 172px splash glyph.
+    // Delaying until s_homeScreenLoaded ensures the glyph is never rendered after WiFi
+    // starts. 10-second timeout is a safety fallback; normal path is ~3-4s.
+    if (splashDone) xSemaphoreTake(splashDone, pdMS_TO_TICKS(10000));
 
     while (true) {
         // Check for peer timeouts

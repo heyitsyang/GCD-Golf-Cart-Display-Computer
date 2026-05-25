@@ -10,6 +10,12 @@
 void meshtasticTask(void *parameter) {
     static bool old_reboot_meshtastic = false;
 
+    // Block until gui_task completes its first render. On button reset the GCM
+    // has pending serial data and mt_loop() allocates immediately, fragmenting
+    // the heap before LVGL can claim the glyph_guard block for the 24 KB
+    // splash-screen draw buffer. 5-second timeout is a safety fallback.
+    if (firstRenderDone) xSemaphoreTake(firstRenderDone, pdMS_TO_TICKS(5000));
+
     while (true) {
         uint32_t now = millis();
 
@@ -62,6 +68,21 @@ void meshtasticTask(void *parameter) {
                   mt_request_node_report(connected_callback);  // Initial connect: full dump
               }
               lastNodeReportRetry = now;
+          }
+
+          // Safety net: if handshake succeeded but position config was never received
+          // (e.g., ring-buffer overflow wiped it from the first dump), re-request after 20 s.
+          // The 20 s window covers the first dump's completion time (~10-15 s per logs).
+          static uint32_t gpsConfigRetryAt = 0;
+          if (handshakeComplete && !gpsConfigAttempted && !isPositionConfigCaptured()) {
+              if (gpsConfigRetryAt == 0) gpsConfigRetryAt = now + 20000;
+              else if (now >= gpsConfigRetryAt) {
+                  Serial.println("Config retry: position config not captured, re-requesting dump");
+                  if (mesh_serial_enabled) mt_request_node_report(connected_callback);
+                  gpsConfigRetryAt = now + 10000;
+              }
+          } else {
+              gpsConfigRetryAt = 0;
           }
 
           // Send AWAKE once after handshake (tag 3) + GPS config

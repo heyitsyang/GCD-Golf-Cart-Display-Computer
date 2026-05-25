@@ -17,6 +17,7 @@ SemaphoreHandle_t displayMutex;
 SemaphoreHandle_t hotPacketMutex;  // Protects hot packet buffer swapping (not data reads)
 SemaphoreHandle_t chatBufferMutex; // Guards the chat ring buffer
 SemaphoreHandle_t firstRenderDone = nullptr;
+SemaphoreHandle_t splashDone = nullptr;
 QueueHandle_t eepromWriteQueue;
 QueueHandle_t meshtasticCallbackQueue;
 QueueHandle_t espnowRecvQueue;

@@ -84,6 +84,7 @@ void guiTask(void *parameter) {
     static lv_obj_t* previous_screen = nullptr;
 
     static bool first_render_signaled = false;
+    static bool s_splashDoneSignaled = false;
 
     // Free the heap reservation held since setup(). Doing it here — right before
     // the first lv_timer_handler() — ensures nothing else allocates into the freed
@@ -109,9 +110,19 @@ void guiTask(void *parameter) {
         lastTick = now;
         lv_timer_handler();
 
+        // Unblock meshtastic_task after the first render (~0.2s). The GCM position
+        // config packet arrives early in the config dump; a short delay preserves it
+        // in the 256-byte UART RX buffer so gpsConfigAttempted can be set → AWAKE sent.
         if (!first_render_signaled) {
             first_render_signaled = true;
             if (firstRenderDone) xSemaphoreGive(firstRenderDone);
+        }
+        // Unblock espnow_task only after the home screen loads (~3-4s). WiFi init
+        // fragments the heap below the 24KB glyph draw-buffer threshold; delaying
+        // it until the 172px splash glyph is no longer rendered prevents OOM.
+        if (!s_splashDoneSignaled && s_homeScreenLoaded) {
+            s_splashDoneSignaled = true;
+            if (splashDone) xSemaphoreGive(splashDone);
         }
         ui_tick();
 

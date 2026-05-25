@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Read(//c/Users/Yang/.claude/projects/c--Users-Yang-Documents-PlatformIO-Projects-GCD-Golf-Cart-Display-Computer/memory/**)"
     ],
     "deny": [],
     "ask": []

@@ -3,8 +3,9 @@
 #include "globals.h"
 
 void createAllTasks() {
-    // Core 1 tasks first — all block immediately on queues/serial so they
-    // don't compete for heap during gui_task's first render.
+    // Core 1 tasks first. GPS/EEPROM/system block on queues/serial immediately;
+    // meshtastic_task waits on firstRenderDone (signaled after home screen loads)
+    // to avoid fragmenting heap with pending GCM data during the splash animation.
     xTaskCreatePinnedToCore(
         gpsTask,
         "GPS Task",
@@ -55,8 +56,8 @@ void createAllTasks() {
         1
     );
 
-    // Core 0: espnow_task blocks on firstRenderDone semaphore before touching WiFi,
-    // so it cannot call esp_wifi_start() until after gui_task's first render.
+    // Core 0: espnow_task blocks on splashDone semaphore (given when home screen loads,
+    // ~3-4s) so WiFi init cannot fragment heap during the 172px splash animation.
     xTaskCreatePinnedToCore(
         espnowTask,
         "ESP-NOW Task",

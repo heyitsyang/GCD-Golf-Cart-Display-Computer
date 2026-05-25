@@ -180,6 +180,8 @@ bool getRadioPositionConfig(meshtastic_Config_PositionConfig *out) {
     return true;
 }
 
+bool isPositionConfigCaptured() { return positionConfigCaptured; }
+
 // Callback from mt_protocol.cpp when FromRadio.metadata is received
 // Called by mt_protocol.cpp line 488 when metadata is received from radio
 // Note: Currently unused - GCM firmware doesn't send metadata

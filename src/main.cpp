@@ -199,7 +199,8 @@ void setup() {
     espnowRecvQueue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_recv_item_t));
     gpsConfigCallbackQueue = xQueueCreate(2, sizeof(gpsConfigCallbackItem_t));
     chatTxQueue = xQueueCreate(8, sizeof(chatTxItem_t));
-    firstRenderDone = xSemaphoreCreateBinary();  // espnow_task waits on this before WiFi init
+    firstRenderDone = xSemaphoreCreateBinary();  // meshtastic_task: unblock after first render (~0.2s)
+    splashDone      = xSemaphoreCreateBinary();  // espnow_task: unblock after home screen loads (~3-4s)
     HEAP_LOG("after mutex/queue create");
 
     // Restore unread DMs from previous GCI sleep cycle (no-op on first boot or non-GCI use).
