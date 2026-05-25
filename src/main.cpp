@@ -154,8 +154,8 @@ void setup() {
     // This block is held through ALL of setup (mutexes, queues, task stacks, etc.)
     // and freed by gui_task immediately before the first lv_timer_handler() call,
     // so nothing else can fragment it between the free and the render.
-    glyph_guard = malloc(26000);
-    HEAP_LOG("after glyph_guard malloc(26000)");
+    glyph_guard = malloc(14000);
+    HEAP_LOG("after glyph_guard malloc(14000)");
 #if DEBUG_HEAP
     Serial.printf("[HEAP] glyph_guard=%p\n", glyph_guard);
 #endif
