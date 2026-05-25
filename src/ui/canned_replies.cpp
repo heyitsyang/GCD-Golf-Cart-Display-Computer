@@ -6,9 +6,9 @@ static const char *kDefaults[CANNED_REPLY_COUNT] = {
     "No",
     "On my way",
     "Running late",
-    "Phone me",
-    "Talk Later",
+    "Arrived",
     "Stand by",
+    "Phone me",
 };
 
 const char *cannedReplyDefault(uint8_t idx) {
