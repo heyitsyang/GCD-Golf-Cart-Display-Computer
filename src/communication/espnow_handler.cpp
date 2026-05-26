@@ -420,11 +420,15 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             airTemperature = rawAirTemperature + temperature_adj;  // Apply temperature offset
             battVoltage = dataFromGci.battVolts;
 
-            bool wasFuelLow = (fuelLevel <= fuel_low_percent);
-            fuelLevel = dataFromGci.fuel;
-            bool isFuelLow = (fuelLevel <= fuel_low_percent);
-            if (isFuelLow && !wasFuelLow) {
-                tone_alert();
+            float newFuelLevel = dataFromGci.fuel;
+            bool wasFuelLow = (fuelLevel != -99.0f) && (fuelLevel <= fuel_low_percent);
+            fuelLevel = newFuelLevel;
+            // Alert only if: sensor configured, valid reading, and threshold newly crossed
+            if (fuelSensorType != FUEL_SENSOR_NONE && newFuelLevel != -99.0f) {
+                bool isFuelLow = (fuelLevel <= fuel_low_percent);
+                if (isFuelLow && !wasFuelLow) {
+                    tone_alert();
+                }
             }
 
             // Always show telemetry (confirms GCI communication is working)

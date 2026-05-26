@@ -149,7 +149,7 @@ int outdoorLuminosity = -99;
 float rawAirTemperature = -99;
 float airTemperature = -99;
 float battVoltage = -99;
-float fuelLevel = 100;  // set to 100% by default to prevent false low fuel warnings, will be updated if GCI data received and valid
+float fuelLevel = -99;  // -99 = no valid reading; updated when GCI telemetry arrives
 float fuel_low_percent = 20.0f;
 float old_fuel_low_percent = 20.0f;
 structMsgFromGci dataFromGci;
@@ -178,6 +178,9 @@ uint32_t debounce_svc_interval_hrs = 0;
 uint32_t debounce_temperature_adj = 0;
 uint32_t debounce_backlight_timeout = 0;
 uint32_t debounce_fuel_low_percent = 0;
+int32_t fuelSensorType = 0;
+int32_t old_fuelSensorType = 0;
+uint32_t debounce_fuel_sensor_type = 0;
 
 // Note: All EEZ Studio shared variables (cur_date, version, etc.)
 // are defined in get_set_vars.cpp via get_set_vars.h

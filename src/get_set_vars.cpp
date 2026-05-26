@@ -629,6 +629,14 @@ void set_var_fuel_low_percent(float value) {
     fuel_low_percent = value;
 }
 
+int32_t get_var_fuel_sensor_type() {
+    return fuelSensorType;
+}
+
+void set_var_fuel_sensor_type(int32_t value) {
+    fuelSensorType = value;
+}
+
 bool get_var_reboot_meshtastic() {
     return reboot_meshtastic;
 }

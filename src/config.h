@@ -13,7 +13,7 @@
 #define DEBUG_EEPROM 0                  // EEPROM read/write operations
 #define DEBUG_SLEEP_STATE 0             // Sleep state machine transitions
 #define DEBUG_MESHTASTIC_CONNECTION 0   // GCM connection/reconnection events
-#define DEBUG_GCM_MESSAGES 0            // GCM (Meshtastic) messages sent and received
+#define DEBUG_GCM_MESSAGES 1            // GCM (Meshtastic) messages sent and received
 #define DEBUG_ESPNOW 0                  // ESP-NOW verbose messages (pairing & telemetry always shown)
 #define DEBUG_OTA_TX_TEST 0             // Periodic T1,T2,T3... OTA test messages every 30s
 #define DEBUG_OTA_TX_TEST_CHANNEL 3     // Channel to send OTA test messages on (corresponds to UI channel selector)
@@ -140,6 +140,12 @@
 #define EEPROM_TASK_STACK_SIZE 4096  // saveDmsToNvs() needs ~1.2KB beyond base overhead
 #define SYSTEM_TASK_STACK_SIZE 4096  // Increased for GPS config init with debug output
 #define ESPNOW_TASK_STACK_SIZE 4096
+
+// Fuel / energy sensor type codes (must match EEZ Studio fuel_sensor_type enum)
+#define FUEL_SENSOR_NONE        0   // no sensor installed
+#define FUEL_SENSOR_ADC_GAS     1   // analog voltage on ADC_FUEL_PIN (gasoline)
+#define FUEL_SENSOR_GPIO_EXP    2   // MCP23008 I2C GPIO expander (gasoline, future)
+#define FUEL_SENSOR_ADC_ELEC    3   // analog voltage (electric/battery, future)
 
 // Task Priorities
 #define GUI_TASK_PRIORITY 3
