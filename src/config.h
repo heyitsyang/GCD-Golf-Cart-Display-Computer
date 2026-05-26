@@ -80,7 +80,9 @@
 // i2c configuration
 #define I2C_SDA_PIN 21
 #define I2C_SCL_PIN 22
-#define I2C_FREQUENCY 100000  // purposely keep at 100kHz to allow longer bus
+#define I2C_FREQUENCY 100000    // purposely keep at 100kHz to allow longer bus
+#define I2C_ADDR_MCP23008 0x20  // default address with all address pins grounded; can be changed by wiring address pins to VCC
+#define I2C_ADDR_BH1750 0x23    // BH1750 default address (ADDR pin grounded); can be changed to 0x5C by wiring ADDR pin to VCC
 
 // Relay output configuration
 #define RELAY1_PIN 25 // used for headlights
