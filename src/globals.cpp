@@ -179,8 +179,6 @@ uint32_t debounce_temperature_adj = 0;
 uint32_t debounce_backlight_timeout = 0;
 uint32_t debounce_fuel_low_percent = 0;
 int32_t fuelSensorType = 0;
-int32_t old_fuelSensorType = 0;
-uint32_t debounce_fuel_sensor_type = 0;
 
 // Note: All EEZ Studio shared variables (cur_date, version, etc.)
 // are defined in get_set_vars.cpp via get_set_vars.h

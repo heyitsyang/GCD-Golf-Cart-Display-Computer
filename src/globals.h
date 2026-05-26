@@ -189,8 +189,6 @@ extern uint32_t debounce_temperature_adj;
 extern uint32_t debounce_backlight_timeout;
 extern uint32_t debounce_fuel_low_percent;
 extern int32_t fuelSensorType;
-extern int32_t old_fuelSensorType;
-extern uint32_t debounce_fuel_sensor_type;
 
 // All EEZ Studio variables are defined in get_set_vars.h
 // Include it here so all files can access them

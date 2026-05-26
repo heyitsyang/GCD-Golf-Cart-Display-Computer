@@ -133,16 +133,6 @@ void systemTask(void *parameter) {
             debounce_fuel_low_percent = 0;
         }
 
-        // Fuel sensor type - debounced
-        if (fuelSensorType != old_fuelSensorType) {
-            old_fuelSensorType = fuelSensorType;
-            debounce_fuel_sensor_type = now;
-        }
-        if (debounceElapsed(debounce_fuel_sensor_type)) {
-            queuePreferenceWrite("fuel_sensor_type", fuelSensorType);
-            debounce_fuel_sensor_type = 0;
-        }
-
         // Backlight timeout - debounced
         if (backlight_timeout != old_backlight_timeout) {
             old_backlight_timeout = backlight_timeout;

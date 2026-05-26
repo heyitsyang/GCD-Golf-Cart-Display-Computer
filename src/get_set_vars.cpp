@@ -614,6 +614,7 @@ void set_var_temperature_adj(float value) {
 }
 
 float get_var_fuel_level() {
+    if (fuelSensorType == FUEL_SENSOR_NONE) return -99.0f;
     return fuelLevel;
 }
 
@@ -635,6 +636,7 @@ int32_t get_var_fuel_sensor_type() {
 
 void set_var_fuel_sensor_type(int32_t value) {
     fuelSensorType = value;
+    queuePreferenceWrite("fuel_sensor_type", (int)value);
 }
 
 bool get_var_reboot_meshtastic() {
