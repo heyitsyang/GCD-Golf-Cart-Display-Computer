@@ -64,7 +64,7 @@ void loadPreferences() {
     set_var_fuel_low_percent(fuel_low_percent);
     old_fuel_low_percent = fuel_low_percent;
 
-    fuelSensorType = prefs.getInt("fuel_sensor_type", FUEL_SENSOR_NONE);
+    fuelSensorType = prefs.getInt("fuel_sense_type", FUEL_SENSOR_NONE);
 
     // Load touchscreen calibration coefficients if available
     touch_alpha_x = prefs.getFloat("touch_alpha_x", 0.0);

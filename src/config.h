@@ -141,7 +141,7 @@
 #define SYSTEM_TASK_STACK_SIZE 4096  // Increased for GPS config init with debug output
 #define ESPNOW_TASK_STACK_SIZE 4096
 
-// Fuel / energy sensor type codes (must match EEZ Studio fuel_sensor_type enum)
+// Fuel / energy sensor type codes (must match EEZ Studio fuel_sense_type enum)
 #define FUEL_SENSOR_NONE        0   // no sensor installed
 #define FUEL_SENSOR_ADC_GAS     1   // analog voltage on ADC_FUEL_PIN (gasoline)
 #define FUEL_SENSOR_GPIO_EXP    2   // MCP23008 I2C GPIO expander (gasoline, future)

@@ -173,8 +173,8 @@ void set_var_fuel_level(float value);
 float get_var_fuel_low_percent();
 void set_var_fuel_low_percent(float value);
 
-int32_t get_var_fuel_sensor_type();
-void set_var_fuel_sensor_type(int32_t value);
+int32_t get_var_fuel_sense_type();
+void set_var_fuel_sense_type(int32_t value);
 
 bool get_var_reboot_meshtastic();
 void set_var_reboot_meshtastic(bool value);
