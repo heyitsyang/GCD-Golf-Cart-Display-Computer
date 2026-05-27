@@ -127,7 +127,7 @@ typedef struct struct_msg_from_gci {
     int outdoorLum;
     float airTemp;
     float battVolts;
-    float fuel;
+    float fuelPct;
 } structMsgFromGci;
 
 typedef struct struct_msg_to_gci {

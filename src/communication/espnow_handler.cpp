@@ -420,7 +420,7 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             airTemperature = rawAirTemperature + temperature_adj;  // Apply temperature offset
             battVoltage = dataFromGci.battVolts;
 
-            float newFuelLevel = dataFromGci.fuel;
+            float newFuelLevel = dataFromGci.fuelPct;
             bool wasFuelLow = (fuelLevel != -99.0f) && (fuelLevel <= fuel_low_percent);
             fuelLevel = newFuelLevel;
             // Alert only if: sensor configured, valid reading, and threshold newly crossed
