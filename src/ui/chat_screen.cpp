@@ -204,7 +204,11 @@ static void rowLeftClickedCb(lv_event_t *e) {
         nowFav = true;
     }
     lv_color_t color = nowFav ? lv_color_hex(0xFFFF00) : lv_color_white();
-    lv_obj_set_style_text_color(prefix, color, LV_PART_MAIN);
+    for (int i = 0; i < (int)s_snapshotCount; i++) {
+        if (!s_rowPrefixLabels[i] || s_snapshot[i].outgoing) continue;
+        if (s_snapshot[i].from == nodeId)
+            lv_obj_set_style_text_color(s_rowPrefixLabels[i], color, LV_PART_MAIN);
+    }
     lv_event_stop_bubbling(e);
 }
 
