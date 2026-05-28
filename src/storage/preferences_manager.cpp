@@ -165,11 +165,9 @@ typedef struct __attribute__((packed)) {
     char     text[CHAT_TEXT_SIZE];
 } nvsDmEntry_t;
 
-#define NVS_DM_MAX 4
-
 void saveDmsToNvs(void) {
-    chatMessage_t buf[NVS_DM_MAX];
-    size_t n = chatBufferSnapshotUnreadDms(buf, NVS_DM_MAX);
+    chatMessage_t buf[DM_SLOT_MAX];
+    size_t n = chatBufferSnapshotUnreadDms(buf, DM_SLOT_MAX);
 
     prefs.putUInt("my_nd_num", my_node_num);  // restored at load so dmPredicate filter works
     prefs.putInt("dm_count", (int)n);
@@ -190,7 +188,7 @@ void saveDmsToNvs(void) {
 void loadDmsFromNvs(void) {
     int n = prefs.getInt("dm_count", 0);
     if (n <= 0) return;
-    if (n > NVS_DM_MAX) n = NVS_DM_MAX;
+    if (n > DM_SLOT_MAX) n = DM_SLOT_MAX;
 
     // Restore node num so chatBufferAppend's dmPredicate filter accepts these messages.
     // The real value arrives from GCM shortly after boot and overwrites this.

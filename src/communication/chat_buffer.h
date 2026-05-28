@@ -16,6 +16,9 @@
 #define CHAT_FILTER_CH1   3
 #define CHAT_FILTER_CH2   4
 
+// Maximum unread DMs tracked by the side-array (also the NVS persistence cap).
+#define DM_SLOT_MAX 4
+
 // Append a message to the ring buffer. Assigns msg.id and msg.timestamp
 // (the latter only if the caller left it at 0). The text field of the
 // stored copy is run through chatAbbreviate() so HoT/GC packets show up

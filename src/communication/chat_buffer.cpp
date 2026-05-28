@@ -10,6 +10,13 @@ static size_t   s_head = 0;        // next write index
 static size_t   s_count = 0;       // populated slots, saturates at CHAT_BUFFER_SIZE
 static uint32_t s_nextId = 1;      // monotonic id source
 
+// Side-array: authoritative source for unread DM count.
+// Unread DMs here survive ring-buffer eviction so the home-screen glyph
+// stays accurate regardless of how many other messages arrive.
+// Capped at DM_SLOT_MAX; oldest is evicted when a 5th DM arrives.
+static chatMessage_t s_dmSlots[DM_SLOT_MAX];
+static size_t        s_dmCount = 0;
+
 static bool dmPredicate(const chatMessage_t *m) {
     return (m->to == my_node_num) ||
            (m->outgoing && m->to != BROADCAST_ADDR);
@@ -82,6 +89,9 @@ void chatAbbreviate(const char *src, char *dst, size_t dstSize) {
 
 void chatBufferAppend(const chatMessage_t *msg) {
     if (!msg) return;
+    // HoT broadcast packets (WX, venue) have dedicated screens; exclude them from the
+    // chat ring so they don't evict unread DMs after the buffer cycles.
+    if (!msg->outgoing && msg->text[0] == '|') return;
     if (!msg->outgoing && !dmPredicate(msg) && !matchesFilter(msg, (uint8_t)mesh_filter)) return;
 
     if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
@@ -105,6 +115,16 @@ void chatBufferAppend(const chatMessage_t *msg) {
 
     s_head = (s_head + 1) % CHAT_BUFFER_SIZE;
     if (s_count < CHAT_BUFFER_SIZE) s_count++;
+
+    // Mirror incoming DMs into the side-array so the unread count survives ring eviction.
+    if (!slot->outgoing && slot->to == my_node_num) {
+        if (s_dmCount == DM_SLOT_MAX) {
+            memmove(&s_dmSlots[0], &s_dmSlots[1], (DM_SLOT_MAX - 1) * sizeof(chatMessage_t));
+            s_dmSlots[DM_SLOT_MAX - 1] = *slot;
+        } else {
+            s_dmSlots[s_dmCount++] = *slot;
+        }
+    }
 
     xSemaphoreGive(chatBufferMutex);
 
@@ -174,42 +194,28 @@ void chatBufferMarkRead(uint32_t id) {
             break;
         }
     }
+    for (size_t i = 0; i < s_dmCount; i++) {
+        if (s_dmSlots[i].id == id) {
+            memmove(&s_dmSlots[i], &s_dmSlots[i + 1], (s_dmCount - i - 1) * sizeof(chatMessage_t));
+            s_dmCount--;
+            break;
+        }
+    }
     xSemaphoreGive(chatBufferMutex);
 }
 
 size_t chatBufferUnreadDmCount(void) {
-    if (!chatBufferMutex) return 0;
-    if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) return 0;
-    size_t count = 0;
-    for (size_t i = 0; i < s_count; i++) {
-        if (!s_buffer[i].outgoing && s_buffer[i].to == my_node_num && !s_buffer[i].read) count++;
-    }
+    if (!chatBufferMutex || xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) return 0;
+    size_t n = s_dmCount;
     xSemaphoreGive(chatBufferMutex);
-    return count;
+    return n;
 }
 
 size_t chatBufferSnapshotUnreadDms(chatMessage_t *out, size_t maxN) {
     if (!out || maxN == 0) return 0;
     if (!chatBufferMutex || xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) return 0;
-
-    size_t start = (s_count == CHAT_BUFFER_SIZE) ? s_head : 0;
-
-    size_t matches = 0;
-    for (size_t i = 0; i < s_count; i++) {
-        const chatMessage_t *m = &s_buffer[(start + i) % CHAT_BUFFER_SIZE];
-        if (!m->outgoing && m->to == my_node_num && !m->read) matches++;
-    }
-
-    size_t skip = (matches > maxN) ? (matches - maxN) : 0;
-    size_t out_idx = 0, seen = 0;
-    for (size_t i = 0; i < s_count && out_idx < maxN; i++) {
-        const chatMessage_t *m = &s_buffer[(start + i) % CHAT_BUFFER_SIZE];
-        if (!m->outgoing && m->to == my_node_num && !m->read) {
-            if (seen++ < skip) continue;
-            out[out_idx++] = *m;
-        }
-    }
-
+    size_t n = (s_dmCount < maxN) ? s_dmCount : maxN;
+    memcpy(out, &s_dmSlots[0], n * sizeof(chatMessage_t));
     xSemaphoreGive(chatBufferMutex);
-    return out_idx;
+    return n;
 }
