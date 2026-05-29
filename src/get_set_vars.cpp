@@ -637,6 +637,7 @@ int32_t get_var_fuel_sense_type() {
 void set_var_fuel_sense_type(int32_t value) {
     fuelSensorType = value;
     queuePreferenceWrite("fuel_sense_type", (int)value);
+    espNow.sendFuelConfig();
 }
 
 bool get_var_reboot_meshtastic() {

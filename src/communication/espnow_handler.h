@@ -31,6 +31,7 @@ public:
     // Status messages to GCI
     bool sendIsHome(bool is_home);
     bool sendIsDaytime(bool is_daytime);
+    bool sendFuelConfig();
     
     // Status
     bool isInitialized() { return initialized; }

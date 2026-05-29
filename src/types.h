@@ -64,7 +64,7 @@ enum HotPacketType {
     HOT_PACKET_VENUE_EVENT = 2
 };
 
-// ESP-NOW message types
+// ESP-NOW message types (must match GCI)
 typedef enum {
     ESPNOW_MSG_TEXT = 0,
     ESPNOW_MSG_GPS_DATA = 1,
@@ -73,8 +73,14 @@ typedef enum {
     ESPNOW_MSG_ACK = 4,
     ESPNOW_MSG_HEARTBEAT = 5,
     ESPNOW_MSG_IS_HOME = 6,
-    ESPNOW_MSG_IS_DAYTIME = 7
+    ESPNOW_MSG_IS_DAYTIME = 7,
+    ESPNOW_MSG_CONFIG = 8  // GCD → GCI configuration (must match GCI)
 } espnow_msg_type_t;
+
+// Config message payload (must match GCI)
+typedef struct __attribute__((packed)) {
+    int32_t fuelSensorType;
+} structMsgConfig;
 
 // ESP-NOW message structure
 typedef struct __attribute__((packed)) {

@@ -333,6 +333,14 @@ bool ESPNowHandler::sendIsDaytime(bool is_daytime) {
     return result;
 }
 
+bool ESPNowHandler::sendFuelConfig() {
+    structMsgConfig cfg;
+    cfg.fuelSensorType = fuelSensorType;
+    bool result = broadcast(ESPNOW_MSG_CONFIG, (uint8_t*)&cfg, sizeof(cfg));
+    Serial.printf("ESP-NOW: Sent fuel_sense_type=%d (%s)\n", fuelSensorType, result ? "OK" : "FAIL");
+    return result;
+}
+
 bool ESPNowHandler::sendRawData(const uint8_t *mac_addr, const uint8_t *data, size_t len) {
     for (int retry = 0; retry < ESPNOW_SEND_RETRY_COUNT; retry++) {
         esp_err_t result = esp_now_send(mac_addr, data, len);
@@ -380,6 +388,7 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
                 // Send initial status to GCI
                 sendIsHome(at_home);
                 sendIsDaytime(is_daytime);
+                sendFuelConfig();
             }
             break;
         }
