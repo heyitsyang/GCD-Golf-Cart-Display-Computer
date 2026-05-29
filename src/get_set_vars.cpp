@@ -638,6 +638,9 @@ void set_var_fuel_sense_type(int32_t value) {
     fuelSensorType = value;
     queuePreferenceWrite("fuel_sense_type", (int)value);
     espNow.sendFuelConfig();
+    // GPIO EXPANDER only reports 25/50/75/100; a threshold below 25 would never trigger.
+    if (value == FUEL_SENSOR_GPIO_EXP && fuel_low_percent < 25.0f)
+        set_var_fuel_low_percent(25.0f);
 }
 
 bool get_var_reboot_meshtastic() {
