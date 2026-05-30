@@ -773,6 +773,12 @@ void set_var_lux_lights_on(int32_t value) {
         lux_lights_on = value;
         queuePreferenceWrite("lux_lights_on", (int)value);
         espNow.sendFuelConfig();
+        if (lux_now >= 0) {
+            if (lux_now < lux_lights_on && !headlights_on)
+                headlights_on = true;
+            else if (lux_now >= lux_lights_off && headlights_on)
+                headlights_on = false;
+        }
     }
 }
 
@@ -785,6 +791,12 @@ void set_var_lux_lights_off(int32_t value) {
         lux_lights_off = value;
         queuePreferenceWrite("lux_lights_off", (int)value);
         espNow.sendFuelConfig();
+        if (lux_now >= 0) {
+            if (lux_now < lux_lights_on && !headlights_on)
+                headlights_on = true;
+            else if (lux_now >= lux_lights_off && headlights_on)
+                headlights_on = false;
+        }
     }
 }
 
