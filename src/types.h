@@ -77,9 +77,11 @@ typedef enum {
     ESPNOW_MSG_CONFIG = 8  // GCD → GCI configuration (must match GCI)
 } espnow_msg_type_t;
 
-// Config message payload (must match GCI)
+// Config message payload (must match GCI main.cpp structMsgConfig)
 typedef struct __attribute__((packed)) {
     int32_t fuelSensorType;
+    int32_t luxLightsOn;   // lux threshold to turn headlights ON
+    int32_t luxLightsOff;  // lux threshold to turn headlights OFF
 } structMsgConfig;
 
 // ESP-NOW message structure
@@ -130,7 +132,7 @@ typedef enum {
 // Golf cart interface message structures
 typedef struct struct_msg_from_gci {
     int modeLights;
-    int outdoorLum;
+    int outdoorLux;
     float airTemp;
     float battVolts;
     float fuelPct;

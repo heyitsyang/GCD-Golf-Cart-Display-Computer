@@ -336,8 +336,11 @@ bool ESPNowHandler::sendIsDaytime(bool is_daytime) {
 bool ESPNowHandler::sendFuelConfig() {
     structMsgConfig cfg;
     cfg.fuelSensorType = fuelSensorType;
+    cfg.luxLightsOn    = (int32_t)lux_lights_on;
+    cfg.luxLightsOff   = (int32_t)lux_lights_off;
     bool result = broadcast(ESPNOW_MSG_CONFIG, (uint8_t*)&cfg, sizeof(cfg));
-    Serial.printf("ESP-NOW: Sent fuel_sense_type=%d (%s)\n", fuelSensorType, result ? "OK" : "FAIL");
+    Serial.printf("ESP-NOW: Sent config fuel=%d lux_on=%d lux_off=%d (%s)\n",
+                  fuelSensorType, lux_lights_on, lux_lights_off, result ? "OK" : "FAIL");
     return result;
 }
 
@@ -424,7 +427,7 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
 
             // Update individual variables for compatibility
             modeHeadLights = dataFromGci.modeLights;
-            outdoorLuminosity = dataFromGci.outdoorLum;
+            outdoorLux = dataFromGci.outdoorLux;
             rawAirTemperature = dataFromGci.airTemp;
             airTemperature = rawAirTemperature + temperature_adj;  // Apply temperature offset
             battVoltage = dataFromGci.battVolts;
@@ -440,9 +443,13 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
                 }
             }
 
+            // Map lux and headlight state into EEZ-accessible variables
+            set_var_lux_now((int32_t)outdoorLux);
+            headlights_on = (modeHeadLights == 1);
+
             // Always show telemetry (confirms GCI communication is working)
-            Serial.printf("Telemetry: Lights=%d Lum=%d Temp=%.1f Batt=%.2f Fuel=%.1f\n",
-                         modeHeadLights, outdoorLuminosity, airTemperature, battVoltage, fuelLevel);
+            Serial.printf("Telemetry: Lights=%d Lux=%d Temp=%.1f Batt=%.2f Fuel=%.1f\n",
+                         modeHeadLights, outdoorLux, airTemperature, battVoltage, fuelLevel);
             break;
         }
 

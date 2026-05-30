@@ -149,7 +149,7 @@ extern int espnow_peer_count;
 
 // Golf cart interface variables for incoming data
 extern int modeHeadLights;
-extern int outdoorLuminosity;
+extern int outdoorLux;
 extern float rawAirTemperature;
 extern float airTemperature;
 extern float battVoltage;

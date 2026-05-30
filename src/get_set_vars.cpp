@@ -772,6 +772,7 @@ void set_var_lux_lights_on(int32_t value) {
     if (lux_lights_on != value) {
         lux_lights_on = value;
         queuePreferenceWrite("lux_lights_on", (int)value);
+        espNow.sendFuelConfig();
     }
 }
 
@@ -783,6 +784,7 @@ void set_var_lux_lights_off(int32_t value) {
     if (lux_lights_off != value) {
         lux_lights_off = value;
         queuePreferenceWrite("lux_lights_off", (int)value);
+        espNow.sendFuelConfig();
     }
 }
 
