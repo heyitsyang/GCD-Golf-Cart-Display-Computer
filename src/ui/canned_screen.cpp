@@ -36,6 +36,8 @@ static char    s_chanNames[GCM_MAX_CHANNELS][12] = {};
 static uint8_t s_chanCount = 3;
 static lv_obj_t *s_slotBtns[CANNED_REPLY_COUNT]   = {nullptr};
 static lv_obj_t *s_slotLabels[CANNED_REPLY_COUNT] = {nullptr};
+static lv_obj_t *s_contextLbl  = nullptr;
+static char      s_contextText[121] = {};
 
 // Persistent label-string buffer for destination entries (newline-separated).
 // rebuildDestOptions() writes it; getLabelFromOpts() reads individual lines.
@@ -97,10 +99,10 @@ static void getLabelFromOpts(const char *opts, uint8_t idx, char *out, size_t ou
 // Creates a tap-to-cycle button with no popup list.
 // radius=0 prevents the lv_refr rounded-corner ARGB8888 layer allocation path.
 // Returns the button; sets *lblOut to the label child (or nullptr on OOM).
-static lv_obj_t *makeCycleBtn(lv_obj_t *parent, int x, int w, lv_obj_t **lblOut) {
+static lv_obj_t *makeCycleBtn(lv_obj_t *parent, int x, int w, int y, lv_obj_t **lblOut) {
     lv_obj_t *btn = lv_btn_create(parent);
     if (!btn) { if (lblOut) *lblOut = nullptr; return nullptr; }
-    lv_obj_set_pos(btn, x, 34);
+    lv_obj_set_pos(btn, x, y);
     lv_obj_set_size(btn, w, 28);
     lv_obj_set_style_pad_all(btn, 2, LV_PART_MAIN);
     lv_obj_set_style_bg_color(btn, lv_color_hex(0x003c6b), LV_PART_MAIN);
@@ -242,10 +244,29 @@ static void buildBody() {
     // Channel cycle-button (left half of selector row).
     // Recipient cycle-button is created lazily in applyModeUI() on first visit
     // to preserve boot-time heap for LVGL draw-layer allocations.
-    s_channelBtn = makeCycleBtn(body, 0, 152, &s_channelLbl);
+    s_channelBtn = makeCycleBtn(body, 0, 152, 2, &s_channelLbl);
     if (s_channelBtn)
         lv_obj_add_event_cb(s_channelBtn, channelBtnClickedCb, LV_EVENT_CLICKED, nullptr);
     updateChannelBtnLabel();
+
+    // Context strip: shown in REPLY mode (white label with replied-to message text),
+    // hidden in NEW mode (no frame — just background shows through).
+    s_contextLbl = lv_label_create(body);
+    if (s_contextLbl) {
+        lv_obj_set_pos(s_contextLbl, 2, 34);
+        lv_obj_set_size(s_contextLbl, 312, 34);
+        lv_obj_set_style_bg_color(s_contextLbl, lv_color_white(), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(s_contextLbl, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_contextLbl, lv_color_black(), LV_PART_MAIN);
+        lv_obj_set_style_text_font(s_contextLbl, &lv_font_montserrat_14, LV_PART_MAIN);
+        lv_obj_set_style_pad_hor(s_contextLbl, 6, LV_PART_MAIN);
+        lv_obj_set_style_pad_ver(s_contextLbl, 4, LV_PART_MAIN);
+        lv_obj_set_style_radius(s_contextLbl, 0, LV_PART_MAIN);
+        lv_label_set_long_mode(s_contextLbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_obj_clear_flag(s_contextLbl, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+        lv_obj_add_flag(s_contextLbl, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(s_contextLbl, "");
+    }
 
     // 8 slot buttons in 2 cols × 4 rows.
     // gridY0=70, rowH=28: grid bottom = 70+(4*28+3*4)=194px, body content=196px.
@@ -296,7 +317,7 @@ static void applyModeUI() {
                       (unsigned)ESP.getFreeHeap(),
                       (unsigned)ESP.getMaxAllocHeap());
 #endif
-        s_recipientBtn = makeCycleBtn(body, 156, 160, &s_recipientLbl);
+        s_recipientBtn = makeCycleBtn(body, 156, 160, 2, &s_recipientLbl);
 #if DEBUG_HEAP
         Serial.printf("[CANNED] post-rcpt: sys free=%u max_alloc=%u btn=%s\n",
                       (unsigned)ESP.getFreeHeap(),
@@ -305,6 +326,15 @@ static void applyModeUI() {
 #endif
         if (s_recipientBtn)
             lv_obj_add_event_cb(s_recipientBtn, recipientBtnClickedCb, LV_EVENT_CLICKED, nullptr);
+    }
+
+    if (s_contextLbl) {
+        if (s_mode == HUB_MODE_REPLY && s_contextText[0]) {
+            lv_label_set_text(s_contextLbl, s_contextText);
+            lv_obj_clear_flag(s_contextLbl, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(s_contextLbl, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 
     if (s_channelBtn) {
@@ -321,17 +351,22 @@ static void applyModeUI() {
 }
 
 void cannedScreenSetReplyMode(uint8_t channel, uint32_t dest, const chatMessage_t *srcMsg) {
-    (void)srcMsg;
     s_mode    = HUB_MODE_REPLY;
     s_channel = channel;
     s_dest    = dest;
+    if (srcMsg && srcMsg->text[0])
+        strncpy(s_contextText, srcMsg->text, sizeof(s_contextText) - 1);
+    else
+        s_contextText[0] = '\0';
+    s_contextText[sizeof(s_contextText) - 1] = '\0';
     s_uiDirty = true;
 }
 
 void cannedScreenSetNewMode() {
-    s_mode    = HUB_MODE_NEW;
-    s_dest    = BROADCAST_ADDR;
-    s_uiDirty = true;
+    s_mode           = HUB_MODE_NEW;
+    s_dest           = BROADCAST_ADDR;
+    s_contextText[0] = '\0';
+    s_uiDirty        = true;
 }
 
 void cannedScreenPump() {
