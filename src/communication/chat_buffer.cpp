@@ -89,9 +89,6 @@ void chatAbbreviate(const char *src, char *dst, size_t dstSize) {
 
 void chatBufferAppend(const chatMessage_t *msg) {
     if (!msg) return;
-    // HoT broadcast packets (WX, venue) have dedicated screens; exclude them from the
-    // chat ring so they don't evict unread DMs after the buffer cycles.
-    if (!msg->outgoing && msg->text[0] == '|') return;
     if (!msg->outgoing && !dmPredicate(msg) && !matchesFilter(msg, (uint8_t)mesh_filter)) return;
 
     if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
