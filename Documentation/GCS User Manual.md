@@ -1,4 +1,4 @@
-# Golf Cart Computer System — User Manual
+# GCS User Manual
 
 The Golf Cart Computer System is a smart display and telemetry platform for golf carts. It provides real-time speed, heading, fuel level, temperature, and GPS-synchronized time, along with mesh radio messaging, weather, and entertainment data.
 
@@ -9,6 +9,20 @@ The system has three components:
 - **GCM** (Golf Cart Mesh) — a Meshtastic LoRa radio module co-located with the GCD. It connects to the long-range mesh radio network, enabling messaging between carts, weather broadcasts, and entertainment schedule data.
 
 All three units are wired together via RJ cables that carry power and signals. The GCM is always connected to the GCD; the GCI requires a one-time software pairing step described in [System Setup](#system-setup-first-time-configuration). When GCI is installed, the cart's ignition switch controls GCD power-down (deep sleep). Without GCI, the GCD remains running whenever power is supplied and draws more battery between uses.
+
+---
+
+## System Connections
+
+<img src="Assembly Images/System Connection Diagram.png" width="480" alt="System Connection Diagram — GCM, GCD, and GCI connected via RJ cables">
+
+Connect the three units before first use:
+
+1. Plug one RJ 6P6C cable from the GCD **To Mesh Radio** jack to the matching jack on the GCM enclosure. This cable carries +5V power, GPS signal, and mesh communications.
+2. Plug a second RJ 6P6C cable from the GCD **To GCI** jack to the matching jack on the GCI enclosure. This cable carries +5V power and the ignition status signal.
+3. GCI telemetry (fuel level, battery voltage, temperature, and headlight status) travels over **ESP-NOW** — a short-range WiFi protocol — with no additional cable. GCI must be paired with the GCD once before telemetry begins (see [System Setup](#system-setup-first-time-configuration)).
+
+> Both RJ cables are keyed and only fit one way. Do not force.
 
 ---
 
@@ -260,11 +274,11 @@ Weather data and entertainment schedule broadcasts do not appear in the message 
 
 The Canned Messages screen is used both to compose new messages and to reply to received ones. Tapping any of the 8 message buttons immediately sends the selected message and returns to the Messages screen.
 
-### Channel Dropdown (top-left)
+### Channel Selector (top-left)
 
-Selects which channel the outgoing message is sent on (e.g., `Ch 0: GolfCart`). Channel names are configured on the GCM radio and displayed here automatically once the GCM is connected.
+Tap to cycle through the available channels (e.g., `Ch 0: GolfCart`). Channel names are configured on the GCM radio and displayed here automatically once the GCM is connected.
 
-### Recipient Dropdown (top-right)
+### Recipient Selector (top-right)
 
 Selects who receives the message. Tap to cycle through:
 
@@ -342,7 +356,7 @@ Data is cached in flash storage and survives reboots, so the last received sched
 
 These steps are performed once when the system is first installed, or any time a component is replaced. All steps are done through the GCD touchscreen; no computer or special tools are required.
 
-> **Pre-installation:** Before flashing the GCD firmware, it is recommended to run the touchscreen calibration program first. This ensures accurate touch response before the main program is installed.  See the Installation Manual for further details.
+> **Pre-installation:** Before flashing the GCD firmware, it is recommended to run the touchscreen calibration program first. This ensures accurate touch response before the main program is installed.  See the *GCS Software Installation Manual* for further details.
 
 **Before starting**, ensure all RJ cable connections are made:
 - GCD to GCM (mesh radio) — carries serial data, GPS signal, and power

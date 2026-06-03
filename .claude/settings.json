@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:deepwiki.com)"
+      "WebFetch(domain:deepwiki.com)",
+      "Read(//c/Users/Temp/gcm_pptx_extract/ppt/media/**)",
+      "Read(//c/Users/Yang/AppData/Local/Temp/gcm_pptx_extract/ppt/media/**)",
+      "PowerShell(Remove-Item \"C:\\\\Users\\\\Yang\\\\Documents\\\\PlatformIO\\\\Projects\\\\GCD-Golf-Cart_Display-Computer\\\\Documentation\\\\GCD Installation Manual.md\" -Confirm:$false)"
     ]
   }
 }
