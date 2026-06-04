@@ -170,7 +170,7 @@ Before beginning case assembly:
 
 ### 2.4 Shelf Mount Assembly
 
-The shelf-mount variant clips over the front lip of a horizontal dash shelf.
+The shelf-mount variant clips over the front lip of a horizontal golf cart tray.
 
 <img src="Assembly Images/GCD shelf mount assembly.jpg" width="320" alt="GCD in shelf-mount enclosure">
 
@@ -207,7 +207,7 @@ Slide the RJ jack cover into the speaker cover. Tuck all wires into the RJ jack 
 
 **Step 8 — Install on dash.**
 
-The completed assembly clips over the lip of the dash shelf.
+The completed assembly clips over the lip of the golf cart shelf.  Be sure the clips are engaged when attaching.  The fit should be snug and not slide easily.
 
 <img src="Assembly Images/GCD in enclosure.jpg" width="320" alt="GCD display board seated in enclosure">
 
