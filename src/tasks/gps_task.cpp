@@ -288,14 +288,12 @@ static void updateBacklight(time_t& sunrise_t, time_t& sunset_t) {
         sunset_time_str  = String(make12hr(hour(sunset_t)))  + ":" + String(prefix_zero(minute(sunset_t)));
     }
 
-    // Set backlight based on day/night and update is_daytime status
-    if (localTime > sunrise_t && localTime < sunset_t) {
-        is_daytime = true;
-        setBacklight((day_backlight * 20) + 55);
-    } else {
-        is_daytime = false;
-        setBacklight(night_backlight * 20);
-    }
+    // Update is_daytime from sunrise/sunset (always needed for GCI notification)
+    is_daytime = (localTime > sunrise_t && localTime < sunset_t);
+
+    // Screen brightness: follow headlights_on when lux sensor is live, else use sunrise/sunset
+    bool is_nighttime = (lux_now >= 0 && espnow_connected) ? headlights_on : !is_daytime;
+    setBacklight(is_nighttime ? (night_backlight * 20) : ((day_backlight * 20) + 55));
 
     // Notify GCI when is_daytime state changes
     if (is_daytime != old_is_daytime) {
