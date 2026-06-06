@@ -45,6 +45,10 @@ static size_t        s_snapshotCount = 0;
 // chatScreenInit() wires the callback and sets the initial label.
 static const char *const s_filterNames[] = {"DM", "ALL", "CH 0", "CH 1", "CH 2"};
 
+// Temporary DM override: badge tap switches to DM without saving to NVM.
+// Stored filter is restored when the Messages screen is exited.
+static int32_t s_preOverrideFilter = -1;
+
 static void updateFilterBtnLabel() {
     if (!objects.lbl_filter) return;
     int idx = (mesh_filter >= 0 && mesh_filter <= 4) ? mesh_filter : 0;
@@ -71,14 +75,15 @@ static void updateDmBadge() {
 }
 
 static void dmBadgeClickedCb(lv_event_t *e) {
-    mesh_filter = CHAT_FILTER_DM;
-    queuePreferenceWrite("mesh_filter", CHAT_FILTER_DM);
+    s_preOverrideFilter = mesh_filter;  // remember for restore on screen exit
+    mesh_filter = CHAT_FILTER_DM;       // temporary — not saved to NVM
     updateFilterBtnLabel();
     lv_obj_add_flag(objects.btn_dm_badge, LV_OBJ_FLAG_HIDDEN);
     chatScreenRequestRefresh();
 }
 
 static void filterCycleClickedCb(lv_event_t *e) {
+    s_preOverrideFilter = -1;  // explicit cycle cancels any temp DM override
     int next = (mesh_filter >= 0 && mesh_filter <= 3) ? mesh_filter + 1 : 0;
     mesh_filter = next;
     queuePreferenceWrite("mesh_filter", next);
@@ -391,7 +396,10 @@ void chatScreenInit() {
 
 void chatScreenRefresh() {
     if (!objects.messages_container_body) return;
+    // Un-hide the body if chatScreenFreeRows() hid it on the previous exit.
+    lv_obj_clear_flag(objects.messages_container_body, LV_OBJ_FLAG_HIDDEN);
     ensureRowsAllocated();
+    updateFilterBtnLabel();  // sync label to mesh_filter (may have been restored on exit)
 
     // lv_mem_monitor() is a no-op with LV_STDLIB_CLIB (LVGL v9 uses system
     // malloc). Printed after ensureRowsAllocated() so it shows post-allocation
@@ -459,14 +467,19 @@ void chatScreenRequestRefresh() {
 }
 
 void chatScreenFreeRows() {
+    // Restore temp DM override: badge tap changes filter without saving to NVM.
+    // Restoring here means re-entering Messages shows the NVM-saved filter.
+    if (s_preOverrideFilter >= 0) {
+        mesh_filter = s_preOverrideFilter;
+        s_preOverrideFilter = -1;
+    }
     s_selectedRow   = nullptr;
     s_snapshotCount = 0;
-    // Hide rows but keep objects allocated. Rows are pre-allocated at boot;
-    // freeing and re-allocating in a runtime-fragmented heap causes
-    // lv_draw_add_task OOM. Keep s_rowsInitialized true.
-    for (int i = 0; i < CHAT_MAX_DISPLAY_ROWS; i++) {
-        if (s_rows[i]) lv_obj_add_flag(s_rows[i], LV_OBJ_FLAG_HIDDEN);
-    }
+    // No LVGL calls here. Any lv_obj_add_flag(HIDDEN) on an off-screen object
+    // calls lv_obj_invalidate(), which queues a display-region dirty even for
+    // inactive screens, causing LVGL to redraw those areas before the Menu
+    // screen can render — visible as sluggish screen transitions.
+    // chatScreenRefresh() hides/updates rows correctly on re-entry.
     s_refreshPending = true;
 }
 
