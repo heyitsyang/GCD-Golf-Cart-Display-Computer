@@ -48,6 +48,7 @@
 #include "ui/tone_actions.h"
 #include "ui/chat_screen.h"
 #include "ui/canned_screen.h"
+#include "ui/settings2_screen.h"
 
 // Utils
 #include "utils/time_utils.h"
@@ -173,6 +174,8 @@ void setup() {
     HEAP_LOG("after chatScreenPreAllocRows");
     cannedScreenInit();
     HEAP_LOG("after cannedScreenInit");
+    settings2ScreenInit();
+    HEAP_LOG("after settings2ScreenInit");
 
     // glyph_guard is NOT freed here — gui_task frees it before the first lv_timer_handler().
     // Initialize Meshtastic
