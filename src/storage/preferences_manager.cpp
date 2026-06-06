@@ -100,6 +100,9 @@ void loadPreferences() {
     lux_lights_on  = prefs.getInt("lux_lights_on",  200);
     lux_lights_off = prefs.getInt("lux_lights_off", 400);
 
+    // Last known GCI firmware version (updated when GCI connects)
+    gci_version = prefs.getString("gci_version", "");
+
 #if DEBUG_EEPROM == 1
     Serial.println("EEPROM values loaded:");
     Serial.printf("  day_backlight=%d, night_backlight=%d\n", day_backlight, night_backlight);

@@ -97,9 +97,9 @@ void setup() {
     randomSeed(esp_random());
 
     // Print version and MAC (always shown - essential boot info)
-    version = String('v') + String(VERSION);
+    gcd_version = "v" + String(VERSION);
     cyd_mac_addr = String(WiFi.macAddress());
-    Serial.printf("\nGCD %s | MAC: %s\n", version.c_str(), cyd_mac_addr.c_str());
+    Serial.printf("\nGCD %s | MAC: %s\n", gcd_version.c_str(), cyd_mac_addr.c_str());
     HEAP_LOG("start of setup");
 
     // Initialize storage and load preferences

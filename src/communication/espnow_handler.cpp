@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "get_set_vars.h"
 #include "../hardware/display.h"
+#include "../storage/preferences_manager.h"
 #include <esp_wifi.h>
 
 // Global instance
@@ -429,7 +430,8 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             modeHeadLights = dataFromGci.modeLights;
             outdoorLux = dataFromGci.outdoorLux;
             rawAirTemperature = dataFromGci.airTemp;
-            airTemperature = rawAirTemperature + temperature_adj;  // Apply temperature offset
+            // Apply correction only when sensor is present (-99 means no sensor)
+            airTemperature = (rawAirTemperature == -99.0f) ? -99.0f : (rawAirTemperature + temperature_adj);
             battVoltage = dataFromGci.battVolts;
 
             float newFuelLevel = dataFromGci.fuelPct;
@@ -453,7 +455,7 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
 
             // Always show telemetry (confirms GCI communication is working)
             Serial.printf("Telemetry: Lights=%d Lux=%d Temp=%.1f Batt=%.2f Fuel=%.1f\n",
-                         modeHeadLights, outdoorLux, airTemperature, battVoltage, fuelLevel);
+                         modeHeadLights, outdoorLux, rawAirTemperature, battVoltage, fuelLevel);
             break;
         }
 
@@ -496,6 +498,22 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             Serial.println(mac_str);
             #endif
             // Note: last_seen timestamp already updated in lines 278-291 above
+            break;
+        }
+
+        case ESPNOW_MSG_GCI_VERSION: {
+            if (item.message.data_len > 0) {
+                char buf[32];
+                size_t len = min((int)item.message.data_len, 31);
+                memcpy(buf, item.message.data, len);
+                buf[len] = '\0';
+                String received = String(buf);
+                if (received != gci_version) {
+                    gci_version = received;
+                    queuePreferenceWrite("gci_version", gci_version);
+                    Serial.printf("ESP-NOW: GCI version updated = %s\n", gci_version.c_str());
+                }
+            }
             break;
         }
     }

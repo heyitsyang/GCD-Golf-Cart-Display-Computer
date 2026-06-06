@@ -35,8 +35,11 @@ void set_var_sats_hdop(const char* value);
 int32_t get_var_avg_speed();
 void set_var_avg_speed(int32_t value);
 
-const char* get_var_version();
-void set_var_version(const char* value);
+const char* get_var_gcd_version();
+void set_var_gcd_version(const char* value);
+
+const char* get_var_gci_version();
+void set_var_gci_version(const char* value);
 
 int32_t get_var_cyd_day_backlight();
 void set_var_cyd_day_backlight(int32_t value);
@@ -238,7 +241,8 @@ extern String hhmmss_str;
 extern String hhmm_str;
 extern String am_pm_str;
 extern String sats_hdop;
-extern String version;
+extern String gcd_version;
+extern String gci_version;
 extern String cyd_mac_addr;
 extern String espnow_gci_mac_addr;
 extern String wx_rcv_time;

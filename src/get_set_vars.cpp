@@ -13,7 +13,8 @@ String hhmmss_str;
 String hhmm_str;
 String am_pm_str;
 String sats_hdop;
-String version;
+String gcd_version;
+String gci_version;
 String cyd_mac_addr;
 String espnow_gci_mac_addr;
 String wx_rcv_time;
@@ -148,12 +149,20 @@ void set_var_avg_speed(int32_t value) {
     avg_speed = value;
 }
 
-const char* get_var_version() {
-    return version.c_str();
+const char* get_var_gcd_version() {
+    return gcd_version.c_str();
 }
 
-void set_var_version(const char* value) {
-    version = String(value);
+void set_var_gcd_version(const char* value) {
+    gcd_version = String(value);
+}
+
+const char* get_var_gci_version() {
+    return gci_version.c_str();
+}
+
+void set_var_gci_version(const char* value) {
+    gci_version = String(value);
 }
 
 int32_t get_var_cyd_day_backlight() {

@@ -74,7 +74,8 @@ typedef enum {
     ESPNOW_MSG_HEARTBEAT = 5,
     ESPNOW_MSG_IS_HOME = 6,
     ESPNOW_MSG_IS_DAYTIME = 7,
-    ESPNOW_MSG_CONFIG = 8  // GCD → GCI configuration (must match GCI)
+    ESPNOW_MSG_CONFIG = 8,        // GCD → GCI configuration (must match GCI)
+    ESPNOW_MSG_GCI_VERSION = 9   // GCI → GCD version string
 } espnow_msg_type_t;
 
 // Config message payload (must match GCI main.cpp structMsgConfig)
