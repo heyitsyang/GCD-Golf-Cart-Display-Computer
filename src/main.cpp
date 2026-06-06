@@ -169,6 +169,8 @@ void setup() {
     // objects.* widgets exist).
     chatScreenInit();
     HEAP_LOG("after chatScreenInit");
+    chatScreenPreAllocRows();          // pre-alloc rows from clean boot heap
+    HEAP_LOG("after chatScreenPreAllocRows");
     cannedScreenInit();
     HEAP_LOG("after cannedScreenInit");
 

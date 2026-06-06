@@ -18,9 +18,12 @@ void chatScreenRequestRefresh();
 // pending OR if filter changed since last build.
 void chatScreenPump();
 
-// Free the lazy-allocated row pool. Call when leaving the Messages screen
-// so ~11 KB is reclaimed while the screen is not active. Rows are
-// re-created by ensureRowsAllocated() on next screen entry.
+// Hide the row pool on Messages screen exit. Rows stay allocated (pre-alloc
+// fix); hidden rows are shown again on next chatScreenRefresh() call.
 void chatScreenFreeRows();
+
+// Pre-allocate the row pool from clean boot heap. Call from setup() after
+// chatScreenInit(). Eliminates late fragmented-heap allocation that causes OOM.
+void chatScreenPreAllocRows();
 
 #endif // CHAT_SCREEN_H

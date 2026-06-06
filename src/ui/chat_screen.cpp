@@ -24,11 +24,13 @@ static int32_t       s_lastBuiltFilter = -1;
 
 static lv_obj_t *s_selectedRow = nullptr;
 
-// Row pool — lazy-allocated on first Messages visit (not at boot).
-// Boot-time pre-allocation consumed 16 KB which starved LVGL glyph rendering
-// (~2.5 KB transient alloc) and caused abort() at ~41 s with no UI activity.
-// LVGL v9 uses LV_STDLIB_CLIB: all objects come from system heap; rows are
-// created once and reused (show/hide + label update) on every refresh.
+// Row pool — pre-allocated at boot by chatScreenPreAllocRows() in setup().
+// Earlier lazy-alloc (on first Messages visit at ~t=80s) caused OOM: WiFi/task
+// heap fragmentation plus the LVGL full-screen draw burst from opening the
+// filter dropdown exceeded available heap. Allocating from a clean ~164 KB
+// boot heap avoids the fragmentation spike; glyph_guard (malloc'd before
+// ui_init) keeps the glyph's 14 KB block intact.
+// Rows are never freed; chatScreenFreeRows() hides them on exit.
 static lv_obj_t *s_rows[CHAT_MAX_DISPLAY_ROWS];
 static lv_obj_t *s_rowPrefixLabels[CHAT_MAX_DISPLAY_ROWS];
 static lv_obj_t *s_rowLabels[CHAT_MAX_DISPLAY_ROWS];
@@ -38,6 +40,52 @@ static bool      s_rowsInitialized = false;
 // clearSelection() can re-truncate after the marquee restores full text.
 static chatMessage_t s_snapshot[CHAT_MAX_DISPLAY_ROWS];
 static size_t        s_snapshotCount = 0;
+
+// Filter cycle button — EEZ creates objects.btn_filter / objects.lbl_filter;
+// chatScreenInit() wires the callback and sets the initial label.
+static const char *const s_filterNames[] = {"DM", "ALL", "CH 0", "CH 1", "CH 2"};
+
+static void updateFilterBtnLabel() {
+    if (!objects.lbl_filter) return;
+    int idx = (mesh_filter >= 0 && mesh_filter <= 4) ? mesh_filter : 0;
+    lv_label_set_text(objects.lbl_filter, s_filterNames[idx]);
+}
+
+static void updateDmBadge() {
+    if (!objects.btn_dm_badge) return;
+    if (mesh_filter == CHAT_FILTER_DM) {
+        lv_obj_add_flag(objects.btn_dm_badge, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+    size_t n = chatBufferUnreadDmCount();
+    if (n == 0) {
+        lv_obj_add_flag(objects.btn_dm_badge, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+    if (objects.lbl_dm_badge) {
+        char buf[12];
+        snprintf(buf, sizeof(buf), "%u DM", (unsigned)n);
+        lv_label_set_text(objects.lbl_dm_badge, buf);
+    }
+    lv_obj_clear_flag(objects.btn_dm_badge, LV_OBJ_FLAG_HIDDEN);
+}
+
+static void dmBadgeClickedCb(lv_event_t *e) {
+    mesh_filter = CHAT_FILTER_DM;
+    queuePreferenceWrite("mesh_filter", CHAT_FILTER_DM);
+    updateFilterBtnLabel();
+    lv_obj_add_flag(objects.btn_dm_badge, LV_OBJ_FLAG_HIDDEN);
+    chatScreenRequestRefresh();
+}
+
+static void filterCycleClickedCb(lv_event_t *e) {
+    int next = (mesh_filter >= 0 && mesh_filter <= 3) ? mesh_filter + 1 : 0;
+    mesh_filter = next;
+    queuePreferenceWrite("mesh_filter", next);
+    updateFilterBtnLabel();
+    updateDmBadge();
+    chatScreenRequestRefresh();
+}
 
 // 12-hour HH:MMa/p, lowercase. "--:--" if timestamp not synced (GPS
 // hasn't seeded the RTC yet).
@@ -241,15 +289,6 @@ static void rowLongPressedCb(lv_event_t *e) {
     lv_event_stop_bubbling(e);
 }
 
-static void filterChangedCb(lv_event_t *e) {
-    if (!objects.filter_dropdown) return;
-    int32_t idx = lv_dropdown_get_selected(objects.filter_dropdown);
-    if (idx != mesh_filter) {
-        mesh_filter = idx;
-        queuePreferenceWrite("mesh_filter", (int)idx);
-        chatScreenRequestRefresh();
-    }
-}
 
 static void newComposeClickedCb(lv_event_t *e) {
     cannedScreenSetNewMode();
@@ -330,16 +369,17 @@ void chatScreenInit() {
                               LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
         lv_obj_set_scroll_dir(body, LV_DIR_VER);
         lv_obj_add_flag(body, LV_OBJ_FLAG_SCROLLABLE);
-        // Rows are lazy-allocated on first Messages visit — see ensureRowsAllocated().
+        // Rows are pre-allocated at boot via chatScreenPreAllocRows() — see ensureRowsAllocated().
     }
 
-    if (objects.filter_dropdown) {
-        // Apply the persisted selection (loadPreferences set mesh_filter).
-        if (mesh_filter >= 0 && mesh_filter <= 4) {
-            lv_dropdown_set_selected(objects.filter_dropdown, mesh_filter);
-        }
-        lv_obj_add_event_cb(objects.filter_dropdown, filterChangedCb,
-                            LV_EVENT_VALUE_CHANGED, nullptr);
+    if (objects.btn_filter) {
+        lv_obj_add_event_cb(objects.btn_filter, filterCycleClickedCb, LV_EVENT_CLICKED, nullptr);
+        updateFilterBtnLabel();
+    }
+
+    if (objects.btn_dm_badge) {
+        lv_obj_add_flag(objects.btn_dm_badge, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_event_cb(objects.btn_dm_badge, dmBadgeClickedCb, LV_EVENT_CLICKED, nullptr);
     }
 
     if (objects.btn_new_msg) {
@@ -411,6 +451,7 @@ void chatScreenRefresh() {
 
     lv_obj_scroll_to_y(body, LV_COORD_MAX, LV_ANIM_OFF);
     s_lastBuiltFilter = mesh_filter;
+    updateDmBadge();
 }
 
 void chatScreenRequestRefresh() {
@@ -418,19 +459,19 @@ void chatScreenRequestRefresh() {
 }
 
 void chatScreenFreeRows() {
-    s_selectedRow  = nullptr;
+    s_selectedRow   = nullptr;
     s_snapshotCount = 0;
-    if (!s_rowsInitialized) return;
+    // Hide rows but keep objects allocated. Rows are pre-allocated at boot;
+    // freeing and re-allocating in a runtime-fragmented heap causes
+    // lv_draw_add_task OOM. Keep s_rowsInitialized true.
     for (int i = 0; i < CHAT_MAX_DISPLAY_ROWS; i++) {
-        if (s_rows[i]) {
-            lv_obj_del(s_rows[i]);
-            s_rows[i]            = nullptr;
-            s_rowPrefixLabels[i] = nullptr;
-            s_rowLabels[i]       = nullptr;
-        }
+        if (s_rows[i]) lv_obj_add_flag(s_rows[i], LV_OBJ_FLAG_HIDDEN);
     }
-    s_rowsInitialized = false;
-    s_refreshPending  = true;
+    s_refreshPending = true;
+}
+
+void chatScreenPreAllocRows() {
+    ensureRowsAllocated();
 }
 
 void chatScreenPump() {

@@ -4,8 +4,8 @@
 #include <Arduino.h>
 #include "types.h"
 
-// Filter indices match the EEZ filter_dropdown order:
-//   0 = DIRECT MSGS
+// Filter indices — match objects.btn_filter cycle order and s_filterNames[] in chat_screen.cpp:
+//   0 = DM (direct messages)
 //   1 = ALL
 //   2 = CHANNEL 0
 //   3 = CHANNEL 1
