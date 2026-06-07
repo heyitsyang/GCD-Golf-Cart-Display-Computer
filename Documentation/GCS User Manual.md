@@ -390,6 +390,7 @@ Pairing is permanent and survives reboots. Repeat this step only if the GCI unit
 1. In Settings 2, tap the **Fuel Sensor** dropdown.
 2. Select the option matching your GCI installation (NO FUEL SENSOR if none is installed).
 3. The setting is transmitted to the GCI automatically. The fuel bar on the Home screen will appear or disappear depending on your selection.
+4. On the Vehicle screen, set the low fuel/low batery warning to the desired warning percentage.
 
 ### Step 4: Set Home Location
 
