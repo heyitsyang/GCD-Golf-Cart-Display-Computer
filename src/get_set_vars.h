@@ -293,6 +293,7 @@ extern bool set_home_loc;
 extern int32_t home_gps_fence_radius_m;
 extern bool at_home;
 extern bool is_daytime;
+extern bool headlights_due;  // true = headlights should be on (no-lux fallback, offset from sunset/sunrise)
 extern String cur_lat;
 extern String cur_long;
 extern String sunrise_time_str;

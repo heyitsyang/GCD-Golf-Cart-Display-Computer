@@ -63,8 +63,8 @@ static bool old_at_home = false;
 // Track set_home_loc for edge detection
 static bool prev_set_home_loc = false;
 
-// Track is_daytime state changes
-static bool old_is_daytime = true;
+// Track headlights_due state changes for GCI notification
+static bool old_headlights_due = true;
 
 /**
  * Update speed from GPS fix
@@ -288,20 +288,24 @@ static void updateBacklight(time_t& sunrise_t, time_t& sunset_t) {
         sunset_time_str  = String(make12hr(hour(sunset_t)))  + ":" + String(prefix_zero(minute(sunset_t)));
     }
 
-    // Update is_daytime from sunrise/sunset (always needed for GCI notification)
+    // Update is_daytime from exact sunrise/sunset (used for screen brightness fallback)
     is_daytime = (localTime > sunrise_t && localTime < sunset_t);
 
-    // Screen brightness: follow headlights_on when lux sensor is live, else use sunrise/sunset
+    // headlights_due: ON 10 min before sunset, OFF 10 min after sunrise
+    headlights_due = !(localTime > sunrise_t + HEADLIGHT_SUNSET_OFFSET_SEC &&
+                       localTime < sunset_t  - HEADLIGHT_SUNSET_OFFSET_SEC);
+
+    // Screen brightness: follow headlights_on when lux sensor is live, else use exact sunrise/sunset
     bool is_nighttime = (lux_now >= 0 && espnow_connected) ? headlights_on : !is_daytime;
     setBacklight(is_nighttime ? (night_backlight * 20) : ((day_backlight * 20) + 55));
 
-    // Notify GCI when is_daytime state changes
-    if (is_daytime != old_is_daytime) {
-        Serial.printf("*** Day/night transition: %s ***\n", is_daytime ? "DAYTIME" : "NIGHTTIME");
-        old_is_daytime = is_daytime;
+    // Notify GCI when headlights_due changes (offset-adjusted boundary)
+    if (headlights_due != old_headlights_due) {
+        Serial.printf("*** Headlight transition: %s ***\n", headlights_due ? "ON" : "OFF");
+        old_headlights_due = headlights_due;
 
         if (espnow_connected) {
-            espNow.sendIsDaytime(is_daytime);
+            espNow.sendIsDaytime(!headlights_due);
         }
     }
 }

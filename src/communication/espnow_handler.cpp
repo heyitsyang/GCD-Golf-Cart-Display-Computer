@@ -391,7 +391,7 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
 
                 // Send initial status to GCI
                 sendIsHome(at_home);
-                sendIsDaytime(is_daytime);
+                sendIsDaytime(!headlights_due);
                 sendFuelConfig();
             }
             break;
