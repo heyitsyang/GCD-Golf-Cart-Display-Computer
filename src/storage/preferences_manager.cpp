@@ -103,6 +103,9 @@ void loadPreferences() {
     // Last known GCI firmware version (updated when GCI connects)
     gci_version = prefs.getString("gci_version", "");
 
+    // Last known GCM node ID (updated when GCM reports its node number)
+    gcm_node_id = prefs.getString("gcm_node_id", "");
+
 #if DEBUG_EEPROM == 1
     Serial.println("EEPROM values loaded:");
     Serial.printf("  day_backlight=%d, night_backlight=%d\n", day_backlight, night_backlight);

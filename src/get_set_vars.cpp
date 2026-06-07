@@ -66,7 +66,7 @@ bool set_home_loc = false;
 int32_t home_gps_fence_radius_m = 500;  // Default 500 meter radius
 bool at_home = false;
 bool is_daytime = true;  // Default to daytime
-bool headlights_due = true;  // Default on until GPS provides time
+bool headlights_due = false;  // Default off until GPS provides time
 String cur_lat;
 String cur_long;
 String sunrise_time_str = "_:__";

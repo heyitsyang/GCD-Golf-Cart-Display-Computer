@@ -61,4 +61,46 @@ def patch_lv_draw_label():
     print(f"fix_lv_draw_label_oom: patch applied to {file_path}")
 
 
+def patch_lv_draw_label_round8():
+    """Change LV_ROUND_UP(g.box_h, 32) -> LV_ROUND_UP(g.box_h, 8).
+    For Cart-60 glyphs (box_h=51): reduces glyph buf from 3456 to 3024 bytes,
+    fitting within the ~3.2KB largest-block available during FADE_IN transitions.
+    """
+    file_path = os.path.join(
+        env.get("PROJECT_LIBDEPS_DIR"), env.get("PIOENV"),
+        "lvgl", "src", "draw", "lv_draw_label.c"
+    )
+
+    if not os.path.exists(file_path):
+        print(f"fix_lv_draw_label_oom (round8): {file_path} not found, skipping")
+        return
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    SENTINEL = "GCD-ROUND8-PATCH"
+    if SENTINEL in content:
+        print("fix_lv_draw_label_oom (round8): already applied, skipping")
+        return
+
+    OLD = "                uint32_t h = LV_ROUND_UP(g.box_h, 32); /*Assume a larger size to avoid many reallocations*/"
+    NEW = (
+        "                uint32_t h = LV_ROUND_UP(g.box_h, 8); "
+        "/*" + SENTINEL + ": 32->8 reduces Cart-60 glyph buf from 3456 to 3024 bytes*/"
+    )
+
+    if OLD not in content:
+        print(
+            "fix_lv_draw_label_oom (round8): WARNING - expected text not found; "
+            "LVGL version may have changed or GCD-OOM-PATCH already modified this line"
+        )
+        return
+
+    content = content.replace(OLD, NEW, 1)
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"fix_lv_draw_label_oom (round8): patch applied to {file_path}")
+
+
 patch_lv_draw_label()
+patch_lv_draw_label_round8()

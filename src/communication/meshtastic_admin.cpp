@@ -9,6 +9,7 @@
 #include "globals.h"
 #include "ui/canned_screen.h"
 #include "storage/favorites.h"
+#include "storage/preferences_manager.h"
 
 // External declarations from mt_protocol.cpp in meshtastic library
 extern uint32_t my_node_num;
@@ -211,7 +212,10 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo) {
     char nodeIdStr[12];
     snprintf(nodeIdStr, sizeof(nodeIdStr), "!%08x", nodeNum);
 
-    set_var_gcm_node_id(nodeIdStr);
+    if (gcm_node_id != nodeIdStr) {
+        gcm_node_id = nodeIdStr;
+        queuePreferenceWrite("gcm_node_id", gcm_node_id);
+    }
 #if DEBUG_MESHTASTIC_CONNECTION
     Serial.print("GCM Node ID: ");
     Serial.println(nodeIdStr);

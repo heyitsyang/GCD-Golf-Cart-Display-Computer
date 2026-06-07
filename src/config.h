@@ -134,7 +134,7 @@
 #define CHAT_TEXT_SIZE 120        // Max text stored per chat message / TX / KB context
 
 // Heap monitoring (set DEBUG_HEAP to 0 to remove all logging once stable)
-#define DEBUG_HEAP 0
+#define DEBUG_HEAP 1
 #define DEBUG_HEAP_INTERVAL_MS 5000
 
 // Task Stack Sizes (in bytes)
@@ -149,8 +149,8 @@
 // Fuel / energy sensor type codes (must match EEZ Studio fuel_sense_type enum)
 #define FUEL_SENSOR_NONE        0   // no sensor installed
 #define FUEL_SENSOR_ADC_GAS     1   // analog voltage on ADC_FUEL_PIN (gasoline)
-#define FUEL_SENSOR_GPIO_EXP    2   // MCP23008 I2C GPIO expander (gasoline, future)
-#define FUEL_SENSOR_ADC_ELEC    3   // analog voltage (electric/battery, future)
+#define FUEL_SENSOR_GPIO_EXP    2   // MCP23008 I2C GPIO expander (gasoline)
+#define FUEL_SENSOR_ADC_ELEC    3   // analog voltage (electric/battery level)
 
 // Task Priorities
 #define GUI_TASK_PRIORITY 3

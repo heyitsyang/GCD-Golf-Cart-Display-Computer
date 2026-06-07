@@ -163,6 +163,13 @@
     #endif
 #endif
 
+/*Layer chunk size for screen opacity animations (FADE_IN, etc.).
+ *lv_refr.c reads LV_DRAW_LAYER_SIMPLE_BUF_SIZE; the SW-unit alias
+ *LV_DRAW_SW_LAYER_SIMPLE_BUF_SIZE above has no effect in LVGL 9.3.
+ *24KB default left only ~3.2KB contiguous during Cart-60 glyph rendering;
+ *8KB matches our intent and gives ~16KB more headroom per animation frame.*/
+#define LV_DRAW_LAYER_SIMPLE_BUF_SIZE (8 * 1024)
+
 /* Use NXP's VG-Lite GPU on iMX RTxxx platforms. */
 #define LV_USE_DRAW_VGLITE 0
 

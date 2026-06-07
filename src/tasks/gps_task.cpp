@@ -64,7 +64,7 @@ static bool old_at_home = false;
 static bool prev_set_home_loc = false;
 
 // Track headlights_due state changes for GCI notification
-static bool old_headlights_due = true;
+static bool old_headlights_due = false;
 
 /**
  * Update speed from GPS fix
