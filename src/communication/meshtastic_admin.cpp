@@ -212,8 +212,9 @@ void handleMyNodeInfo(meshtastic_MyNodeInfo *myNodeInfo) {
     char nodeIdStr[12];
     snprintf(nodeIdStr, sizeof(nodeIdStr), "!%08x", nodeNum);
 
-    if (gcm_node_id != nodeIdStr) {
-        gcm_node_id = nodeIdStr;
+    if (strcmp(gcm_node_id, nodeIdStr) != 0) {
+        strncpy(gcm_node_id, nodeIdStr, sizeof(gcm_node_id) - 1);
+        gcm_node_id[sizeof(gcm_node_id) - 1] = '\0';
         queuePreferenceWrite("gcm_node_id", gcm_node_id);
     }
 #if DEBUG_MESHTASTIC_CONNECTION

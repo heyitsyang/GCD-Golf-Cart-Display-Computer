@@ -243,7 +243,7 @@ extern String am_pm_str;
 extern String sats_hdop;
 extern String gcd_version;
 extern String gci_version;
-extern String gcm_node_id;
+extern char gcm_node_id[12];
 extern String cyd_mac_addr;
 extern String espnow_gci_mac_addr;
 extern String wx_rcv_time;

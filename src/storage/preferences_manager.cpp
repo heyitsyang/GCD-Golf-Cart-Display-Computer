@@ -104,7 +104,11 @@ void loadPreferences() {
     gci_version = prefs.getString("gci_version", "");
 
     // Last known GCM node ID (updated when GCM reports its node number)
-    gcm_node_id = prefs.getString("gcm_node_id", "");
+    {
+        String _tmp = prefs.getString("gcm_node_id", "");
+        strncpy(gcm_node_id, _tmp.c_str(), sizeof(gcm_node_id) - 1);
+        gcm_node_id[sizeof(gcm_node_id) - 1] = '\0';
+    }
 
 #if DEBUG_EEPROM == 1
     Serial.println("EEPROM values loaded:");

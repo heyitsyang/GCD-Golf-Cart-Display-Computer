@@ -37,7 +37,7 @@ String fcast_temp4;
 String fcast_precip4;
 String espnow_status;
 String espnow_last_received;
-String gcm_node_id;
+char gcm_node_id[12] = "";
 String text_message;
 
 // Numeric variable definitions
@@ -472,11 +472,12 @@ void set_var_espnow_last_received(const char* value) {
 }
 
 const char* get_var_gcm_node_id() {
-    return gcm_node_id.c_str();
+    return gcm_node_id;
 }
 
 void set_var_gcm_node_id(const char* value) {
-    gcm_node_id = String(value);
+    strncpy(gcm_node_id, value, sizeof(gcm_node_id) - 1);
+    gcm_node_id[sizeof(gcm_node_id) - 1] = '\0';
 }
 
 int32_t get_var_screen_inactivity_countdown() {
