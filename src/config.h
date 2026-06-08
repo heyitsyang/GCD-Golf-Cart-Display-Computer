@@ -134,7 +134,7 @@
 #define CHAT_TEXT_SIZE 120        // Max text stored per chat message / TX / KB context
 
 // Heap monitoring (set DEBUG_HEAP to 0 to remove all logging once stable)
-#define DEBUG_HEAP 1
+#define DEBUG_HEAP 0
 #define DEBUG_HEAP_INTERVAL_MS 5000
 
 // Task Stack Sizes (in bytes)

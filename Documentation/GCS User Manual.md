@@ -254,6 +254,18 @@ Narrows which messages are shown in the list. Tap the dropdown to cycle through:
 
 The selected filter is saved and persists across reboots.
 
+**How the filter works — inbound and display:**
+
+The filter does two things simultaneously:
+
+1. **Display** — only messages matching the active filter appear in the list. Messages already in the buffer that do not match are hidden, not deleted. If you switch back to a wider filter (e.g., ALL), those messages reappear.
+
+2. **Inbound storage** — incoming messages that do not match the active filter are discarded before they enter the 32-message buffer. They cannot be recovered by switching the filter later.
+
+Two exceptions always bypass the inbound filter regardless of the active setting: **direct messages to you** are always stored, and **your own outgoing messages** are always stored.
+
+**Practical implication:** if you leave the filter set to CHANNEL 0 overnight, any channel 1 or channel 2 messages that arrive while the cart is powered will be permanently lost. Set the filter to ALL when you want to receive everything, and narrow it only when actively reading a specific channel.
+
 ### NEW MSG Button
 
 Opens the Canned Messages screen in compose mode, ready to send a new message without replying to anyone specific.
