@@ -19,8 +19,14 @@
 // formatted "time" would just be uptime since boot. ~July 2017.
 #define TIMESTAMP_VALID_MIN  1500000000U
 
+// Guard time before committing a filter selection to NVM. Long enough that
+// the user can cycle past intermediate options without triggering writes.
+#define FILTER_WRITE_DEBOUNCE_MS 3000
+
 static volatile bool s_refreshPending = true;
 static int32_t       s_lastBuiltFilter = -1;
+// millis() timestamp of last filter cycle tap; 0 = no write pending
+static uint32_t      s_filterWritePendingMs = 0;
 
 static lv_obj_t *s_selectedRow = nullptr;
 
@@ -52,7 +58,18 @@ static int32_t s_preOverrideFilter = -1;
 static void updateFilterBtnLabel() {
     if (!objects.lbl_filter) return;
     int idx = (mesh_filter >= 0 && mesh_filter <= 5) ? mesh_filter : 0;
-    lv_label_set_text(objects.lbl_filter, s_filterNames[idx]);
+    if (idx >= CHAT_FILTER_CH0 && idx <= CHAT_FILTER_CH2) {
+        uint8_t ch = (uint8_t)(idx - CHAT_FILTER_CH0);
+        const char *name = cannedScreenGetChannelName(ch);
+        char buf[20];
+        if (name && name[0] != '\0')
+            snprintf(buf, sizeof(buf), "CH %u: %s", ch, name);
+        else
+            snprintf(buf, sizeof(buf), "CH %u", ch);
+        lv_label_set_text(objects.lbl_filter, buf);
+    } else {
+        lv_label_set_text(objects.lbl_filter, s_filterNames[idx]);
+    }
 }
 
 static void updateDmBadge() {
@@ -86,7 +103,7 @@ static void filterCycleClickedCb(lv_event_t *e) {
     s_preOverrideFilter = -1;  // explicit cycle cancels any temp DM override
     int next = (mesh_filter >= 0 && mesh_filter <= 4) ? mesh_filter + 1 : 0;
     mesh_filter = next;
-    queuePreferenceWrite("mesh_filter", next);
+    s_filterWritePendingMs = millis();  // commit to NVM after guard time elapses
     updateFilterBtnLabel();
     updateDmBadge();
     chatScreenRequestRefresh();
@@ -467,6 +484,12 @@ void chatScreenRequestRefresh() {
 }
 
 void chatScreenFreeRows() {
+    // Flush any pending filter NVM write immediately — the pump won't fire after
+    // the screen is no longer active, so we commit here regardless of guard time.
+    if (s_filterWritePendingMs != 0) {
+        queuePreferenceWrite("mesh_filter", (int)mesh_filter);
+        s_filterWritePendingMs = 0;
+    }
     // Restore temp DM override: badge tap changes filter without saving to NVM.
     // Restoring here means re-entering Messages shows the NVM-saved filter.
     if (s_preOverrideFilter >= 0) {
@@ -485,10 +508,19 @@ void chatScreenFreeRows() {
 
 void chatScreenPreAllocRows() {
     ensureRowsAllocated();
+    // Widen filter button to fit "CH N: ChannelName"; shrink DM badge to compensate.
+    if (objects.btn_filter)   { lv_obj_set_width(objects.btn_filter,  150); }
+    if (objects.btn_dm_badge) { lv_obj_set_width(objects.btn_dm_badge, 58);
+                                lv_obj_set_x(objects.btn_dm_badge,    165); }
 }
 
 void chatScreenPump() {
     if (lv_scr_act() != objects.meshtastic_messages) return;
+    if (s_filterWritePendingMs != 0 &&
+        (millis() - s_filterWritePendingMs) >= FILTER_WRITE_DEBOUNCE_MS) {
+        queuePreferenceWrite("mesh_filter", (int)mesh_filter);
+        s_filterWritePendingMs = 0;
+    }
     if (s_refreshPending || s_lastBuiltFilter != mesh_filter) {
         s_refreshPending = false;
         chatScreenRefresh();
