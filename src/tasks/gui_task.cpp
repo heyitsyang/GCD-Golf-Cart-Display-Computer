@@ -8,6 +8,7 @@
 #include "ui/venue_event_display.h"
 #include "ui/chat_screen.h"
 #include "ui/canned_screen.h"
+#include "ui/settings2_screen.h"
 #include "get_set_vars.h"
 #include "hardware/display.h"
 
@@ -137,6 +138,7 @@ void guiTask(void *parameter) {
         // Drain chat / messaging UI updates queued from other tasks.
         chatScreenPump();
         cannedScreenPump();
+        settings2ScreenPump();
 
         // Update espnow GCI MAC address color on Settings2 screen
         updateEspnowGciMacColor();
@@ -159,6 +161,9 @@ void guiTask(void *parameter) {
             }
             if (previous_screen == objects.meshtastic_canned_messages && current_screen != objects.meshtastic_canned_messages) {
                 cannedScreenFreeRecipientBtn();
+            }
+            if (previous_screen == objects.settings2 && current_screen != objects.settings2) {
+                settings2ScreenOnExit();
             }
 
             previous_screen = current_screen;
