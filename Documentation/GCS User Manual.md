@@ -246,19 +246,22 @@ Narrows which messages are shown in the list. Tap the dropdown to cycle through:
 
 | Filter | Shows |
 |--------|-------|
-| ALL | Every message |
+| ALL | Every message except HOT packet data broadcasts |
 | DIRECT MSGS | Only messages sent directly to you or by you to a specific person |
-| CHANNEL 0 | Only messages on channel 0 |
-| CHANNEL 1 | Only messages on channel 1 |
-| CHANNEL 2 | Only messages on channel 2 |
+| CHANNEL 0 | Only messages on channel 0 (HOT packets excluded) |
+| CHANNEL 1 | Only messages on channel 1 (HOT packets excluded) |
+| CHANNEL 2 | Only messages on channel 2 (HOT packets excluded) |
+| DEBUG | All traffic including raw HOT packet data broadcasts |
 
 The selected filter is saved and persists across reboots.
+
+**HOT packets** are automated data broadcasts sent over the mesh by the weather and entertainment servers. They carry the content shown on the Weather and Now Playing screens and are not intended for reading as messages. ALL and the channel filters suppress them so they do not clutter the message list. Switch to DEBUG only when troubleshooting the data feed.
 
 **How the filter works — inbound and display:**
 
 The filter does two things simultaneously:
 
-1. **Display** — only messages matching the active filter appear in the list. Messages already in the buffer that do not match are hidden, not deleted. If you switch back to a wider filter (e.g., ALL), those messages reappear.
+1. **Display** — only messages matching the active filter appear in the list. Messages already in the buffer that do not match are hidden, not deleted. If you switch back to a wider filter (e.g., ALL), those hidden messages reappear.
 
 2. **Inbound storage** — incoming messages that do not match the active filter are discarded before they enter the 32-message buffer. They cannot be recovered by switching the filter later.
 

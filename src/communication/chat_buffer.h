@@ -6,15 +6,17 @@
 
 // Filter indices — match objects.btn_filter cycle order and s_filterNames[] in chat_screen.cpp:
 //   0 = DM (direct messages)
-//   1 = ALL
-//   2 = CHANNEL 0
-//   3 = CHANNEL 1
-//   4 = CHANNEL 2
+//   1 = ALL (excludes HOT packets)
+//   2 = CHANNEL 0 (excludes HOT packets)
+//   3 = CHANNEL 1 (excludes HOT packets)
+//   4 = CHANNEL 2 (excludes HOT packets)
+//   5 = DEBUG (all traffic including HOT packets)
 #define CHAT_FILTER_DM    0
 #define CHAT_FILTER_ALL   1
 #define CHAT_FILTER_CH0   2
 #define CHAT_FILTER_CH1   3
 #define CHAT_FILTER_CH2   4
+#define CHAT_FILTER_DEBUG 5
 
 // Maximum unread DMs tracked by the side-array (also the NVS persistence cap).
 #define DM_SLOT_MAX 4

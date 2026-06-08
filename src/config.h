@@ -18,8 +18,6 @@
 #define DEBUG_OTA_TX_TEST 0             // Periodic T1,T2,T3... OTA test messages every 30s
 #define DEBUG_OTA_TX_TEST_CHANNEL 3     // Channel to send OTA test messages on (corresponds to UI channel selector)
 
-#define SHOW_HOT_PKTS_IN_MSGS 1         // 1 = show HoT packets in Messages screen; 0 = filter them out
-
 // Speaker pin & default settings
 #define SPEAKER_PIN 26
 #define BEEP_FREQUENCY_HZ 2500

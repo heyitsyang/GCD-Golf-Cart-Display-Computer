@@ -43,7 +43,7 @@ static size_t        s_snapshotCount = 0;
 
 // Filter cycle button — EEZ creates objects.btn_filter / objects.lbl_filter;
 // chatScreenInit() wires the callback and sets the initial label.
-static const char *const s_filterNames[] = {"DM", "ALL", "CH 0", "CH 1", "CH 2"};
+static const char *const s_filterNames[] = {"DM", "ALL", "CH 0", "CH 1", "CH 2", "DEBUG"};
 
 // Temporary DM override: badge tap switches to DM without saving to NVM.
 // Stored filter is restored when the Messages screen is exited.
@@ -51,7 +51,7 @@ static int32_t s_preOverrideFilter = -1;
 
 static void updateFilterBtnLabel() {
     if (!objects.lbl_filter) return;
-    int idx = (mesh_filter >= 0 && mesh_filter <= 4) ? mesh_filter : 0;
+    int idx = (mesh_filter >= 0 && mesh_filter <= 5) ? mesh_filter : 0;
     lv_label_set_text(objects.lbl_filter, s_filterNames[idx]);
 }
 
@@ -84,7 +84,7 @@ static void dmBadgeClickedCb(lv_event_t *e) {
 
 static void filterCycleClickedCb(lv_event_t *e) {
     s_preOverrideFilter = -1;  // explicit cycle cancels any temp DM override
-    int next = (mesh_filter >= 0 && mesh_filter <= 3) ? mesh_filter + 1 : 0;
+    int next = (mesh_filter >= 0 && mesh_filter <= 4) ? mesh_filter + 1 : 0;
     mesh_filter = next;
     queuePreferenceWrite("mesh_filter", next);
     updateFilterBtnLabel();
@@ -414,7 +414,7 @@ void chatScreenRefresh() {
 
     clearSelection();
 
-    uint8_t filter = (uint8_t)((mesh_filter >= 0 && mesh_filter <= 4) ? mesh_filter : 0);
+    uint8_t filter = (uint8_t)((mesh_filter >= 0 && mesh_filter <= 5) ? mesh_filter : 0);
     s_snapshotCount = chatBufferSnapshot(filter, s_snapshot, CHAT_MAX_DISPLAY_ROWS);
 
     // Update pre-allocated rows in-place — no LVGL object creation or

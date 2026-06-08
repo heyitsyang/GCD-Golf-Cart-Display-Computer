@@ -23,13 +23,15 @@ static bool dmPredicate(const chatMessage_t *m) {
 }
 
 static bool matchesFilter(const chatMessage_t *m, uint8_t filter) {
+    bool isHot = (m->text[0] == '|');
     switch (filter) {
-        case CHAT_FILTER_DM:  return dmPredicate(m);
-        case CHAT_FILTER_ALL: return true;
-        case CHAT_FILTER_CH0: return m->channel == 0;
-        case CHAT_FILTER_CH1: return m->channel == 1;
-        case CHAT_FILTER_CH2: return m->channel == 2;
-        default:              return true;
+        case CHAT_FILTER_DM:    return dmPredicate(m);
+        case CHAT_FILTER_ALL:   return !isHot;
+        case CHAT_FILTER_CH0:   return !isHot && m->channel == 0;
+        case CHAT_FILTER_CH1:   return !isHot && m->channel == 1;
+        case CHAT_FILTER_CH2:   return !isHot && m->channel == 2;
+        case CHAT_FILTER_DEBUG: return true;
+        default:                return true;
     }
 }
 
@@ -90,9 +92,6 @@ void chatAbbreviate(const char *src, char *dst, size_t dstSize) {
 void chatBufferAppend(const chatMessage_t *msg) {
     if (!msg) return;
     if (!msg->outgoing && !dmPredicate(msg) && !matchesFilter(msg, (uint8_t)mesh_filter)) return;
-#if !SHOW_HOT_PKTS_IN_MSGS
-    if (!msg->outgoing && msg->text[0] == '|') return;
-#endif
 
     if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
         Serial.println("chatBufferAppend: mutex timeout, dropping");
