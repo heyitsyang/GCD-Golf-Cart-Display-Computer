@@ -382,9 +382,8 @@ void cannedScreenPump() {
 }
 
 void cannedScreenFreeRecipientBtn() {
-    if (!s_recipientBtn) return;
-    lv_obj_del(s_recipientBtn);
-    s_recipientBtn = nullptr;
-    s_recipientLbl = nullptr;
+    // Zero LVGL calls — per feedback_lvgl_offscreen_invalidate rule.
+    // Recipient button stays allocated (~300 bytes) after first visit.
+    // rebuildDestOptions() updates the label on re-entry via cannedScreenPump.
     s_uiDirty = true;
 }
