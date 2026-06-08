@@ -155,6 +155,11 @@ void cannedScreenResetChannelNames() {
     s_chanCount = 3;
 }
 
+const char *cannedScreenGetChannelName(uint8_t ch) {
+    if (ch >= GCM_MAX_CHANNELS) return "";
+    return s_chanNames[ch];
+}
+
 // ---- recipient cycle button -------------------------------------------------
 
 // Appends one node entry to opts[]. Separator '\n' is prepended when pos > 0.

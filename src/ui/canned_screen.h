@@ -28,4 +28,7 @@ void cannedScreenOnChannelResponse(const meshtastic_Channel *ch);
 // Called from handleGcmRebooted() to clear stale channel names before re-fetch.
 void cannedScreenResetChannelNames();
 
+// Returns the stored channel name for ch (0-based). Empty string if not yet received.
+const char *cannedScreenGetChannelName(uint8_t ch);
+
 #endif // CANNED_SCREEN_H
