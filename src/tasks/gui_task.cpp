@@ -216,7 +216,14 @@ void handleInactivityCountdown(uint32_t now) {
     if (get_var_screen_inactivity_countdown() > 0) {
         int32_t remaining = get_var_screen_inactivity_countdown() - 100;
         if (remaining <= 0) {
-            remaining = 0;
+            // Navigate to home with no animation — FADE_IN (triggered when EEZ sees
+            // countdown=0) temporarily consumes ~45 KB, dropping largest_block below
+            // glyph allocation threshold (2932B < 2944-3024B needed by Cart-60/REM-80).
+            if (lv_scr_act() != objects.home) {
+                lv_scr_load_anim(objects.home, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
+            }
+            set_var_screen_inactivity_countdown(SCREEN_INACTIVITY_TIMEOUT_MS);
+            return;
         }
         set_var_screen_inactivity_countdown(remaining);
     }

@@ -3,6 +3,50 @@
 #include "globals.h"
 #include "get_set_vars.h"
 
+// Static fallback buffer for font glyph pixel allocations.
+// When heap fragmentation leaves no contiguous block large enough for a glyph
+// (draw-task churn across 8 render tiles drops largest_block to ~2676B while
+// Cart-60 needs 2754B), the custom handler returns this BSS buffer instead.
+// One buffer suffices: LVGL SW draw unit renders glyphs sequentially
+// (alloc → fill → draw → free), so at most one glyph buffer is live at a time.
+static uint8_t s_glyph_fallback[3072];
+static bool s_glyph_fallback_in_use = false;
+
+static void * glyph_buf_malloc(size_t size, lv_color_format_t color_format) {
+    LV_UNUSED(color_format);
+    // Only attempt heap malloc when a contiguous block likely exists.
+    // If largest_free_block < size, malloc() is guaranteed to fail and would
+    // fire heapAllocFailedCallback (blocking Serial write) before we can
+    // return the static buffer. Pre-checking avoids that callback entirely.
+    if (heap_caps_get_largest_free_block(MALLOC_CAP_8BIT) >= size) {
+        void * p = malloc(size);
+        if (p) return p;
+    }
+    if (!s_glyph_fallback_in_use && size <= sizeof(s_glyph_fallback)) {
+        s_glyph_fallback_in_use = true;
+        return s_glyph_fallback;
+    }
+    return NULL;
+}
+
+static void glyph_buf_free(void * buf) {
+    if (buf == s_glyph_fallback) s_glyph_fallback_in_use = false;
+    else free(buf);
+}
+
+static void * glyph_buf_align(void * buf, lv_color_format_t color_format) {
+    LV_UNUSED(color_format);
+    uint8_t * p = (uint8_t *)buf;
+    uintptr_t addr = (uintptr_t)p;
+    if (addr % LV_ATTRIBUTE_MEM_ALIGN_SIZE != 0)
+        p += LV_ATTRIBUTE_MEM_ALIGN_SIZE - (addr % LV_ATTRIBUTE_MEM_ALIGN_SIZE);
+    return p;
+}
+
+static uint32_t glyph_buf_stride(uint32_t w, lv_color_format_t color_format) {
+    return lv_draw_buf_width_to_stride(w, color_format);
+}
+
 // Beep control variables
 static int beepCount = 0;
 static int targetBeeps = 0;
@@ -20,6 +64,11 @@ static lv_display_t *display_handle = nullptr;
 void initDisplay() {
     // Initialize LVGL
     lv_init();
+
+    // Install static fallback for glyph pixel buffers (OOM resilience)
+    lv_draw_buf_handlers_t * fh = lv_draw_buf_get_font_handlers();
+    lv_draw_buf_handlers_init(fh, glyph_buf_malloc, glyph_buf_free,
+        glyph_buf_align, NULL, NULL, glyph_buf_stride);
 
     // Allocate draw buffer
     draw_buf = new uint8_t[DRAW_BUF_SIZE];
