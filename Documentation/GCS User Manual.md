@@ -113,17 +113,6 @@ Controls the volume of alert tones and notification sounds from the built-in spe
 
 Settings 2 contains connectivity, GPS, display orientation, and system management controls. Navigate here using the right arrow on the Settings screen.
 
-### GPS Status Row *(read-only)*
-
-The top row shows live GPS diagnostic information:
-
-- **Satellites / HDOP** (e.g., `5/7.5`) — number of satellites in use and horizontal dilution of precision. HDOP below 2.0 indicates good positional accuracy; above 5.0 is poor.
-- **Latitude / Longitude** — current GPS coordinates for reference.
-
-### Flip Screen
-
-Rotates the entire display 180°. Use this if your GCD unit is physically mounted upside-down. Touch calibration adjusts automatically — no recalibration needed after flipping.
-
 ### GCI MAC / PAIR GCI
 
 - The **GCI MAC** field shows the hardware address of the paired Golf Cart Internal computer. If no GCI has been paired, it shows a placeholder.
@@ -135,18 +124,31 @@ A calibration offset added to the temperature reading reported by the GCI. If yo
 
 ### Backlight Timeout — range 0–30 minutes
 
-*(Applies when GCI is not installed.)* The screen dims and turns off after this many minutes of no touch input. Set to **0** to keep the screen on indefinitely. The screen wakes immediately on touch. In addition, when Home Location is set and the cart is at home, the GCM GPS polling rate slows automatically (from 8 seconds to 2 minutes) to conserve power. When GCI is installed, the cart's ignition-off signal manages screen power automatically and this setting is not used.
+*(Applies when GCI is not installed.)* The screen dims and turns off after this many minutes of no touch input. Set to **0** to keep the screen on indefinitely. The screen wakes immediately on touch. When GCI is installed, the cart's ignition-off signal manages screen power automatically and this setting is not used.
 
-### Home Location
+### GPS Status Row and Home Location *(requires GPS fix)*
 
-- **HOME OFF / HOME ON toggle** — tap to set your current GPS position as the "Home" location. Requires a GPS fix; set this while parked at your garage or starting point.
+The GPS status row and Home Location controls are hidden until the GCD acquires a GPS position fix. Once a fix is available, they appear automatically.
+
+**GPS Status** *(read-only)*:
+
+- **Satellites / HDOP** (e.g., `5/7.5`) — number of satellites in use and horizontal dilution of precision. HDOP below 2.0 indicates good positional accuracy; above 5.0 is poor.
+- **Latitude / Longitude** — current GPS coordinates for reference.
+
+**Home Location**:
+
+- **HOME OFF / HOME ON toggle** — tap to set your current GPS position as the "Home" location. Set this while parked at your garage or starting point.
 - **Fence slider** (100–1000 m) — the radius around the home point that counts as "at home."
-- When GCI is not installed, being at home slows the GCM GPS polling rate to conserve power. Additional actions may be added in future updates.
+- When GCI is not installed, being at home slows the GCM GPS polling rate (from 8 seconds to 2 minutes) to conserve power.
 - To clear a home location, toggle the switch back to OFF.
+
+### Flip Screen
+
+Rotates the entire display 180°. Use this if your GCD unit is physically mounted upside-down. Touch calibration adjusts automatically — no recalibration needed after flipping.
 
 ### Fuel Sensor Type
 
-Select the type of fuel sensor installed on the GCI. This setting is automatically transmitted to the GCI so it reads the correct hardware.
+Tap the button to cycle through the available fuel sensor types. The button label shows the currently selected type. This setting is automatically transmitted to the GCI so it reads the correct hardware.
 
 | Option | Use case |
 |--------|----------|
@@ -155,18 +157,14 @@ Select the type of fuel sensor installed on the GCI. This setting is automatical
 | **GPIO EXPANDER** | Binary level switches (25/50/75%) via I²C expander on GCI |
 | **ADC ELECTRIC** | Analog voltage proportional to electric vehicle battery state of charge |
 
-### Mesh Serial
+### GCM Serial
 
 Enables or disables serial communication between the GCD and the GCM radio module. **Must be ON** for the Messages, Weather, and Now Playing screens to receive data.
 
-Turn this **OFF** when you need to configure the GCM via Bluetooth (e.g., using the Meshtastic phone app). The GCM can only communicate on one channel at a time — serial or Bluetooth — so the GCD serial link must be disabled before the GCM will accept a Bluetooth connection. When finished, return to Settings 2 and toggle **MESH SERIAL** back ON; it does not re-enable automatically.
+Turn this **OFF** when you need to configure the GCM via Bluetooth (e.g., using the Meshtastic phone app). The GCM can only communicate on one channel at a time — serial or Bluetooth — so the GCD serial link must be disabled before the GCM will accept a Bluetooth connection. When finished, return to Settings 2 and toggle **GCM SERIAL** back ON; it does not re-enable automatically.
 
-### Action Buttons
+### Reset Preferences
 
-These three red buttons perform system-level operations:
-
-- **REBOOT GCD** — restarts the display computer. Use this after making significant settings changes if the display seems unresponsive.
-- **REBOOT GCM** — sends a remote restart command to the GCM radio module. Use if messaging stops working and the radio appears frozen.
 - **RESET PREFS** — **wipes all saved settings back to factory defaults. This cannot be undone.** All paired devices, home location, odometer values, and preferences will be lost.
 
 ---
@@ -220,7 +218,7 @@ The gap between the On and Off values creates **hysteresis** — a deliberate de
 
 <img src="../GCD%20Screens/GCD%20Screens%20640x480/Messages.jpg" width="213" alt="Messages Screen">
 
-The Messages screen displays incoming and outgoing mesh radio messages. All communication goes through the GCM radio module; **Mesh Serial must be ON** in Settings 2.
+The Messages screen displays incoming and outgoing mesh radio messages. All communication goes through the GCM radio module; **GCM Serial must be ON** in Settings 2.
 
 ### Message List
 
@@ -377,13 +375,13 @@ These steps are performed once when the system is first installed, or any time a
 - GCD to GCM (mesh radio) — carries serial data, GPS signal, and power
 - GCD to GCI (internal computer) — carries power and the ignition signal wire
 
-### Step 1: Enable Mesh Serial (connect GCM)
+### Step 1: Enable GCM Serial (connect GCM)
 
 1. From the Home screen, swipe left or right to open Menu.
 2. Tap the gear icon → Settings → right arrow → Settings 2.
-3. Toggle **MESH SERIAL** to ON.
+3. Toggle **GCM SERIAL** to ON.
 4. The GCD connects to the GCM radio within a few seconds.
-5. Reboot the GCD (tap **REBOOT GCD** or power-cycle). On the next Splash screen, the **GCM Node** ID will appear (e.g., `!aabbccdd`). Note this ID and mark it on the GCM enclosure — other users will need it to send you direct messages.
+5. Power-cycle the GCD. On the next Splash screen, the **GCM Node** ID will appear (e.g., `!aabbccdd`). Note this ID and mark it on the GCM enclosure — other users will need it to send you direct messages.
 
 ### Step 2: Pair GCI (connect telemetry)
 
@@ -402,7 +400,7 @@ Pairing is permanent and survives reboots. Repeat this step only if the GCI unit
 
 ### Step 3: Configure Fuel Sensor
 
-1. In Settings 2, tap the **Fuel Sensor** dropdown.
+1. In Settings 2, tap the **Fuel Sensor Type** button to cycle through options.
 2. Select the option matching your GCI installation (NO FUEL SENSOR if none is installed).
 3. The setting is transmitted to the GCI automatically. The fuel bar on the Home screen will appear or disappear depending on your selection.
 4. On the Vehicle screen, set the low fuel/low batery warning to the desired warning percentage.
@@ -410,8 +408,8 @@ Pairing is permanent and survives reboots. Repeat this step only if the GCI unit
 ### Step 4: Set Home Location
 
 1. Drive or park the cart at your home/garage position.
-2. Confirm GPS has a fix — check Settings 2 and verify satellite count is 4 or higher.
-3. In Settings 2, tap **HOME OFF** to toggle it to **HOME ON**.
+2. Open Settings 2. The GPS status row appears automatically once the GCD has a position fix; if it is not visible yet, wait for the satellite count to appear (4 or more satellites is ideal).
+3. Tap **HOME OFF** to toggle it to **HOME ON**.
 4. Adjust the **Fence** slider to set the radius (in meters) that counts as "at home."
 
 ### Step 5: Set Auto-Headlight Thresholds (optional, requires BH1750 sensor on GCI)
