@@ -166,6 +166,26 @@ void guiTask(void *parameter) {
                 settings2ScreenOnExit();
             }
 
+#if DEBUG_HEAP
+            {
+                const char * sname = "?";
+                if      (current_screen == objects.splash)                     sname = "SPLASH";
+                else if (current_screen == objects.home)                       sname = "HOME";
+                else if (current_screen == objects.menu)                       sname = "MENU";
+                else if (current_screen == objects.meshtastic_messages)        sname = "MESSAGES";
+                else if (current_screen == objects.meshtastic_canned_messages) sname = "CANNED";
+                else if (current_screen == objects.settings)                   sname = "SETUP";
+                else if (current_screen == objects.settings2)                  sname = "SETUP2";
+                else if (current_screen == objects.vehicle)                    sname = "VEHICLE";
+                else if (current_screen == objects.weather)                    sname = "WEATHER";
+                else if (current_screen == objects.now_playing)                sname = "NOW_PLAYING";
+                else if (current_screen == objects.num_entry)                  sname = "NUM_ENTRY";
+                Serial.printf("[%s] enter: free=%u max=%u\n",
+                              sname,
+                              (unsigned)ESP.getFreeHeap(),
+                              (unsigned)ESP.getMaxAllocHeap());
+            }
+#endif
             previous_screen = current_screen;
             // Reset countdown when entering a new screen (except splash)
             if (current_screen != objects.splash) {

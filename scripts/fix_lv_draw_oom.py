@@ -10,11 +10,18 @@
 # The patch: pre-check heap_caps_get_largest_free_block before lv_malloc_zeroed
 # (avoids heapAllocFailedCallback) and, on OOM, return a static dummy task that
 # carries a valid draw_dsc pointer but is NOT linked into the layer's task list.
-# The caller writes to it and calls lv_draw_finalize_task_creation, which marks
-# the dummy READY (no draw unit claims type=0). The widget is silently skipped
-# for that render cycle; on the next dirty-refresh it typically succeeds.
+# The caller writes to it and calls lv_draw_finalize_task_creation, which finds
+# no draw unit claims type=0 -> task set READY -> silent no-op. The widget is
+# silently skipped for that render cycle; on the next dirty-refresh it typically
+# succeeds.
 #
-# Patch is idempotent: checks for sentinel before applying.
+# Capability flag: MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL (0x1800) exactly
+# matches what lv_malloc_zeroed requests, as confirmed by the heap-fail callback
+# showing caps=0x1800.
+#
+# Idempotent: v2 sentinel skips. v1 sentinel (GCD-OOM-DRAW-PATCH without -v2)
+# triggers an in-place upgrade (fixes caps + bumps sentinel), which changes the
+# file and forces SCons to recompile lv_draw.c.
 #
 
 Import("env")
@@ -34,14 +41,32 @@ def patch_lv_draw_oom():
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    SENTINEL = "GCD-OOM-DRAW-PATCH"
-    if SENTINEL in content:
-        print("fix_lv_draw_oom: already applied, skipping")
+    NEW_SENTINEL = "GCD-OOM-DRAW-PATCH-v2"
+    OLD_SENTINEL = "GCD-OOM-DRAW-PATCH"    # v1, without "-v2"
+
+    if NEW_SENTINEL in content:
+        print("fix_lv_draw_oom: v2 already applied, skipping")
         return
 
-    # --- Part 1: add esp_heap_caps.h include ---
+    if OLD_SENTINEL in content:
+        # v1 patch present — upgrade: fix capability flag + bump sentinel.
+        # Changing the file forces SCons to recompile lv_draw.c from the
+        # patched source (the stale .o that caused the v291 crash is discarded).
+        content = content.replace(
+            "heap_caps_get_largest_free_block(MALLOC_CAP_8BIT)",
+            "heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL)"
+        )
+        content = content.replace(OLD_SENTINEL, NEW_SENTINEL)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"fix_lv_draw_oom: upgraded v1->v2 in {file_path}")
+        return
+
+    # --- No sentinel: fresh apply with v2 sentinel ---
+
+    # Part 1: add esp_heap_caps.h include
     OLD_INC = '#include "../stdlib/lv_string.h"'
-    NEW_INC = '#include "../stdlib/lv_string.h"\n#include "esp_heap_caps.h" /*GCD-OOM-DRAW-PATCH*/'
+    NEW_INC = '#include "../stdlib/lv_string.h"\n#include "esp_heap_caps.h" /*GCD-OOM-DRAW-PATCH-v2*/'
 
     if OLD_INC not in content:
         print("fix_lv_draw_oom: WARNING - include anchor not found; LVGL version may have changed")
@@ -49,25 +74,25 @@ def patch_lv_draw_oom():
 
     content = content.replace(OLD_INC, NEW_INC, 1)
 
-    # --- Part 2: replace LV_ASSERT_MALLOC with pre-check + dummy-task fallback ---
+    # Part 2: replace LV_ASSERT_MALLOC with pre-check + dummy-task fallback
     OLD = (
         "    lv_draw_task_t * new_task = lv_malloc_zeroed(LV_ALIGN_UP(sizeof(lv_draw_task_t), 8) + dsc_size);\n"
         "    LV_ASSERT_MALLOC(new_task);\n"
         "    new_task->area = *coords;"
     )
     NEW = (
-        "    size_t _gcd_alloc = LV_ALIGN_UP(sizeof(lv_draw_task_t), 8) + dsc_size; /*GCD-OOM-DRAW-PATCH*/\n"
+        "    size_t _gcd_alloc = LV_ALIGN_UP(sizeof(lv_draw_task_t), 8) + dsc_size; /*GCD-OOM-DRAW-PATCH-v2*/\n"
         "    lv_draw_task_t * new_task =\n"
-        "        (heap_caps_get_largest_free_block(MALLOC_CAP_8BIT) >= _gcd_alloc)\n"
+        "        (heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL) >= _gcd_alloc)\n"
         "        ? lv_malloc_zeroed(_gcd_alloc) : NULL;\n"
-        "    if(new_task == NULL) { /*GCD-OOM-DRAW-PATCH: return dummy; not linked into task list*/\n"
+        "    if(new_task == NULL) { /*GCD-OOM-DRAW-PATCH-v2: return dummy; not linked into task list*/\n"
         "        static uint8_t s_oom_draw_buf[LV_ALIGN_UP(sizeof(lv_draw_task_t), 8) + 512];\n"
         "        lv_memzero(s_oom_draw_buf, sizeof(s_oom_draw_buf));\n"
         "        lv_draw_task_t * oom_task = (lv_draw_task_t *)s_oom_draw_buf;\n"
         "        oom_task->draw_dsc = s_oom_draw_buf + LV_ALIGN_UP(sizeof(lv_draw_task_t), 8);\n"
         "        LV_PROFILER_DRAW_END;\n"
         "        return oom_task;\n"
-        "    } /*GCD-OOM-DRAW-PATCH end*/\n"
+        "    } /*GCD-OOM-DRAW-PATCH-v2 end*/\n"
         "    new_task->area = *coords;"
     )
 
@@ -82,7 +107,7 @@ def patch_lv_draw_oom():
 
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"fix_lv_draw_oom: patch applied to {file_path}")
+    print(f"fix_lv_draw_oom: patch v2 applied to {file_path}")
 
 
 patch_lv_draw_oom()
