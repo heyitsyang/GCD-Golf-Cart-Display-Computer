@@ -17,92 +17,94 @@ void displayVenueEventTable(const char* dataString) {
         current_venue_table_container = nullptr;
     }
 
-    lv_obj_t * container = lv_obj_create(current_screen);
-    current_venue_table_container = container; // Store reference for future updates
-    lv_obj_set_pos(container, 0, 40);
-    lv_obj_set_size(container, TFT_HEIGHT, TFT_WIDTH - 40);
-    lv_obj_set_style_bg_color(container, lv_color_black(), LV_PART_MAIN);
-    lv_obj_set_style_border_width(container, 0, LV_PART_MAIN);
-
-    // Disable container scrolling within the screen
-    lv_obj_clear_flag(container, LV_OBJ_FLAG_SCROLLABLE);
-    
-    // Count events
-    String dataStr = String(dataString);
+    // Count events — count '#' delimiters, zero heap alloc
     int eventCount = 0;
-    int pos = 0;
-    
-    while (pos < dataStr.length()) {
-        int delimiterPos = dataStr.indexOf('#', pos);
-        if (delimiterPos == -1) break;
-        
-        String pair = dataStr.substring(pos, delimiterPos);
-        if (pair.indexOf(',') != -1) {
-            eventCount++;
-        }
-        pos = delimiterPos + 1;
+    for (const char* p = dataString; *p; p++) {
+        if (*p == '#') eventCount++;
     }
-    
+
     int maxEvents = min(eventCount, 12);
     if (maxEvents == 0) maxEvents = 1;
-    
-    // Create table
-    lv_obj_t * table = lv_table_create(container);
+
+    // Table directly on screen — no container wrapper. Skipping the intermediate lv_obj
+    // eliminates one extra layer of LVGL draw overhead.
+    lv_obj_t * table = lv_table_create(current_screen);
+    if (table == nullptr) {
+        Serial.println("[NOW_PLAYING] lv_table_create OOM, skipping");
+        return;
+    }
+    current_venue_table_container = table;
+
     lv_table_set_col_cnt(table, 2);
     lv_table_set_row_cnt(table, maxEvents);
-    
-    lv_table_set_col_width(table, 0, (TFT_HEIGHT - 20) / 2);  // Width: use almost full 320px width
+
+    lv_table_set_col_width(table, 0, (TFT_HEIGHT - 20) / 2);
     lv_table_set_col_width(table, 1, (TFT_HEIGHT - 20) / 2);
 
-    lv_obj_set_size(table, TFT_HEIGHT - 10, TFT_WIDTH - 50);  // Table: 310px wide, 190px tall
-    lv_obj_align(table, LV_ALIGN_CENTER, 0, 0);
-    
-    // Style table
+    lv_obj_set_pos(table, 0, 40);
+    lv_obj_set_size(table, TFT_HEIGHT - 10, TFT_WIDTH - 50);  // 310×190
+
+    // Style table — radius=0 prevents LVGL from creating an offline draw layer for
+    // rounded-corner clipping. That layer consumed ~43KB during rendering (the full
+    // largest-block), leaving insufficient heap for subsequent draw tasks.
     lv_obj_set_style_bg_color(table, lv_color_black(), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_color(table, lv_color_white(), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(table, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_radius(table, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
-    
+    lv_obj_set_style_radius(table, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_clip_corner(table, false, LV_PART_MAIN);
+
     // Style cells
     lv_obj_set_style_bg_color(table, lv_color_hex(0x404040), LV_PART_ITEMS | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(table, lv_color_white(), LV_PART_ITEMS | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(table, &lv_font_montserrat_18, LV_PART_ITEMS | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(table, &lv_font_montserrat_14, LV_PART_ITEMS | LV_STATE_DEFAULT);
     lv_obj_set_style_border_color(table, lv_color_hex(0x808080), LV_PART_ITEMS | LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(table, 1, LV_PART_ITEMS | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_all(table, 3, LV_PART_ITEMS | LV_STATE_DEFAULT);
 
-    // Style scrollbar - make it twice as wide (default is typically 7-8px, so make it ~16px)
+    // Style scrollbar
     lv_obj_set_style_width(table, 16, LV_PART_SCROLLBAR | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(table, lv_color_hex(0x9e9e9e), LV_PART_SCROLLBAR | LV_STATE_DEFAULT);
-    lv_obj_set_style_radius(table, 8, LV_PART_SCROLLBAR | LV_STATE_DEFAULT);
-    
-    // Parse and populate
+    lv_obj_set_style_radius(table, 0, LV_PART_SCROLLBAR | LV_STATE_DEFAULT);
+
+    // Parse and populate — C-string pointer walk, zero heap alloc
+    char venBuf[HP_VENUE_DATA_SIZE];
+    char evBuf[HP_VENUE_DATA_SIZE];
     int row = 0;
-    int startPos = 0;
-    
-    while (startPos < dataStr.length() && row < maxEvents) {
-        int delimiterPos = dataStr.indexOf('#', startPos);
-        if (delimiterPos == -1) break;
-        
-        String pair = dataStr.substring(startPos, delimiterPos);
-        int commaPos = pair.indexOf(',');
-        
-        if (commaPos != -1) {
-            String venue = pair.substring(0, commaPos);
-            String event = pair.substring(commaPos + 1);
-            
-            venue.trim();
-            event.trim();
-            
-            lv_table_set_cell_value(table, row, 0, venue.c_str());
-            lv_table_set_cell_value(table, row, 1, event.c_str());
-            
+    const char* p = dataString;
+
+    while (*p && row < maxEvents) {
+        const char* hash = strchr(p, '#');
+        if (!hash) break;
+
+        const char* comma = p;
+        while (comma < hash && *comma != ',') comma++;
+
+        if (comma < hash) {
+            // copy + trim venue: p..comma-1
+            const char* vs = p;
+            const char* ve = comma;
+            while (vs < ve && *vs == ' ') vs++;
+            while (ve > vs && *(ve - 1) == ' ') ve--;
+            int vLen = min((int)(ve - vs), (int)sizeof(venBuf) - 1);
+            memcpy(venBuf, vs, vLen);
+            venBuf[vLen] = '\0';
+
+            // copy + trim event: comma+1..hash-1
+            const char* es = comma + 1;
+            const char* ee = hash;
+            while (es < ee && *es == ' ') es++;
+            while (ee > es && *(ee - 1) == ' ') ee--;
+            int eLen = min((int)(ee - es), (int)sizeof(evBuf) - 1);
+            memcpy(evBuf, es, eLen);
+            evBuf[eLen] = '\0';
+
+            lv_table_set_cell_value(table, row, 0, venBuf);
+            lv_table_set_cell_value(table, row, 1, evBuf);
             row++;
         }
-        
-        startPos = delimiterPos + 1;
+        p = hash + 1;
     }
-    
+
     if (row == 0) {
         lv_table_set_cell_value(table, 0, 0, "No Data");
         lv_table_set_cell_value(table, 0, 1, "Available");
