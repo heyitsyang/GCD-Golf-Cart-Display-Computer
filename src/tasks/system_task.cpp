@@ -49,11 +49,6 @@ void systemTask(void *parameter) {
             clearAllPreferences();
         }
 
-        // Handle manual reboot
-        if (manual_reboot == true) {
-            ESP.restart();
-        }
-
         // === DEBOUNCED EEPROM WRITES ===
         // For UI-adjustable values (sliders, spinners), we delay EEPROM writes
         // until the value has been stable for EEPROM_DEBOUNCE_MS to reduce wear.

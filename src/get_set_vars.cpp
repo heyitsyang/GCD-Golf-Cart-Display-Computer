@@ -44,7 +44,6 @@ String text_message;
 int32_t avg_speed = 0;
 int32_t day_backlight = 10;
 int32_t night_backlight = 5;
-bool manual_reboot = false;
 bool new_rx_data_flag = false;
 bool mesh_serial_enabled = true;
 bool espnow_connected = false;
@@ -61,7 +60,6 @@ float accum_distance = 0.0;
 float trip_distance = 0.0;
 bool reset_preferences = false;
 float temperature_adj = 0;
-bool reboot_meshtastic = false;
 bool set_home_loc = false;
 int32_t home_gps_fence_radius_m = 500;  // Default 500 meter radius
 bool at_home = false;
@@ -188,14 +186,6 @@ const char* get_var_cyd_mac_addr() {
 
 void set_var_cyd_mac_addr(const char* value) {
     cyd_mac_addr = String(value);
-}
-
-bool get_var_manual_reboot() {
-    return manual_reboot;
-}
-
-void set_var_manual_reboot(bool value) {
-    manual_reboot = value;
 }
 
 bool get_var_new_rx_data_flag() {
@@ -652,14 +642,6 @@ void set_var_fuel_sense_type(int32_t value) {
     // GPIO EXPANDER only reports 25/50/75/100; a threshold below 25 would never trigger.
     if (value == FUEL_SENSOR_GPIO_EXP && fuel_low_percent < 25.0f)
         set_var_fuel_low_percent(25.0f);
-}
-
-bool get_var_reboot_meshtastic() {
-    return reboot_meshtastic;
-}
-
-void set_var_reboot_meshtastic(bool value) {
-    reboot_meshtastic = value;
 }
 
 const char* get_var_text_message() {

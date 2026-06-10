@@ -187,7 +187,6 @@ void setup() {
     HEAP_LOG("after mt_serial_init");
 
     // Initialize application variables
-    manual_reboot = false;
     new_rx_data_flag = false;
     mesh_serial_enabled = true;
     reset_preferences = false;

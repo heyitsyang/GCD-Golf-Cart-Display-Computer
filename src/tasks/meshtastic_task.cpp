@@ -8,8 +8,6 @@
 #include "prototypes.h"
 
 void meshtasticTask(void *parameter) {
-    static bool old_reboot_meshtastic = false;
-
     // Block until gui_task completes its first render. On button reset the GCM
     // has pending serial data and mt_loop() allocates immediately, fragmenting
     // the heap before LVGL can claim the glyph_guard block for the 24 KB
@@ -30,25 +28,6 @@ void meshtasticTask(void *parameter) {
                   Serial.println("Meshtastic serial enabled");
               }
           }
-
-          // Handle Meshtastic reboot trigger
-          if (reboot_meshtastic && !old_reboot_meshtastic) {
-              Serial.println("\n=== Meshtastic Reboot Triggered ===");
-              if (mesh_serial_enabled) {
-                  if (mt_send_admin_reboot(0)) {  // 0 = immediate reboot
-#if DEBUG_GCM_MESSAGES
-                      Serial.println("GCM TX: Reboot command sent");
-#endif
-                  } else {
-                      Serial.println("Failed to send reboot command");
-                  }
-              } else {
-                  Serial.println("Cannot reboot: Meshtastic serial is disabled");
-              }
-              // Reset the trigger
-              reboot_meshtastic = false;
-          }
-          old_reboot_meshtastic = reboot_meshtastic;
 
           // Call mt_loop if mesh_serial_enabled is enabled
           bool can_send = false;

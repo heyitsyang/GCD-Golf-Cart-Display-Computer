@@ -50,9 +50,6 @@ void set_var_cyd_night_backlight(int32_t value);
 const char* get_var_cyd_mac_addr();
 void set_var_cyd_mac_addr(const char* value);
 
-bool get_var_manual_reboot();
-void set_var_manual_reboot(bool value);
-
 bool get_var_new_rx_data_flag();
 void set_var_new_rx_data_flag(bool value);
 
@@ -179,9 +176,6 @@ void set_var_fuel_low_percent(float value);
 int32_t get_var_fuel_sense_type();
 void set_var_fuel_sense_type(int32_t value);
 
-bool get_var_reboot_meshtastic();
-void set_var_reboot_meshtastic(bool value);
-
 const char* get_var_text_message();
 void set_var_text_message(const char* value);
 
@@ -272,7 +266,6 @@ extern String text_message;
 extern int32_t avg_speed;
 extern int32_t day_backlight;
 extern int32_t night_backlight;
-extern bool manual_reboot;
 extern bool new_rx_data_flag;
 extern bool mesh_serial_enabled;
 extern bool espnow_connected;
@@ -289,7 +282,6 @@ extern float trip_distance;
 extern bool reset_preferences;
 extern bool espnow_pair_gci;
 extern float temperature_adj;
-extern bool reboot_meshtastic;
 extern bool set_home_loc;
 extern int32_t home_gps_fence_radius_m;
 extern bool at_home;
