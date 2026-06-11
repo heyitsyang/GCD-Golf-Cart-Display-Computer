@@ -333,6 +333,8 @@ static void ensureRowsAllocated() {
             }
             return;
         }
+        // Prevents PRESS_LOST → lv_malloc_zeroed OOM crash when scroll fires on a full buffer.
+        lv_obj_remove_style_all(row);
         lv_obj_set_width(row, lv_pct(100));
         lv_obj_set_height(row, ROW_HEIGHT_PX);
         lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_PART_MAIN);
