@@ -3,6 +3,7 @@
 
 #include <lvgl.h>
 
+void venueEventDisplayInit();
 void displayVenueEventTable(const char* dataString);
 
 // Check if the Now Playing screen needs updating and refresh if needed

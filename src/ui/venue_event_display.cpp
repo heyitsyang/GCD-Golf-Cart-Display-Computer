@@ -168,11 +168,33 @@ void checkAndUpdateNowPlayingScreen() {
     }
 }
 
-void onNowPlayingScreenExit() {
-    is_now_playing_screen_active = false;
+// Fires on LV_EVENT_SCREEN_UNLOADED — animation complete, screen fully off-display.
+// Safe to delete children; frees the table heap before the user reaches the next screen.
+static void nowPlayingUnloadedCb(lv_event_t *) {
     if (current_venue_table_container != nullptr) {
         lv_obj_del(current_venue_table_container);
         current_venue_table_container = nullptr;
     }
+}
+
+// Safety net: fires on LV_EVENT_SCREEN_LOAD_START for next visit to Now Playing.
+// Cleans up if nowPlayingUnloadedCb somehow missed (e.g. first-boot edge case).
+static void nowPlayingLoadStartCb(lv_event_t *) {
+    if (current_venue_table_container != nullptr) {
+        lv_obj_del(current_venue_table_container);
+        current_venue_table_container = nullptr;
+    }
+}
+
+void venueEventDisplayInit() {
+    lv_obj_add_event_cb(objects.now_playing, nowPlayingUnloadedCb,
+                        LV_EVENT_SCREEN_UNLOADED, nullptr);
+    lv_obj_add_event_cb(objects.now_playing, nowPlayingLoadStartCb,
+                        LV_EVENT_SCREEN_LOAD_START, nullptr);
+}
+
+void onNowPlayingScreenExit() {
+    is_now_playing_screen_active = false;
     last_displayed_data[0] = '\0';
+    // Table freed in nowPlayingUnloadedCb (fires post-animation, safe for lv_obj_del).
 }
