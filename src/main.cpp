@@ -100,6 +100,15 @@ void setup() {
     gcd_version = "v" + String(VERSION);
     cyd_mac_addr = String(WiFi.macAddress());
     Serial.printf("\nGCD %s | MAC: %s\n", gcd_version.c_str(), cyd_mac_addr.c_str());
+    {
+        esp_reset_reason_t rr = esp_reset_reason();
+        static const char* const rrStr[] = {
+            "UNKNOWN", "POWER_ON", "EXT", "SW", "PANIC",
+            "INT_WDT", "TASK_WDT", "WDT", "DEEPSLEEP", "BROWNOUT", "SDIO"
+        };
+        const char* rrLabel = (rr < (sizeof(rrStr)/sizeof(rrStr[0]))) ? rrStr[rr] : "?";
+        Serial.printf("Reset reason: %s (%d)\n", rrLabel, (int)rr);
+    }
     HEAP_LOG("start of setup");
 
     // Initialize storage and load preferences
@@ -182,8 +191,6 @@ void setup() {
     // glyph_guard is NOT freed here — gui_task frees it before the first lv_timer_handler().
     // Initialize Meshtastic
     mt_serial_init(MT_SERIAL_RX_PIN, MT_SERIAL_TX_PIN, MT_DEV_BAUD_RATE);
-    randomSeed(micros());
-    mt_request_node_report(connected_callback);
     set_text_message_callback(text_message_callback);
     set_portnum_callback(admin_portnum_callback);
     HEAP_LOG("after mt_serial_init");

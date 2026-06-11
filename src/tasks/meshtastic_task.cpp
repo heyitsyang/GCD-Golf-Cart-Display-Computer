@@ -14,6 +14,11 @@ void meshtasticTask(void *parameter) {
     // splash-screen draw buffer. 5-second timeout is a safety fallback.
     if (firstRenderDone) xSemaphoreTake(firstRenderDone, pdMS_TO_TICKS(5000));
 
+#if DEBUG_HEAP
+    Serial.printf("[HEAP] meshtasticTask stack HWM: %u bytes\n",
+                  (unsigned)uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t));
+#endif
+
     while (true) {
         uint32_t now = millis();
 
