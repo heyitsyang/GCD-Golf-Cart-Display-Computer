@@ -137,6 +137,12 @@ static void updateHeading(const gps_fix& fix) {
 static void updateTimeDisplay(const gps_fix& fix) {
     if (!fix.valid.date || !fix.valid.time) return;
 
+#if DEBUG_GPS
+    if (lastGpsTimeUpdate != 0 && (millis() - lastGpsTimeUpdate) > 5000) {
+        Serial.printf("[GPS_GAP] Time resumed after %lums gap\n", millis() - lastGpsTimeUpdate);
+    }
+#endif
+
     // Set system time from GPS
     setTime(fix.dateTime.hours, fix.dateTime.minutes,
             fix.dateTime.seconds, fix.dateTime.date,
