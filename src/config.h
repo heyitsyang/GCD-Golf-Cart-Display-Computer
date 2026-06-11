@@ -148,6 +148,11 @@
 #define FUEL_SENSOR_GPIO_EXP    2   // MCP23008 I2C GPIO expander (gasoline)
 #define FUEL_SENSOR_ADC_ELEC    3   // analog voltage (electric/battery level)
 
+// Low-fuel alert hysteresis: once the alert fires, fuel must rise this many percent
+// above the threshold before the alert can fire again.  5% is well above the ~2%
+// effective noise floor of ADC_ELEC after EMA + telemetry threshold.
+#define ADC_ELEC_ALERT_HYSTERESIS_PCT 5.0f
+
 // Task Priorities
 #define GUI_TASK_PRIORITY 3
 #define GPS_TASK_PRIORITY 2
