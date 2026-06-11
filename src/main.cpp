@@ -176,6 +176,8 @@ void setup() {
     HEAP_LOG("after cannedScreenInit");
     settings2ScreenInit();
     HEAP_LOG("after settings2ScreenInit");
+    venueEventDisplayInit();
+    HEAP_LOG("after venueEventDisplayInit");
 
     // glyph_guard is NOT freed here — gui_task frees it before the first lv_timer_handler().
     // Initialize Meshtastic

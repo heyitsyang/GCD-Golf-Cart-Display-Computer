@@ -55,23 +55,43 @@ void updateEspnowGciMacColor() {
 
 void checkGpsTimeStale() {
     static bool timeWasStale = false;
-    const unsigned long GPS_TIME_TIMEOUT = MAX_GPS_TIME_STALENESS_SECS * 1000UL;  // Convert seconds to milliseconds
+#if DEBUG_GPS
+    static uint32_t s_lastGapLog = 0;
+    static uint32_t s_staleStartMs = 0;
+#endif
+    const unsigned long GPS_TIME_TIMEOUT = MAX_GPS_TIME_STALENESS_SECS * 1000UL;
 
-    // Check if GPS time is stale (no update for more than MAX_GPS_TIME_STALENESS_SECS seconds)
-    // lastGpsTimeUpdate is 0 at boot until first GPS time is received
-    bool timeIsStale = (lastGpsTimeUpdate == 0) || ((millis() - lastGpsTimeUpdate) > GPS_TIME_TIMEOUT);
+    uint32_t now32 = millis();
+    bool timeIsStale = (lastGpsTimeUpdate == 0) || ((now32 - lastGpsTimeUpdate) > GPS_TIME_TIMEOUT);
 
-    // Only update display if staleness state changed
+#if DEBUG_GPS
+    if (now32 - s_lastGapLog >= 30000) {
+        s_lastGapLog = now32;
+        Serial.printf("[GPS] gap=%lums / timeout=%lums\n",
+                      lastGpsTimeUpdate ? (now32 - lastGpsTimeUpdate) : 99999UL,
+                      (unsigned long)GPS_TIME_TIMEOUT);
+    }
+#endif
+
     if (timeIsStale != timeWasStale) {
+#if DEBUG_GPS
+        if (timeIsStale) {
+            s_staleStartMs = now32;
+            Serial.printf("[GPS_STALE] NO GPS written: gap=%lums lastUpdate=%lu\n",
+                          lastGpsTimeUpdate ? (now32 - lastGpsTimeUpdate) : 99999UL,
+                          lastGpsTimeUpdate);
+        } else {
+            Serial.printf("[GPS_STALE] Recovered: was stale for %lums\n",
+                          now32 - s_staleStartMs);
+        }
+#endif
         if (xSemaphoreTake(gpsMutex, portMAX_DELAY)) {
             if (timeIsStale) {
-                // GPS time is stale - show blank clock and "NO GPS"
                 cur_date = String("NO GPS");
                 hhmm_str = String("");
                 hhmmss_str = String("");
                 am_pm_str = String("");
             }
-            // Note: When GPS time becomes valid again, gps_task will update these strings
             xSemaphoreGive(gpsMutex);
         }
         timeWasStale = timeIsStale;
