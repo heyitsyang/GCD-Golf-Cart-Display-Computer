@@ -18,6 +18,10 @@
 #define DEBUG_OTA_TX_TEST 0             // Periodic T1,T2,T3... OTA test messages every 30s
 #define DEBUG_OTA_TX_TEST_CHANNEL 3     // Channel to send OTA test messages on (corresponds to UI channel selector)
 
+// Heap monitoring (set DEBUG_HEAP to 0 to remove all logging once stable)
+#define DEBUG_HEAP 0
+#define DEBUG_HEAP_INTERVAL_MS 5000
+
 // Speaker pin & default settings
 #define SPEAKER_PIN 26
 #define BEEP_FREQUENCY_HZ 2500
@@ -130,10 +134,6 @@
 // display row anyway, and HoT/GC packets become ~12-char tags via chatAbbreviate().
 // Saves ~7.5 KB of BSS (two 32-slot arrays) + ~2 KB of queue heap vs using 237.
 #define CHAT_TEXT_SIZE 120        // Max text stored per chat message / TX / KB context
-
-// Heap monitoring (set DEBUG_HEAP to 0 to remove all logging once stable)
-#define DEBUG_HEAP 0
-#define DEBUG_HEAP_INTERVAL_MS 5000
 
 // Task Stack Sizes (in bytes)
 #define GPS_TASK_STACK_SIZE 4096
