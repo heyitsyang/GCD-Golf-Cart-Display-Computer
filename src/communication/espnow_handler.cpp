@@ -435,13 +435,16 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             battVoltage = dataFromGci.battVolts;
 
             float newFuelLevel = dataFromGci.fuelPct;
-            bool wasFuelLow = (fuelLevel != -99.0f) && (fuelLevel <= fuel_low_percent);
             fuelLevel = newFuelLevel;
-            // Alert only if: sensor configured, valid reading, and threshold newly crossed
+            // Alert on threshold crossing; re-arm only after fuel recovers FUEL_ALERT_HYSTERESIS_PCT
+            // above the threshold — prevents repeated alerts from ADC noise near the threshold.
+            static bool s_fuelAlertArmed = true;
             if (fuelSensorType != FUEL_SENSOR_NONE && newFuelLevel != -99.0f) {
-                bool isFuelLow = (fuelLevel <= fuel_low_percent);
-                if (isFuelLow && !wasFuelLow) {
+                if (newFuelLevel <= fuel_low_percent && s_fuelAlertArmed) {
                     tone_alert();
+                    s_fuelAlertArmed = false;
+                } else if (newFuelLevel > fuel_low_percent + ADC_ELEC_ALERT_HYSTERESIS_PCT) {
+                    s_fuelAlertArmed = true;
                 }
             }
 
