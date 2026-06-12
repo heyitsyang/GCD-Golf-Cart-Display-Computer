@@ -49,6 +49,7 @@
 #include "ui/chat_screen.h"
 #include "ui/canned_screen.h"
 #include "ui/settings2_screen.h"
+#include "ui/menu_screen.h"
 
 // Utils
 #include "utils/time_utils.h"
@@ -185,6 +186,8 @@ void setup() {
     HEAP_LOG("after cannedScreenInit");
     settings2ScreenInit();
     HEAP_LOG("after settings2ScreenInit");
+    menuScreenInit();
+    HEAP_LOG("after menuScreenInit");
     venueEventDisplayInit();
     HEAP_LOG("after venueEventDisplayInit");
 

@@ -9,6 +9,7 @@
 #include "ui/chat_screen.h"
 #include "ui/canned_screen.h"
 #include "ui/settings2_screen.h"
+#include "ui/menu_screen.h"
 #include "get_set_vars.h"
 #include "hardware/display.h"
 
@@ -159,6 +160,7 @@ void guiTask(void *parameter) {
         chatScreenPump();
         cannedScreenPump();
         settings2ScreenPump();
+        menuScreenPump();
 
         // Update espnow GCI MAC address color on Settings2 screen
         updateEspnowGciMacColor();
