@@ -17,14 +17,13 @@
 #define DEBUG_ESPNOW 0                  // ESP-NOW verbose messages (pairing & telemetry always shown)
 #define DEBUG_OTA_TX_TEST 0             // Periodic T1,T2,T3... OTA test messages every 30s
 #define DEBUG_OTA_TX_TEST_CHANNEL 3     // Channel to send OTA test messages on (corresponds to UI channel selector)
-#define DEBUG_HEAP 1                    // Log free heap at various points (e.g. task entries, main loop, etc.)  
+#define DEBUG_HEAP 0                    // Log free heap at various points (e.g. task entries, main loop, etc.)  
 #define DEBUG_HEAP_INTERVAL_MS 5000     // Log free heap every N milliseconds when enabled
 
 // Speaker pin & default settings
 #define SPEAKER_PIN 26
 #define BEEP_FREQUENCY_HZ 2500
 #define BEEP_DURATION_MS 100
-#define BEEP_SPACING_MS BEEP_DURATION/2
 #define SPEAKER_VOLUME 20
 
 // Sleep pin (sleeps when LOW)
@@ -70,7 +69,6 @@
 #define MT_DEV_BAUD_RATE 9600
 #define MAX_MESHTASTIC_PAYLOAD 237
 #define HOT_PKT_HEADER_OFFSET 5
-#define SEND_PERIOD 300
 
 // GPS configuration
 #define GPS_RX_PIN 03

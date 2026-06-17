@@ -82,7 +82,6 @@ JC_Sunrise sun{MY_LATITUDE, MY_LONGITUDE, JC_Sunrise::officialZenith};
 
 // Time variables
 time_t localTime, utcTime;
-int timesetinterval = 60;
 
 // Preferences
 Preferences prefs;

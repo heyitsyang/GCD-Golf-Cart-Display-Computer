@@ -45,7 +45,6 @@
 #define TOUCH_ROTATION_270 3
 
 unsigned long delay_start = 0;
-#define DELAY_1S 1000
 #define DELAY_5S 5000
 
 SPIClass touchscreenSPI = SPIClass(VSPI);
@@ -133,7 +132,6 @@ void gather_cal_data(void) {
 
   for (int i = 0; i < 6; i++) {
     lv_obj_clean(lv_scr_act());
-    //lv_draw_cross(i);
     display_crosshair(i);
 
     reset = true;
