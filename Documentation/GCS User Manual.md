@@ -1,4 +1,4 @@
-# GCS User Manual
+# GCS User Manual for GCD Ver 1.0.0
 
 The Golf Cart Computer System is a smart display and telemetry platform for golf carts. It provides real-time speed, heading, fuel level, temperature, and GPS-synchronized time, along with mesh radio messaging, weather, and entertainment data.
 
@@ -30,13 +30,14 @@ Connect the three units before first use:
 
 <img src="../GCD%20Screens/GCD%20Screens%20640x480/Splash.jpg" width="213" alt="Splash Screen">
 
-The splash screen appears on every boot and disappears automatically after a few seconds.
+The splash screen appears on every boot and disappears automatically after a few seconds. The center displays the Hands-On Tech logo.
 
-It displays two important identifiers:
+Four identifiers are shown at the bottom in two columns:
 
-- **GCM Node** (e.g., `!aabbccdd`) — this is the cart's mesh radio address. Share this with other cart owners so they can send you direct messages.
-- **GCD MAC** — the display computer's WiFi hardware address, used internally for GCI pairing. No user action required.
-- **Firmware version** (bottom-left corner, e.g., `v1.0.1+1`) — useful when reporting issues.
+- **GCD** (bottom-left, e.g., `v1.0.1+1`) — GCD firmware version. Useful when reporting issues.
+- **GCI** (bottom-left, e.g., `v1.0.1+10`) — GCI firmware version. Shows the last-known version reported by the paired GCI; blank if no GCI has connected yet.
+- **GCD MAC** (bottom-right) — the display computer's WiFi hardware address, used internally for GCI pairing. No user action required.
+- **GCM Node** (bottom-right, e.g., `!aabbccdd`) — this is the cart's mesh radio address. Share this with other cart owners so they can send you direct messages.
 
 ---
 
@@ -84,7 +85,7 @@ The Menu provides access to all secondary screens. Tap the back arrow (top-left)
 |------|-------------|
 | Cloud / sun | [Weather](#weather) |
 | Theater masks | [Now Playing / Entertainment](#now-playing--entertainment) |
-| Tent / mesh symbol | [Messages](#messages) |
+| Meshtastic symbol | [Messages](#messages) |
 | Golf cart | [Vehicle](#vehicle) |
 | Gear | [Settings](#settings) |
 
@@ -155,13 +156,13 @@ Tap the button to cycle through the available fuel sensor types. The button labe
 | **NO FUEL SENSOR** | No sensor installed; fuel bar and low-fuel alerts are disabled |
 | **ADC GAS** | Analog float sensor (e.g., Yamaha gas gauge) wired to GCI's ADC input |
 | **GPIO EXPANDER** | Binary level switches (25/50/75%) via I²C expander on GCI |
-| **ADC ELECTRIC** | Analog voltage proportional to electric vehicle battery state of charge |
+| **ADC ELECTRIC** | LiFePO4 electric vehicle approximate battery state of charge using ADC input|
 
 ### GCM Serial
 
 Enables or disables serial communication between the GCD and the GCM radio module. **Must be ON** for the Messages, Weather, and Now Playing screens to receive data.
 
-Turn this **OFF** when you need to configure the GCM via Bluetooth (e.g., using the Meshtastic phone app). The GCM can only communicate on one channel at a time — serial or Bluetooth — so the GCD serial link must be disabled before the GCM will accept a Bluetooth connection. When finished, return to Settings 2 and toggle **GCM SERIAL** back ON; it does not re-enable automatically.
+Turn this **OFF** when you need to configure the GCM via Bluetooth (e.g., using the Meshtastic phone app). The GCM can only communicate on one channel at a time — serial or Bluetooth — so the GCD serial link must be disabled before the GCM will accept a Bluetooth connection. When finished, return to Settings 2 and toggle **GCM SERIAL** back ON; it does not re-enable automatically except on boot.
 
 ### Reset Preferences
 
@@ -265,7 +266,7 @@ The filter does two things simultaneously:
 
 Two exceptions always bypass the inbound filter regardless of the active setting: **direct messages to you** are always stored, and **your own outgoing messages** are always stored.
 
-**Practical implication:** if you leave the filter set to CHANNEL 0 overnight, any channel 1 or channel 2 messages that arrive while the cart is powered will be permanently lost. Set the filter to ALL when you want to receive everything, and narrow it only when actively reading a specific channel.
+**Practical implication:** if you leave the filter set to CHANNEL 0 overnight, any channel 1 or channel 2 messages that arrive while the cart is powered will be permanently lost. Set the filter to ALL if you want to receive everything, and narrow it only when actively reading a specific channel or direct message.
 
 ### NEW MSG Button
 

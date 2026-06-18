@@ -1,6 +1,7 @@
 import sys, re, datetime
 
 PATH_VERSION = './src/version.h'
+PATH_USER_MANUAL = './Documentation/GCS User Manual.md'
 MAJOR, MINOR, PATCH, BUILD = 0, 1, 2, 3
 
 # Read
@@ -33,3 +34,11 @@ with open(PATH_VERSION, 'r') as reader:
     ])
 
     print('Release: ' + version)
+
+  # Update GCS User Manual title with current MAJOR.MINOR.PATCH
+  semver = '%s.%s.%s' % (versions[MAJOR], versions[MINOR], versions[PATCH])
+  with open(PATH_USER_MANUAL, 'r', encoding='utf-8') as f:
+    manual = f.read()
+  manual = re.sub(r'^# GCS User Manual.*$', '# GCS User Manual for GCD Ver ' + semver, manual, flags=re.MULTILINE)
+  with open(PATH_USER_MANUAL, 'w', encoding='utf-8') as f:
+    f.write(manual)
