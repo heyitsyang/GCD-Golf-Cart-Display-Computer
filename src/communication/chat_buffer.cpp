@@ -22,8 +22,11 @@ static bool dmPredicate(const chatMessage_t *m) {
            (m->outgoing && m->to != BROADCAST_ADDR);
 }
 
-static bool matchesFilter(const chatMessage_t *m, uint8_t filter) {
-    bool isHot = (m->text[0] == '|');
+// isHot is passed explicitly rather than read from m->text: for a stored
+// ring-buffer entry, text[] has already been run through chatAbbreviate()
+// and no longer starts with '|', so hot-ness must be captured at append
+// time (see chatBufferAppend) before that rewrite happens.
+static bool matchesFilter(const chatMessage_t *m, bool isHot, uint8_t filter) {
     switch (filter) {
         case CHAT_FILTER_DM:    return dmPredicate(m);
         case CHAT_FILTER_ALL:   return !isHot;
@@ -91,7 +94,8 @@ void chatAbbreviate(const char *src, char *dst, size_t dstSize) {
 
 void chatBufferAppend(const chatMessage_t *msg) {
     if (!msg) return;
-    if (!msg->outgoing && !dmPredicate(msg) && !matchesFilter(msg, (uint8_t)mesh_filter)) return;
+    bool isHot = (msg->text[0] == '|');
+    if (!msg->outgoing && !dmPredicate(msg) && !matchesFilter(msg, isHot, (uint8_t)mesh_filter)) return;
 
     if (xSemaphoreTake(chatBufferMutex, pdMS_TO_TICKS(100)) != pdTRUE) {
         Serial.println("chatBufferAppend: mutex timeout, dropping");
@@ -110,6 +114,7 @@ void chatBufferAppend(const chatMessage_t *msg) {
     slot->timestamp = (msg->timestamp != 0) ? msg->timestamp : (uint32_t)time(NULL);
     slot->outgoing  = msg->outgoing;
     slot->read      = false;
+    slot->isHot     = isHot;
     chatAbbreviate(msg->text, slot->text, sizeof(slot->text));
 
     s_head = (s_head + 1) % CHAT_BUFFER_SIZE;
@@ -153,7 +158,7 @@ size_t chatBufferSnapshot(uint8_t filter, chatMessage_t *out, size_t maxN) {
     size_t matches = 0;
     for (size_t i = 0; i < s_count; i++) {
         const chatMessage_t *m = &s_buffer[(start + i) % CHAT_BUFFER_SIZE];
-        if (matchesFilter(m, filter)) matches++;
+        if (matchesFilter(m, m->isHot, filter)) matches++;
     }
 
     size_t skip = (matches > maxN) ? (matches - maxN) : 0;
@@ -161,7 +166,7 @@ size_t chatBufferSnapshot(uint8_t filter, chatMessage_t *out, size_t maxN) {
     size_t seen = 0;
     for (size_t i = 0; i < s_count && out_idx < maxN; i++) {
         const chatMessage_t *m = &s_buffer[(start + i) % CHAT_BUFFER_SIZE];
-        if (!matchesFilter(m, filter)) continue;
+        if (!matchesFilter(m, m->isHot, filter)) continue;
         if (seen++ < skip) continue;
         out[out_idx++] = *m;
     }

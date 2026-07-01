@@ -43,6 +43,8 @@ typedef struct {
     uint32_t timestamp;   // epoch (time(NULL)) at receive/send
     bool     outgoing;
     bool     read;        // true once user has tapped or replied (DMs only)
+    bool     isHot;       // true if this was a HoT/GC packet; text[] is abbreviated
+                           // before storage so this must be captured up front
     char     text[CHAT_TEXT_SIZE];
 } chatMessage_t;
 
