@@ -1,4 +1,4 @@
-# GCS User Manual for GCD Ver 1.0.0
+# GCS User Manual for GCD Ver 1.0.1
 
 The Golf Cart Computer System is a smart display and telemetry platform for golf carts. It provides real-time speed, heading, fuel level, temperature, and GPS-synchronized time, along with mesh radio messaging, weather, and entertainment data.
 
