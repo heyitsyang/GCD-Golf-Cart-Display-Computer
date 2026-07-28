@@ -280,7 +280,12 @@ and have neither problem.
 
 **Button behaviour** (Settings 2, near the existing `PAIR GCI` button):
 
-| Condition | Label | Short click |
+> ⚠️ **SUPERSEDED BY REV 4 — do not document the UI from this table. See §13.3 for what is actually
+> on screen.** Rev 3 packed every state into the button label; rev 4 split it into a **fixed
+> `PAIR MBX` button** plus a separate colour-coded value string `lbl_mailbox_id_str`, and replaced the
+> `RX` suffix with colour. The table below is kept only to show what rev 3 did.
+
+| Condition | Label *(rev 3, superseded)* | Short click |
 |---|---|---|
 | No fresh offer, unpaired | `NO MAILBOX` | — (no-op) |
 | No fresh offer, paired | `MBX a1b2c3d4` | — (no-op) |
@@ -288,9 +293,20 @@ and have neither problem.
 | Fresh offer, id == paired | `MBX a1b2c3d4 RX` | — (already yours; confirms the sensor is being heard right now) |
 | Any | — | **long press → forget** (`mbx_id = 0`, feature off) |
 
-Longest string is `PAIR MBX a1b2c3d4` — **17 characters**, which sets the label width in Phase 0 and
-the `char buf[20]` in Phase 4. All ASCII: no `LV_SYMBOL_*` glyph, so this works in
-`lv_font_montserrat_14` with no font change.
+**As built (rev 4), for reference — the button label never changes:**
+
+| Condition | Button | `lbl_mailbox_id_str` | Colour |
+|---|---|---|---|
+| Unpaired, no offer | `PAIR MBX` | `NO MAILBOX` | white |
+| Fresh offer, id ≠ paired | `PAIR MBX` *(green/CHECKED)* | `deadbeef OFFERED` | white |
+| Paired, no contact yet | `PAIR MBX` | `a1b2c3d4` | white |
+| Paired, heard, none missed | `PAIR MBX` | `a1b2c3d4` | green |
+| Paired, frames missed | `PAIR MBX` | `a1b2c3d4 (N)` | yellow |
+| Paired, silent 24 h awake | `PAIR MBX` | `a1b2c3d4 SILENT` | red |
+
+Short click accepts a pending offer; long press forgets. *(Rev 3 sizing note, now moot: the longest
+button string was `PAIR MBX a1b2c3d4` at 17 characters. Rev 4's button is a fixed 8-character
+literal and the id moved to the value string — see §13.1 for the real geometry.)*
 
 > **Use `LV_EVENT_SHORT_CLICKED`, not `LV_EVENT_CLICKED`, for the short-click handler.** LVGL 9 fires
 > `LV_EVENT_CLICKED` on release *regardless of press duration*, so a long press would fire both
@@ -647,20 +663,28 @@ D-1 … D-5 were confirmed on 2026-07-26; D-6 … D-8 are open.
   this needs can be taken. This feature adds the first thing on the
   GCD that the driver must *pair* rather than just read, so it needs operator-level documentation in
   `Documentation\GCS User Manual.md`:
-  - **New screen captures** — the Home screen with the glyph lit, and Settings 2 showing the pair
-    button in its `NO MAILBOX` / `PAIR MBX a1b2c3d4` / `MBX a1b2c3d4` states. Follow the existing
+  - **New screen captures** — the Home screen with the glyph lit, and Settings 2 showing the mailbox
+    row in its `NO MAILBOX` (white) / `deadbeef OFFERED` (white, button green) / `a1b2c3d4` (green)
+    states. **The button always reads `PAIR MBX`; the state is in the value string beside it** —
+    see the as-built table in §3.3 and §13.3. Follow the existing
     convention: ~640×480 JPGs in `Documentation\GCD Screens\`, referenced as
     `GCD%20Screens/<Name>.jpg` at `width="213"`. *(Layout flattened 2026-07-28 — the old
     `GCD Screens 640x480\` subfolder and its 320×240 sibling are gone, and there is no `../`, since
     the folder is a child of `Documentation\`.)* **Done:** Home, Settings and Settings 2 were
     recaptured 2026-07-28.
-  - **Pairing procedure** — press the button on the mailbox sensor, walk to the cart, open Settings 2,
-    confirm the id shown, tap to accept. Include the time limit and what to do if the offer lapses
-    (press the sensor button again).
-  - **What the glyph means and how to dismiss it** — tap to extinguish until the next state change,
-    and why you might want to (a stuck or dead sensor).
-  - **Un-pairing / replacing a sensor** — long-press the button to forget; or pair a new sensor,
-    which overwrites.
+  - **Pairing procedure** — **open Settings 2 first**, then press the button on the mailbox sensor,
+    confirm the id shown, tap to accept. Include the 45 s limit and what to do if the offer lapses
+    (press the sensor button again). *(Order matters: the 45 s runs from the single press, so it must
+    cover getting to the screen.)*
+  - **What the glyph means and how to dismiss it** — **long-press** to dismiss. Describe it as a
+    **snooze**, not a permanent dismissal: it returns, with a chime, at the sensor's next PRESENT
+    report (up to an hour), and clears on its own when the mail is collected.
+  - **Un-pairing / replacing a sensor** — long-press `PAIR MBX` to forget; or just pair a new sensor,
+    which overwrites — no un-pair needed first.
+  - **Health colours** — white = not paired / awaiting first contact, green = healthy,
+    yellow `(N)` = frames missed *this session* (see the wording cautions: not a log of lost mail,
+    and it wraps at 256), red `SILENT` = nothing heard for 24 h of awake time, which in a GCI install
+    may never appear.
   - Worth cross-checking whether the **Assembly** and **Software Installation** manuals also need the
     sensor's channel requirement (primary = `GolfCart`, O-1) — that is an installer step, not an
     operator one, so it likely belongs there rather than in the User Manual.
