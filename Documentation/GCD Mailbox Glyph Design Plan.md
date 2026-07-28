@@ -649,9 +649,11 @@ D-1 … D-5 were confirmed on 2026-07-26; D-6 … D-8 are open.
   `Documentation\GCS User Manual.md`:
   - **New screen captures** — the Home screen with the glyph lit, and Settings 2 showing the pair
     button in its `NO MAILBOX` / `PAIR MBX a1b2c3d4` / `MBX a1b2c3d4` states. Follow the existing
-    convention: 640×480 JPGs in `GCD Screens\GCD Screens 640x480\`, referenced from `Documentation\`
-    as `../GCD Screens/...`. Captures cannot be taken until the firmware runs, so this trails
-    Phase 4.
+    convention: ~640×480 JPGs in `Documentation\GCD Screens\`, referenced as
+    `GCD%20Screens/<Name>.jpg` at `width="213"`. *(Layout flattened 2026-07-28 — the old
+    `GCD Screens 640x480\` subfolder and its 320×240 sibling are gone, and there is no `../`, since
+    the folder is a child of `Documentation\`.)* **Done:** Home, Settings and Settings 2 were
+    recaptured 2026-07-28.
   - **Pairing procedure** — press the button on the mailbox sensor, walk to the cart, open Settings 2,
     confirm the id shown, tap to accept. Include the time limit and what to do if the offer lapses
     (press the sensor button again).
@@ -777,10 +779,10 @@ riskiest files out of the change entirely.
 **Mailbox sensor** — firmware: a **pair button** that emits one `mode=PAIR` frame per press
 (**O-4**). Programming process: record and label the `mbx_id` (**O-5**).
 
-**Documentation** — `Documentation\GCS User Manual.md` plus new 640×480 captures in
-`GCD Screens\GCD Screens 640x480\` (**O-7**). Trails Phase 4, since the captures need running
-firmware. Check whether the sensor channel requirement belongs in the Assembly / Software
-Installation manuals as an installer step.
+**Documentation** — `Documentation\GCS User Manual.md` plus refreshed captures in
+`Documentation\GCD Screens\` (**O-7**). Home, Settings and Settings 2 were recaptured 2026-07-28 and
+the image paths flattened; the manual text itself is still to be written. Check whether the sensor
+channel requirement belongs in the Assembly / Software Installation manuals as an installer step.
 
 **GCI** — not involved.
 

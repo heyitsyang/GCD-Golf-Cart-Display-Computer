@@ -28,7 +28,7 @@ Connect the three units before first use:
 
 ## Splash Screen
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Splash.jpg" width="213" alt="Splash Screen">
+<img src="GCD%20Screens/Splash.jpg" width="213" alt="Splash Screen">
 
 The splash screen appears on every boot and disappears automatically after a few seconds. The center displays the Hands-On Tech logo.
 
@@ -43,7 +43,7 @@ Four identifiers are shown at the bottom in two columns:
 
 ## Home Screen
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Home.jpg" width="213" alt="Home Screen">
+<img src="GCD%20Screens/Home.jpg" width="213" alt="Home Screen">
 
 The home screen is the main at-a-glance view. Swipe left or right anywhere on the screen (outside the bottom icon bar) to open the Menu.
 
@@ -77,7 +77,7 @@ The headlight icon, golf cart icon, and fuel/battery icon are only visible when 
 
 ## Menu
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Menu.jpg" width="213" alt="Menu Screen">
+<img src="GCD%20Screens/Menu.jpg" width="213" alt="Menu Screen">
 
 The Menu provides access to all secondary screens. Tap the back arrow (top-left) to return to the Home screen.
 
@@ -93,7 +93,7 @@ The Menu provides access to all secondary screens. Tap the back arrow (top-left)
 
 ## Settings
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Settings.jpg" width="213" alt="Settings Screen">
+<img src="GCD%20Screens/Settings.jpg" width="213" alt="Settings Screen">
 
 Three sliders control the core display and audio experience. Tap the right arrow (top-right) to continue to Settings 2.
 
@@ -110,7 +110,7 @@ Controls the volume of alert tones and notification sounds from the built-in spe
 
 ## Settings 2
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Settings2.jpg" width="213" alt="Settings 2 Screen">
+<img src="GCD%20Screens/Settings2.jpg" width="213" alt="Settings 2 Screen">
 
 Settings 2 contains connectivity, GPS, display orientation, and system management controls. Navigate here using the right arrow on the Settings screen.
 
@@ -172,7 +172,7 @@ Turn this **OFF** when you need to configure the GCM via Bluetooth (e.g., using 
 
 ## Vehicle
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Vehicle.jpg" width="213" alt="Vehicle Screen">
+<img src="GCD%20Screens/Vehicle.jpg" width="213" alt="Vehicle Screen">
 
 The Vehicle screen manages maintenance counters, service reminders, and sensor thresholds. Distance and hour counters accumulate automatically while the cart is in use.
 
@@ -217,7 +217,7 @@ The gap between the On and Off values creates **hysteresis** — a deliberate de
 
 ## Messages
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Messages.jpg" width="213" alt="Messages Screen">
+<img src="GCD%20Screens/Messages.jpg" width="213" alt="Messages Screen">
 
 The Messages screen displays incoming and outgoing mesh radio messages. All communication goes through the GCM radio module; **GCM Serial must be ON** in Settings 2.
 
@@ -284,7 +284,7 @@ Weather data and entertainment schedule broadcasts do not appear in the message 
 
 ## Canned Messages (Compose & Reply)
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Canned%20Messages.jpg" width="213" alt="Canned Messages Screen">
+<img src="GCD%20Screens/Canned%20Messages.jpg" width="213" alt="Canned Messages Screen">
 
 The Canned Messages screen is used both to compose new messages and to reply to received ones. Tapping any of the 8 message buttons immediately sends the selected message and returns to the Messages screen.
 
@@ -336,7 +336,7 @@ Favorites are stored in flash memory and survive power cycles. Node short names 
 
 ## Weather
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Weather.jpg" width="213" alt="Weather Screen">
+<img src="GCD%20Screens/Weather.jpg" width="213" alt="Weather Screen">
 
 The Weather screen displays forecast data received over the Meshtastic mesh as a broadcast from a weather station or data server on the network. No configuration is required — data appears automatically when a compatible broadcast is received.
 
@@ -353,7 +353,7 @@ If no weather broadcast has been received since the last boot, the screen will s
 
 ## Now Playing / Entertainment
 
-<img src="GCD%20Screens/GCD%20Screens%20640x480/Now%20Playing.jpg" width="213" alt="Now Playing Screen">
+<img src="GCD%20Screens/Now%20Playing.jpg" width="213" alt="Now Playing Screen">
 
 The Now Playing screen displays a live entertainment schedule received over the mesh network. Like the Weather screen, it requires no configuration — data appears automatically when a compatible broadcast is received from a schedule server on the mesh.
 
