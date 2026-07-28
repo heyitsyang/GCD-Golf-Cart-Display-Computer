@@ -230,8 +230,19 @@ void set_var_espnow_gci_mac_addr(const char* value) {
             }
         }
 
-        // Queue the preference write to save to EEPROM
-        queuePreferenceWrite("espnow_gci_mac_addr", espnow_gci_mac_addr);
+        // Key must be "gci_mac" — the name loadPreferences() reads back and the
+        // one system_task writes. It is also 7 chars: NVS silently rejects keys
+        // longer than 15, which is why the original "espnow_gci_mac_addr" here
+        // never persisted anything.
+        //
+        // Harmless until now only by accident: system_task polls this variable
+        // against old_espnow_gci_mac_addr and persists every change from any
+        // source, so it has been carrying the pairing on its own. That makes the
+        // write below a duplicate rather than the primary path — kept because
+        // this setter is reachable from EEZ (ui.c native_vars) and must be
+        // correct on its own terms if a flow ever assigns the variable. The
+        // MAC changes only on pair/unpair, so the extra write costs nothing.
+        queuePreferenceWrite("gci_mac", espnow_gci_mac_addr);
     }
 }
 
@@ -597,14 +608,6 @@ bool get_var_reset_preferences() {
 
 void set_var_reset_preferences(bool value) {
     reset_preferences = value;
-}
-
-bool get_var_espnow_pair_gci() {
-    return espnow_pair_gci;
-}
-
-void set_var_espnow_pair_gci(bool value) {
-    espnow_pair_gci = value;
 }
 
 float get_var_temperature_adj() {

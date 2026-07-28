@@ -61,6 +61,10 @@ public:  // Make public so espnow_task can use it
 // Global instance
 extern ESPNowHandler espNow;
 
+// Forgets the paired GCI. Counterpart to the pairing window opened by
+// espnow_pair_gci; called from the Settings 2 PAIR GCI long press.
+void espnowUnpairGci();
+
 // Callback functions
 void espnowOnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status);
 void espnowOnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len);

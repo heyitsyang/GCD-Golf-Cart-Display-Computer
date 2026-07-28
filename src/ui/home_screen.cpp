@@ -2,6 +2,7 @@
 #include "ui_eez/screens.h"
 #include "home_screen.h"
 #include "communication/mailbox.h"
+#include "hardware/display.h"
 
 // Long-pressing the mail glyph extinguishes it, so a misbehaving sensor can be
 // silenced without a reboot. Long press rather than tap because the glyph sits
@@ -11,6 +12,11 @@
 static void mailGlyphLongPressedCb(lv_event_t *) {
     if (!mailboxGlyphOn()) return;   // nothing lit; ignore stray presses
     mailboxDismiss();
+    // After the guard, so the click means "dismissed", not merely "pressed".
+    // The glyph vanishing is the only other feedback, and an 800 ms hold needs
+    // an endpoint — without it you cannot tell a completed dismiss from a hold
+    // that was too short.
+    tone_click();
 }
 
 void homeScreenInit() {

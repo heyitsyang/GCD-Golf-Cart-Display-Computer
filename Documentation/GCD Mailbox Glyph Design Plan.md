@@ -164,9 +164,10 @@ static volatile uint32_t s_dismissEpoch;  // writer: GUI task only
 ```c
 glyph_on   =  s_mailPresent && (s_dismissEpoch != s_stateEpoch)
 dismiss()  =  s_dismissEpoch = s_stateEpoch          // GUI task
-on_frame() =  if (present != s_mailPresent) { s_mailPresent = present; s_stateEpoch++;
-                                              if (present) tone_alert(); }
-              else if (present)             { s_stateEpoch++; }   // re-assertion, silent
+on_frame() =  wasOn = glyph_on
+              if (present != s_mailPresent) { s_mailPresent = present; s_stateEpoch++; }
+              else if (present)             { s_stateEpoch++; }   // re-assertion
+              if (!wasOn && glyph_on) tone_alert()                // chime on the GLYPH edge
 ```
 
 Why this is the right shape:
@@ -174,13 +175,30 @@ Why this is the right shape:
 | Scenario | Result |
 |---|---|
 | Mail arrives (ABSENT→PRESENT edge) | epoch bumps, `dismissEpoch` no longer matches → **glyph on** + chime ✅ |
-| Driver long-presses to dismiss | `dismissEpoch = stateEpoch` → **glyph off** ✅ |
-| Hourly PRESENT re-assertion after a dismiss | epoch bumps → **glyph returns, silently** ✅ — the snooze lapses because the mail is still there |
+| Driver long-presses to dismiss | `dismissEpoch = stateEpoch` → **glyph off** + click ✅ |
+| Hourly PRESENT re-assertion after a dismiss | epoch bumps → **glyph returns, with a chime** ✅ — the snooze lapses because the mail is still there |
+| Hourly PRESENT re-assertion, *not* dismissed | glyph was already lit → not a glyph edge → **no chime** ✅ |
 | Mail collected (PRESENT→ABSENT) | `s_mailPresent=false` → **glyph off**, latch reset for next time ✅ |
 | Both the ABSENT and the next PRESENT edge frames are lost | next hourly re-assertion carries the *current* state → bump → **self-corrects** ✅ |
 
-The chime deliberately stays on the rising edge only. Sounding it on every re-assertion would nag
-hourly for mail the driver has already acknowledged, which is the opposite of what dismissing is for.
+**The chime follows the glyph edge, not the mail-state edge** (corrected 2026-07-28 — the original
+rule tied it to the state edge and is described below for the record). Those two edges coincide
+everywhere except after a dismiss, which is precisely the case that matters: the mail state is
+already `PRESENT`, so a state-edge test sees no change and stays silent, and a snoozed glyph returns
+with no announcement. Since a dismissed driver is by definition not looking at the glyph, a silent
+return made the snooze nearly useless — an alarm that snoozes and comes back mute.
+
+Sampling `glyph_on` before the mutation and comparing after expresses this as one rule — *the glyph
+lit, so chime* — rather than enumerating the paths that should and should not sound. Hourly
+re-assertion of an **undismissed** glyph still stays silent, because the glyph was already lit and so
+there is no edge; that was the original concern about nagging, and it is still satisfied.
+
+> **Sensor limitation worth knowing.** A second delivery arriving *before the first is collected*
+> produces **no frame edge at all** — the box was already occupied, so the sensor keeps reporting
+> `PRESENT`. The GCD cannot distinguish that from an hourly heartbeat, and if the glyph was never
+> dismissed it is already lit, so the second delivery is invisible. `PRESENT-ABSENT-PRESENT` (mail
+> collected in between) chimes on the genuine edge; `PRESENT-CANCEL-PRESENT` chimes when the snooze
+> lapses. There is no third case the GCD can detect.
 
 **The epoch pair is still required even though the rule is now simpler.** A plain `bool dismissed`
 would have two writers — the parser clearing it and the GUI setting it — and that read-modify-write
@@ -333,16 +351,17 @@ Verified safe:
 
 ### 3.5 Chimes
 
-`tone_alert()` on the **ABSENT→PRESENT edge only** (i.e. inside the epoch-bump branch, when
-`present == true`). Not on the hourly re-assertion, not on ABSENT. Calling a tone from
-`meshtasticCallbackTask` is already established — see
+`tone_alert()` **whenever the glyph goes dark → lit** — the ABSENT→PRESENT edge, and also the
+re-assertion that ends a snooze (§3.2). Not on the re-assertion of an already-lit glyph, and not on
+ABSENT. Calling a tone from `meshtasticCallbackTask` is already established — see
 [meshtastic_callback_task.cpp:44](src/tasks/meshtastic_callback_task.cpp#L44).
 
 A second, distinct chime (`tone_message()`) fires from the GUI task when the user **accepts** an
 offer, and `tone_confirm()` when a long press **forgets** one — an 800 ms hold is long enough that
 without a cue you would not know when to let go.
 
-No chime when a snoozed glyph returns at the next re-assertion (§3.2).
+A snoozed glyph returning at the next re-assertion **does** chime (§3.2) — that is the whole point of
+a snooze. What stays silent is the re-assertion of a glyph that was never dismissed.
 
 ---
 
@@ -679,9 +698,10 @@ pio run                     # compiles; check the RAM/Flash summary against the 
 | 4 | Short-click the button | Chime; label becomes `MBX a1b2c3d4` |
 | 5 | Leave Settings 2, return | Still `MBX a1b2c3d4` (NVS committed after 3 s / on exit) |
 | 6 | Send `…#NORM#a1b2c3d4#…#PRESENT` | Home glyph **lights** ("N", yellow, left of the fuel glyph); one alert chime |
-| 7 | Send it again (simulates the hourly re-assertion) | Glyph stays on, **no second chime** |
-| 8 | Tap the glyph | Glyph **off** |
-| 9 | Send `…#PRESENT` again | Glyph **stays off** — the dismiss latch holds through re-assertion |
+| 7 | Send it again (simulates the hourly re-assertion) | Glyph stays on, **no second chime** — it was already lit, so this is not a glyph edge |
+| 8 | **Long-press** the glyph | Glyph **off**, one click |
+| 9 | Send `…#PRESENT` again — the **PRESENT-CANCEL-PRESENT** sequence | Glyph **returns, with a chime** (rev 4 + the 2026-07-28 chime correction; under rev 3 it stayed off and under early rev 4 it returned silently) |
+| 9a | Long-press to dismiss again, then send `…#ABSENT`, then `…#PRESENT` — the **PRESENT-ABSENT-PRESENT** sequence | Off after ABSENT; **on with a chime** on the PRESENT, i.e. a collected-then-redelivered box behaves like a first delivery |
 | 10 | Send `…#ABSENT`, then `…#PRESENT` | Off, then **on** again with a chime |
 | 11 | Send `…#NORM#deadbeef#…#PRESENT` | Glyph unchanged; `<MBX deadbeef P>` visible under DEBUG |
 | 12 | Send `\|#03#PAIR#deadbeef#…`, then **wait 45 s** without clicking | Button shows `PAIR MBX deadbeef`, then reverts to `MBX a1b2c3d4`. Nothing was claimed; the old pairing is intact (**D-7**) |
@@ -1077,8 +1097,98 @@ an orphaned EEZ *expression* is a silent display break.
 caption on the GCI row. No C code referenced it, so there was no build impact, and it leaves both
 pairing rows symmetric as `[button][value]`.
 
-**Chime map, final:** `tone_alert()` on the PRESENT rising edge, `tone_message()` on accepting an
-offer, `tone_confirm()` on a long-press forget. Silent when a snoozed glyph returns.
+**Chime map, final:** `tone_click()` on every short click of the pair button, `tone_alert()` on the
+PRESENT rising edge, `tone_message()` on accepting an offer, `tone_confirm()` on a long-press forget,
+and `tone_click()` when a long press dismisses the Home glyph. A snoozed glyph **chimes** when it
+returns; only the re-assertion of an undismissed glyph is silent (§3.2, corrected 2026-07-28).
+
+The glyph-dismiss click fires **after** `mailGlyphLongPressedCb`'s `mailboxGlyphOn()` guard, so it
+means *dismissed* rather than merely *pressed*. Without it the only feedback is the glyph vanishing,
+which leaves no way to distinguish a completed dismiss from a hold that fell short of the 800 ms
+threshold. It is `tone_click()` and not the `tone_confirm()` used by the two forget gestures because
+dismissing is an acknowledgement, not a destructive configuration change — and the snooze reverses
+itself at the sensor's next PRESENT frame anyway.
+
+The click was added to match `PAIR GCI`, which gets its click from an EEZ flow action
+(`action_tone_click`). `btn_pair_mailbox` has no flow, so C fires `tone_click()` at the top of
+`mbxAcceptCb` — **unconditionally**, because a tap with no offer pending is a no-op and the button
+would otherwise feel dead. When the accept does succeed, the `tone_message()` that follows
+supersedes it: `beep_internal()` ([display.cpp:288-290](src/hardware/display.cpp#L288-L290)) stops
+any sequence already playing before starting a new one, so back-to-back tones sound only as the last
+one, not as a click *then* a chime. **The order of the two calls is therefore load-bearing.** The
+long-press path is unaffected — `SHORT_CLICKED` is suppressed past the threshold, so a forget plays
+`tone_confirm()` alone.
+
+**Follow-on: `PAIR GCI` moved from an EEZ flow action to C, for the same reason.** Its flow did two
+things — play the click, then set `espnow_pair_gci` — which put the tone and the state change in
+different systems, neither discoverable from the other. Both now live in `pairGciCb()` in
+`settings2_screen.cpp` on `LV_EVENT_CLICKED` (correct here rather than `SHORT_CLICKED`, since this
+button has no long-press gesture). `espnowTask` still owns the rising-edge detection and clears the
+flag itself, so the handler only raises it.
+
+The EEZ variable `espnow_pair_gci` was **deleted**, not merely unbound: left declared with nothing
+using it, it would read as dead and invite removal by a later edit that didn't know `espnowTask`
+depends on the C global of the same name. Removing it cost nothing — `set_var_espnow_pair_gci()` only
+assigned the global, and both call sites already did that assignment on the preceding line, so the
+accessors were pure redundancy. It remains a plain cross-task global declared in `get_set_vars.h`
+with a comment recording why it has no accessors. Net effect on the build: **−16 B RAM, −256 B flash.**
+
+**Tone map across both pairing rows, now symmetric:**
+
+| | `PAIR GCI` | `PAIR MBX` |
+|---|---|---|
+| Tap | `tone_click()` | `tone_click()` |
+| Success | `tone_message()` — ACK received | `tone_message()` — offer accepted |
+| Failure | `tone_error()` — 6 s timeout | *(none — a local accept cannot fail)* |
+| Forget | `tone_confirm()` — long press | `tone_confirm()` — long press |
+
+**Both buttons are now dual-gesture, so both use `SHORT_CLICKED`.** `PAIR GCI` gained a long-press
+unpair (`espnowUnpairGci()` in `espnow_handler.cpp`), which forced its tap handler off the
+`LV_EVENT_CLICKED` the old EEZ flow used: LVGL 9 fires `CLICKED` on the release of a *long* press too,
+so the unpair would have been followed instantly by a fresh pairing window — the exact failure the
+mailbox button was already written to avoid. See the dual-gesture rule in §3.3.
+
+`espnowUnpairGci()` drops every peer using the same idiom `espnowTask` uses when opening a pairing
+window, sets `espnow_gci_mac_addr` back to the established `"NONE"` sentinel, clears `espnow_pair_gci`
+so a window opened moments earlier cannot re-adopt the device just forgotten, and forces
+`espnow_connected` false so the MAC label turns red immediately instead of waiting out the keepalive
+timeout. With the peer gone, `espnowOnDataRecv()` filters the GCI's traffic, so nothing sets it back.
+
+It assigns `espnow_gci_mac_addr` **directly** rather than calling `set_var_espnow_gci_mac_addr()`,
+which restarts the whole ESP-NOW stack to install the new peer — pointless when the point is that
+there is no peer. Persistence is unaffected: `system_task` compares against `old_espnow_gci_mac_addr`
+and queues the write under `"gci_mac"`.
+
+**Colour states also converged, on the same principle: neutral ≠ fault.**
+
+| | `lbl_gci_mac_addr_value` | `lbl_mailbox_id_str` |
+|---|---|---|
+| White | `NONE` — no GCI paired | `NO MAILBOX`, `… OFFERED`, or awaiting first contact |
+| Green | paired and responding | heard, nothing missed |
+| Yellow | *(none — the link is heartbeat-checked, not counted)* | `a1b2c3d4 (N)` frames missed |
+| Red | paired but no longer answering | `a1b2c3d4 SILENT` — 24 h quiet |
+
+`updateEspnowGciMacColor()` previously painted **red whenever `espnow_connected` was false**, which
+made an unpaired GCD look broken. The GCI is optional — declining it is a supported configuration that
+buys battery life — so `NONE` is now white, and red is reserved for a GCI that *was* paired and has
+stopped answering, the only actionable case.
+
+Two implementation notes. The cache had to become **tri-state**: unpairing an already-disconnected GCI
+leaves `espnow_connected` false on both sides of the transition, so the old `bool` cache would never
+fire and the label would stay red after an unpair. And a MAC failing the `length() == 17` validity
+test — the same check `espnowTask` and `sleep_manager` already apply — reads as unpaired rather than
+as a fault, so a corrupt stored value degrades to white instead of raising a false alarm.
+
+Two non-obvious points in that table. **The GCI success tone is gated on `espnow_pair_gci` and read
+before the flag is cleared** — an ACK from an already-registered peer passes the known-peer filter in
+`espnowOnDataRecv()` at any time, so without the gate a routine ACK would beep like a fresh pairing.
+**The GCI failure tone has no mailbox equivalent by design:** GCI pairing can time out with nothing on
+screen changing, making a silent failure indistinguishable from a success the user wasn't watching
+for, whereas accepting a mailbox offer is local and instantaneous.
+
+Calling tones from `espnowTask` is safe and precedented — `beep_internal()` drives a hardware timer
+and `ledcWrite()` with no LVGL involvement, the same basis on which `mailbox.cpp` calls `tone_alert()`
+from `meshtasticCallbackTask`.
 
 **Not yet verified on hardware.** The seq-gap counting, the colour states, the 800 ms holds and the
 snooze behaviour all compile and are logically traced, but none has been exercised on the CYD. The

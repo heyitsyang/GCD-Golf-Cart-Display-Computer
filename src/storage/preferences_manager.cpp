@@ -53,7 +53,10 @@ void loadPreferences() {
     // Load directly without calling setter to avoid premature EEPROM queue write
     hrs_since_svc = prefs.getInt("hrs_since_svc", 0);
 
-    svc_interval_hrs = prefs.getInt("svc_interval_hrs", 100);
+    // Key is "svc_intvl_hrs" (13), not the variable's own name: NVS caps keys at
+    // 15 chars and rejects longer ones silently. No migration needed — writes
+    // under the old 16-char key always failed, so nothing was ever stored.
+    svc_interval_hrs = prefs.getInt("svc_intvl_hrs", 100);
     set_var_svc_interval_hrs(svc_interval_hrs);
     old_svc_interval_hrs = svc_interval_hrs;
 

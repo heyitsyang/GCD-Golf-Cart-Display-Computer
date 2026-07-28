@@ -161,8 +161,9 @@ void set_var_trip_distance(float value);
 bool get_var_reset_preferences();
 void set_var_reset_preferences(bool value);
 
-bool get_var_espnow_pair_gci();
-void set_var_espnow_pair_gci(bool value);
+// espnow_pair_gci has no EEZ accessors: the pair button is wired in C
+// (settings2_screen.cpp) and the flag is consumed directly by espnowTask, so no
+// UI binding exists to serve. It remains a plain cross-task global below.
 
 float get_var_temperature_adj();
 void set_var_temperature_adj(float value);

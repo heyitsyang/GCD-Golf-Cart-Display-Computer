@@ -22,15 +22,23 @@ static void homeScreenLoadedCb(lv_event_t *) {
 }
 
 
-void updateEspnowGciMacColor() {
-    static bool last_espnow_connected_state = false;
-    static bool initialized = false;
+// Colour states for the GCI MAC label. Mirrors the mailbox row's health model
+// one line below it: a neutral state that is not a fault, plus the two that are.
+#define GCI_MAC_UNPAIRED  0   // white  — no GCI, a supported configuration
+#define GCI_MAC_CONNECTED 1   // green  — paired and responding
+#define GCI_MAC_LOST      2   // red    — paired but silent
+#define GCI_MAC_UNKNOWN   0xFF
 
-    // Only update if we're on the settings2 screen that has obj5 (GCI MAC address label)
+void updateEspnowGciMacColor() {
+    // 0xFF forces a write on the first evaluation of each Settings 2 visit.
+    static uint8_t last_state = GCI_MAC_UNKNOWN;
+
+    // Only update if we're on the settings2 screen that has the GCI MAC label
     lv_obj_t* current_screen = lv_scr_act();
     if (current_screen == nullptr || current_screen != objects.settings2) {
-        // Reset initialization when not on settings2 screen
-        initialized = false;
+        // Force a repaint on the next visit rather than trusting a cached
+        // colour set before the user navigated away.
+        last_state = GCI_MAC_UNKNOWN;
         return;
     }
 
@@ -39,19 +47,27 @@ void updateEspnowGciMacColor() {
         return;
     }
 
-    bool current_state = get_var_espnow_connected();
+    // "NONE" is not an error: the GCI is optional, and running without one is a
+    // deliberate choice that buys battery life. Red is reserved for a GCI that
+    // was paired and has stopped answering, which is the only actionable case.
+    // The length test matches the validity check espnowTask and sleep_manager
+    // already use, so a malformed MAC reads as unpaired rather than as a fault.
+    bool unpaired = (espnow_gci_mac_addr == "NONE" || espnow_gci_mac_addr.length() != 17);
 
-    // Initialize or update when state changes
-    if (!initialized || current_state != last_espnow_connected_state) {
-        if (current_state) {
-            // Connected - apply green color (#00ff2d)
-            lv_obj_set_style_text_color(objects.lbl_gci_mac_addr_value, lv_color_hex(0xff00ff2d), LV_PART_MAIN | LV_STATE_DEFAULT);
-        } else {
-            // Disconnected - apply red color (#ff0000)
-            lv_obj_set_style_text_color(objects.lbl_gci_mac_addr_value, lv_color_hex(0xffff0000), LV_PART_MAIN | LV_STATE_DEFAULT);
-        }
-        last_espnow_connected_state = current_state;
-        initialized = true;
+    uint8_t state = unpaired                  ? GCI_MAC_UNPAIRED
+                  : get_var_espnow_connected() ? GCI_MAC_CONNECTED
+                                               : GCI_MAC_LOST;
+
+    // Tracking the tri-state, not just the connected flag: unpairing an already
+    // disconnected GCI leaves espnow_connected false both before and after, so a
+    // bool cache would never notice and the label would stay red.
+    if (state != last_state) {
+        last_state = state;
+        lv_color_t c = (state == GCI_MAC_CONNECTED) ? lv_color_hex(0xff00ff2d)
+                     : (state == GCI_MAC_LOST)      ? lv_color_hex(0xffff0000)
+                                                    : lv_color_white();
+        lv_obj_set_style_text_color(objects.lbl_gci_mac_addr_value, c,
+                                    LV_PART_MAIN | LV_STATE_DEFAULT);
     }
 }
 

@@ -104,7 +104,10 @@ void systemTask(void *parameter) {
             debounce_svc_interval_hrs = now;
         }
         if (debounceElapsed(debounce_svc_interval_hrs)) {
-            queuePreferenceWrite("svc_interval_hrs", svc_interval_hrs);
+            // "svc_intvl_hrs", not "svc_interval_hrs" (16 chars): NVS silently
+            // rejects keys longer than 15, so the original never persisted and
+            // the setting reverted to its default on every reboot.
+            queuePreferenceWrite("svc_intvl_hrs", svc_interval_hrs);
             debounce_svc_interval_hrs = 0;
         }
 

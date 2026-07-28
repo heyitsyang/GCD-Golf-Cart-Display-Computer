@@ -4,6 +4,7 @@
 #include "types.h"
 #include "communication/espnow_handler.h"
 #include "get_set_vars.h"
+#include "hardware/display.h"
 
 void espnowTask(void *parameter) {
     espnow_recv_item_t recv_item;
@@ -156,10 +157,13 @@ void espnowTask(void *parameter) {
                     } else {
                         Serial.println("ESP-NOW: Pairing timeout - no device found");
                     }
+                    // Both branches are failures: the window closed with no new
+                    // peer. Without a tone the button would look identical to a
+                    // success 6 s earlier, since nothing on screen changes.
+                    tone_error();
                 }
 
                 espnow_pair_gci = false;
-                set_var_espnow_pair_gci(false);
                 pairingStartTime = 0;
             }
 

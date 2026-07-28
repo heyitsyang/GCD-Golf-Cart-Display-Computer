@@ -140,16 +140,25 @@ void mailboxOnFrame(uint32_t mbxId, bool present, bool isPairOffer,
     // reports mail still waiting, then the glyph returns. The mail has not gone
     // anywhere, so the reminder should not be permanently dismissible.
     //
-    // The chime stays on the rising edge only. Sounding it on every re-assertion
-    // would nag hourly for mail the driver has already acknowledged.
+    // The chime follows the GLYPH edge, not the mail-state edge. Those differ
+    // only after a dismiss, and that is exactly the case that matters: the mail
+    // state is already PRESENT, so a state-edge test sees no change and stays
+    // silent, leaving a snoozed glyph to come back with no announcement.
+    // Sampling before the mutation and comparing after covers every path with
+    // one rule — "the glyph lit, so chime" — instead of enumerating them.
+    bool wasOn = mailboxGlyphOn();
+
     if (present != s_mailPresent) {
         s_mailPresent = present;
         s_stateEpoch++;
         Serial.printf("MBX %08x -> %s\n", mbxId, present ? "PRESENT" : "ABSENT");
-        if (present) tone_alert();
     } else if (present) {
-        s_stateEpoch++;   // re-assertion: lapses any dismiss, silently
+        s_stateEpoch++;   // re-assertion: lapses any dismiss
     }
+
+    // Still silent when an undismissed glyph is merely re-asserted hourly: it was
+    // already lit, so this is not an edge and there is nothing new to announce.
+    if (!wasOn && mailboxGlyphOn()) tone_alert();
 }
 
 bool mailboxGlyphOn(void) {

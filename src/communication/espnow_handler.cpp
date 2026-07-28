@@ -487,9 +487,17 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
                 // Variable change will be detected by system_task and saved to EEPROM
             }
 
+            // Confirm audibly, matching the PAIR MBX accept chime.
+            //
+            // Gated on the pairing window being open, and read before it is
+            // closed below: an ACK from an already-registered peer passes the
+            // known-peer filter in espnowOnDataRecv() at any time, so only the
+            // ACK that closes a window the user actually opened is a pairing
+            // success. Ungated, a stray ACK would beep like a fresh pairing.
+            if (espnow_pair_gci) tone_message();
+
             // Close the pairing window now that peer is added
             espnow_pair_gci = false;
-            set_var_espnow_pair_gci(false);
 
             break;
         }
@@ -520,6 +528,43 @@ void ESPNowHandler::processReceivedMessage(espnow_recv_item_t &item) {
             break;
         }
     }
+}
+
+// Forgets the paired GCI: drops every peer, clears the stored MAC, and cancels
+// any pairing window still in flight.
+//
+// espnow_gci_mac_addr is assigned directly rather than through
+// set_var_espnow_gci_mac_addr(), which restarts the entire ESP-NOW stack in
+// order to install the new peer — pointless here, since the whole point is that
+// there is no peer to install. Persistence still happens: system_task compares
+// against old_espnow_gci_mac_addr and queues the write under "gci_mac".
+//
+// "NONE" is the established unpaired sentinel — it is the default in
+// loadPreferences() and what espnowTask and sleep_manager already test for.
+void espnowUnpairGci() {
+    if (espnow_gci_mac_addr == "NONE") return;
+
+    Serial.printf("ESP-NOW: Unpaired from %s\n", espnow_gci_mac_addr.c_str());
+
+    // Same peer-clearing idiom espnowTask uses when opening a pairing window.
+    for (int i = espNow.getPeerCount() - 1; i >= 0; i--) {
+        espnow_peer_info_t* peer = espNow.getPeerInfo(i);
+        if (peer) {
+            espNow.removePeer(peer->mac_addr);
+        }
+    }
+
+    espnow_gci_mac_addr = "NONE";
+
+    // Cancel a pairing window opened moments ago, so a long press cannot leave
+    // one armed to re-adopt the device that was just forgotten.
+    espnow_pair_gci = false;
+
+    // Turn the MAC label red immediately rather than waiting for the keepalive
+    // timeout to notice. With the peer gone, espnowOnDataRecv() filters the
+    // GCI's traffic, so nothing will set this back to true on its own.
+    espnow_connected = false;
+    set_var_espnow_connected(false);
 }
 
 // Callback functions

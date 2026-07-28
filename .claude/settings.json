@@ -8,7 +8,8 @@
       "Bash(python -c ' *)",
       "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.platformio\\\\packages\\\\\" | Select-Object -First 20 Name)",
       "Bash(awk '/^void create_screen_/{fn=$0} /objects.\\(lbl_remote_mac_addr|sats_hdop_1\\) = obj/{print fn\" <- \"$0}' src/ui_eez/screens.c)",
-      "Bash(cp \"/c/Users/Yang/.claude/plans/i-have-created-a-bubbly-reddy.md\" \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\" && rg -n \"^## \" \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\" && wc -c \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\")"
+      "Bash(cp \"/c/Users/Yang/.claude/plans/i-have-created-a-bubbly-reddy.md\" \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\" && rg -n \"^## \" \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\" && wc -c \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\")",
+      "Bash(rg -n \"tone_click|click_sound|tone_beep|tone_\" src/utils src/hardware --include-zero)"
     ],
     "additionalDirectories": [
       "C:\\Users\\Yang\\.claude\\plans"

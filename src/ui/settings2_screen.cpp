@@ -82,7 +82,41 @@ static void fuelCycleCb(lv_event_t *) {
 // long-press handler below would re-accept an offer immediately after forgetting
 // it. SHORT_CLICKED covers everything shorter than LONG_PRESS_TIME_MS, so there
 // is no gap between the two gestures.
+// Opens the ESP-NOW pairing window. espnowTask polls for the rising edge of
+// espnow_pair_gci and clears the flag itself, on ACK or after PAIRING_TIMEOUT_MS,
+// so this only has to raise it.
+//
+// Previously an EEZ flow action (click tone, then set the variable). Moved to C
+// so the tone and the state change live in one place: split across two systems,
+// neither half was discoverable from the other.
+//
+// SHORT_CLICKED, not the CLICKED the old flow used: now that this button also
+// carries a long press, CLICKED would fire on the release of that long press
+// too and re-open a pairing window immediately after the unpair below.
+//
+// Pressing again inside an open window is harmless: espnowTask's rising-edge
+// test fails, so only the tone repeats.
+static void pairGciCb(lv_event_t *) {
+    tone_click();
+    espnow_pair_gci = true;
+}
+
+// Long press forgets the paired GCI, mirroring the mailbox button below.
+// tone_confirm() is unconditional — matching mbxForgetCb, and because an 800 ms
+// hold needs an audible endpoint whether or not anything was paired to forget.
+static void unpairGciCb(lv_event_t *) {
+    espnowUnpairGci();
+    tone_confirm();
+}
+
+// Click feedback matches the PAIR GCI button above.
+//
+// tone_click() first, unconditionally: a tap with no offer pending is a no-op,
+// and without it the button would feel dead. On a successful accept the
+// following tone_message() supersedes it — beep_internal() cancels whatever is
+// playing — so the accept still sounds like an accept, not a click then a chime.
 static void mbxAcceptCb(lv_event_t *) {
+    tone_click();
     if (mailboxAcceptOffer()) {
         tone_message();
         s_mbxWritePendingMs = millis();
@@ -102,6 +136,11 @@ void settings2ScreenInit() {
     if (!objects.btn_fuel_sensor_type) return;
     lv_label_set_text(objects.lbl_fuel_sensor_type, FUEL_NAMES[fuelSensorType]);
     lv_obj_add_event_cb(objects.btn_fuel_sensor_type, fuelCycleCb, LV_EVENT_CLICKED, nullptr);
+
+    if (objects.btn_send_mac_to_espnow) {
+        lv_obj_add_event_cb(objects.btn_send_mac_to_espnow, pairGciCb,   LV_EVENT_SHORT_CLICKED, nullptr);
+        lv_obj_add_event_cb(objects.btn_send_mac_to_espnow, unpairGciCb, LV_EVENT_LONG_PRESSED,  nullptr);
+    }
 
     if (objects.btn_pair_mailbox) {
         lv_obj_add_event_cb(objects.btn_pair_mailbox, mbxAcceptCb, LV_EVENT_SHORT_CLICKED, nullptr);
