@@ -213,6 +213,8 @@ bool get_var_headlights_on();
 void set_var_headlights_on(bool value);
 bool get_var_mail_available();
 void set_var_mail_available(bool value);
+const char *get_var_mailbox_id_str();
+void set_var_mailbox_id_str(const char *value);
 
 int32_t get_var_lux_now();
 void set_var_lux_now(int32_t value);

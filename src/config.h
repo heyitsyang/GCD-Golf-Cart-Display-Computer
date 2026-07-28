@@ -36,6 +36,12 @@
 #define XPT2046_CLK 25
 #define XPT2046_CS 33
 
+// Long-press threshold for the whole UI, applied to the touch input device in
+// initTouchscreen(). LVGL's built-in default is 400 ms; this doubles it so that
+// destructive long-press gestures are harder to trigger by accident. Changing
+// this affects every long press in the project (mailbox forget, chat reply).
+#define LONG_PRESS_TIME_MS 800
+
 // Touch rotation values
 #define TOUCH_ROTATION_0 0
 #define TOUCH_ROTATION_90 1

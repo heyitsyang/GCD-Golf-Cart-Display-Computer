@@ -203,7 +203,7 @@ void processHotPacket(const char* text) {
             // Unlike the weather branch, this one is const-only — it must not
             // tokenize the buffer in place.
             const char* body = &text[HOT_PKT_HEADER_OFFSET];   // "NORM#a1b2c3d4#..."
-            uint8_t mdLen = 0, idLen = 0, stLen = 0;
+            uint8_t mdLen = 0, idLen = 0, sqLen = 0, stLen = 0;
             const char* mdp = hotField(body, 0, &mdLen);       // mode
             const char* idp = hotField(body, 1, &idLen);       // mbx_id
             uint32_t mbxId = 0;
@@ -212,9 +212,28 @@ void processHotPacket(const char* text) {
                 break;
             }
 
-            // A PAIR frame carries only mode + mbx_id; the rest is ignored by contract.
-            if (mdp && mdLen == 4 && memcmp(mdp, "PAIR", 4) == 0) {
-                mailboxOnFrame(mbxId, false, true);
+            // seq drives missed-frame counting. Absent or unparseable is not an
+            // error — the frame is still usable, gap counting is just skipped.
+            const char* sqp = hotField(body, 2, &sqLen);
+            uint8_t  seq      = 0;
+            bool     seqValid = false;
+            if (sqp && sqLen <= 3) {
+                uint32_t v = 0;
+                seqValid = true;
+                for (uint8_t i = 0; i < sqLen; i++) {
+                    if (sqp[i] < '0' || sqp[i] > '9') { seqValid = false; break; }
+                    v = v * 10 + (uint32_t)(sqp[i] - '0');
+                }
+                if (seqValid && v <= 255) seq = (uint8_t)v;
+                else                      seqValid = false;
+            }
+
+            bool isPairOffer = (mdp && mdLen == 4 && memcmp(mdp, "PAIR", 4) == 0);
+
+            // A PAIR frame carries only mode + mbx_id as trustworthy fields, so
+            // its state is not read; it still counts as contact for health.
+            if (isPairOffer) {
+                mailboxOnFrame(mbxId, false, true, seq, seqValid);
                 break;
             }
 
@@ -225,7 +244,7 @@ void processHotPacket(const char* text) {
             else { Serial.println("MBX bad state"); break; }
 
             // Unknown modes (e.g. DEV) fall through as NORM — forward-compatible.
-            mailboxOnFrame(mbxId, present, false);
+            mailboxOnFrame(mbxId, present, false, seq, seqValid);
             break;
         }
 

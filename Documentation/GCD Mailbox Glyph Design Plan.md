@@ -16,6 +16,18 @@ Design date: 2026-07-26 (rev 3) · Built and verified: 2026-07-27 · Codebase: *
 >
 > **Read §12 before changing any of this** — it records where the as-built differs from the plan
 > below, which is otherwise left in its original forward-looking form.
+>
+> ### 🔨 Rev 4 is built, pending hardware verification — see §13
+>
+> A UI revision to make mailbox pairing consistent with the GCI pairing row above it: fixed
+> `PAIR MBX` button label, plus a separate colour-coded `lbl_mailbox_id_str` value string carrying
+> sensor health — **white** awaiting, **green** healthy, **yellow (N)** frames missed, **red**
+> silent 24 h. Misses are counted from the frame's `seq` field rather than elapsed time, because the
+> sensor gates transmissions overnight and any short time-based rule would alarm every morning.
+>
+> Rev 4 also **changes two rev-3 behaviours**, so §3.2 and §3.4 above have been corrected in place
+> rather than left stale: the glyph is dismissed by **long press**, and a dismiss is now a **snooze**
+> that lapses at the sensor's next PRESENT frame instead of persisting until a state edge.
 
 > **Revision history**
 > - **rev 1** — pair by tapping an `<MBX …>` row under a new MBX chat filter.
@@ -143,21 +155,36 @@ static volatile uint32_t s_stateEpoch;    // writer: parser task only — bumped
 static volatile uint32_t s_dismissEpoch;  // writer: GUI task only
 ```
 
+> ⚠️ **Rev 4 changed the bump rule.** The original design bumped the epoch *only* on a state edge, so
+> a dismiss survived the sensor's hourly re-assertion indefinitely. Rev 4 makes dismiss a **snooze**
+> instead: the epoch bumps on **every PRESENT frame**, so the glyph returns the next time the sensor
+> reports mail still waiting. The mail has not gone anywhere, so the reminder should not be
+> permanently dismissible. The table below reflects rev 4.
+
 ```c
 glyph_on   =  s_mailPresent && (s_dismissEpoch != s_stateEpoch)
 dismiss()  =  s_dismissEpoch = s_stateEpoch          // GUI task
-on_frame() =  if (present != s_mailPresent) { s_mailPresent = present; s_stateEpoch++; }
+on_frame() =  if (present != s_mailPresent) { s_mailPresent = present; s_stateEpoch++;
+                                              if (present) tone_alert(); }
+              else if (present)             { s_stateEpoch++; }   // re-assertion, silent
 ```
 
 Why this is the right shape:
 
 | Scenario | Result |
 |---|---|
-| Mail arrives (ABSENT→PRESENT edge) | epoch bumps, `dismissEpoch` no longer matches → **glyph on** ✅ |
-| Driver taps to dismiss | `dismissEpoch = stateEpoch` → **glyph off** ✅ |
-| Hourly PRESENT re-assertion after a dismiss | no edge → no bump → **stays off** ✅ (a naive `if(present) dismissed=false` would re-light it every hour — the bug this avoids) |
+| Mail arrives (ABSENT→PRESENT edge) | epoch bumps, `dismissEpoch` no longer matches → **glyph on** + chime ✅ |
+| Driver long-presses to dismiss | `dismissEpoch = stateEpoch` → **glyph off** ✅ |
+| Hourly PRESENT re-assertion after a dismiss | epoch bumps → **glyph returns, silently** ✅ — the snooze lapses because the mail is still there |
 | Mail collected (PRESENT→ABSENT) | `s_mailPresent=false` → **glyph off**, latch reset for next time ✅ |
-| Both the ABSENT and the next PRESENT edge frames are lost | next hourly re-assertion carries the *current* state, which differs → bump → **self-corrects** ✅ |
+| Both the ABSENT and the next PRESENT edge frames are lost | next hourly re-assertion carries the *current* state → bump → **self-corrects** ✅ |
+
+The chime deliberately stays on the rising edge only. Sounding it on every re-assertion would nag
+hourly for mail the driver has already acknowledged, which is the opposite of what dismissing is for.
+
+**The epoch pair is still required even though the rule is now simpler.** A plain `bool dismissed`
+would have two writers — the parser clearing it and the GUI setting it — and that read-modify-write
+race would occasionally swallow a dismiss.
 
 Locking: none. ESP32 LX6 cores share DRAM with hardware coherency; naturally-aligned 32-bit and
 single-byte loads/stores are atomic, so tearing is impossible. `volatile` prevents the GUI task's
@@ -274,15 +301,20 @@ it against the button.
 > field is 3-4 characters (`DEV` vs `NORM`/`PAIR`), so the id does not sit at a constant index.
 > *(Rev 1 had `&src[5]` here, which pointed at the mode field. Fixed.)*
 
-### 3.4 Tap-to-dismiss on the glyph
+### 3.4 Long-press-to-dismiss on the glyph
 
 Make the existing label clickable from C — **no new EEZ widget, no new LVGL object**:
 
 ```c
 lv_obj_add_flag(objects.lbl_mail_available, LV_OBJ_FLAG_CLICKABLE);
 lv_obj_set_ext_click_area(objects.lbl_mail_available, 8);   // ~40x46 px target
-lv_obj_add_event_cb(objects.lbl_mail_available, mailGlyphClickedCb, LV_EVENT_CLICKED, nullptr);
+lv_obj_add_event_cb(objects.lbl_mail_available, mailGlyphLongPressedCb,
+                    LV_EVENT_LONG_PRESSED, nullptr);
 ```
+
+> ⚠️ **Rev 4: long press, not tap.** The glyph sits in the middle of the Home screen where stray taps
+> are easy, and dismissing is the one action there that discards information. It uses the global
+> `LONG_PRESS_TIME_MS` (§13.7), so it matches every other long press in the UI.
 
 Verified safe:
 - `create_screens()` runs once from `ui_init()`; objects are never destroyed, so a callback attached
@@ -307,7 +339,10 @@ Verified safe:
 [meshtastic_callback_task.cpp:44](src/tasks/meshtastic_callback_task.cpp#L44).
 
 A second, distinct chime (`tone_message()`) fires from the GUI task when the user **accepts** an
-offer, as confirmation.
+offer, and `tone_confirm()` when a long press **forgets** one — an 800 ms hold is long enough that
+without a cue you would not know when to let go.
+
+No chime when a snoozed glyph returns at the next re-assertion (§3.2).
 
 ---
 
@@ -682,6 +717,8 @@ two new EEZ objects and **no ongoing drift** — nothing in this feature allocat
 | [src/main.cpp](src/main.cpp) | `homeScreenInit()` + `settingsScreenInit()` + `HEAP_LOG` |
 | **src/ui/settings_screen.h / .cpp** | *new, not in the plan* — owns the GPS labels that moved to the Settings screen (§12) |
 | [src/tasks/gui_task.cpp](src/tasks/gui_task.cpp) | *not in the plan* — `settingsScreenPump()` registration |
+| [src/config.h](src/config.h) | *rev 4* — `LONG_PRESS_TIME_MS 800` (§13.7) |
+| [src/hardware/display.cpp](src/hardware/display.cpp) | *rev 4* — `lv_indev_set_long_press_time()` in `initTouchscreen()` |
 
 **Not touched (rev 1 would have changed all of these):** `chat_screen.cpp`, `chat_buffer.h`,
 `chatMessage_t`, and `get_set_vars.h`'s `mesh_filter` comment. This held — the rev 3 design kept the
@@ -752,10 +789,10 @@ fix, and Settings 2 shows no leftover artifacts from the objects that left it.
 
 ### 12.2 Pair button geometry, as placed
 
-D-6 left placement to EEZ Studio. As built: **Settings 2 at (167, 75), 140 × 15**, label in
-`lv_font_montserrat_10` — not the y≈162 / montserrat_14 the plan suggested. The smaller font is
-better: `PAIR MBX a1b2c3d4` is ~95 px inside a 140 px button, versus the ~136 px squeeze 14 pt would
-have caused. No overlap with the MAC row above (y 45-60) or temp-adj below (y 127).
+D-6 left placement to EEZ Studio. As first built: Settings 2 at (167, 75), 140 × 15, label in
+`lv_font_montserrat_10` — not the y≈162 / montserrat_14 the plan suggested. *(Superseded by rev 4,
+§13: the row was later reshaped to mirror the GCI row — button (80,71) 69×15 montserrat_12 with a
+separate value string at (163,70).)*
 
 ### 12.3 Added: green button state
 
@@ -797,3 +834,254 @@ and the generated tick block looks identical whether the expression is bound or 
 
 Not yet exercised: step 12/12a (TTL lapse and re-latch) and the two-mailbox cases, which need either
 a second sensor id or patience.
+
+---
+
+## 13. Rev 4 — GCI-consistent pairing UI + sensor health (BUILT)
+
+> **Status: built 2026-07-28, pending hardware verification.** Compiles clean at RAM 23.4% /
+> Flash 64.2%. §13.7 records where the as-built differs from the design in §13.1-§13.6.
+
+**Context.** The rev 3 UI packed everything into one button label (`PAIR MBX a1b2c3d4`), which does
+not match how GCI pairing presents itself one row above it on the same screen. Rev 4 splits it into
+the GCI shape — a fixed-label button plus a separate colour-coded value string — and uses the colour
+to carry sensor health, which rev 3 had no way to show at all.
+
+### 13.1 The GCI model, precisely
+
+`lbl_gci_mac_addr_value` is **EEZ-owned for text, C-owned for colour**: it has a tick block, *and*
+`updateEspnowGciMacColor()` ([gui_task.cpp:25-56](src/tasks/gui_task.cpp#L25-L56)) sets its colour
+from C (green `#00ff2d` connected, red `#ff0000` disconnected). Text and colour are separate
+properties, so there is no conflict.
+
+Rev 4 mirrors that exactly, which also **permanently removes the label-ownership hazard of §12.4**:
+C never writes this label's text, so no future re-export can reintroduce the fight.
+
+Layout is already in place and mirrors the GCI row:
+
+| | GCI row (y 45) | Mailbox row (y ~70) |
+|---|---|---|
+| Button | `btn_send_mac_to_espnow` (79,45) 68×15, montserrat_12 | `btn_pair_mailbox` (80,71) 69×15, montserrat_12 |
+| Value | `lbl_gci_mac_addr_value` (163,45) montserrat_14 | `lbl_mailbox_id_str` (163,70) montserrat_14 |
+
+From x=163 there is ~157 px, about 18 characters at montserrat_14 — `a1b2c3d4 OFFERED` (16) fits.
+
+### 13.2 Why health is measured by `seq`, not elapsed time
+
+The sensor **gates transmissions overnight** (DDR04). A legitimate silence is therefore 8-12 hours,
+so any "not heard in N minutes → yellow" rule alarms every morning — every day, in a NO_GCI install
+where the GCD is always on. Elapsed time is unusable as a health signal without encoding the sensor's
+transmit window into the GCD, which would couple the two firmwares.
+
+`seq` (field 2, 0-255 wrapping) is already in every frame and currently ignored. It is the only
+**direct** measure of missed traffic:
+
+```c
+missed += (seq - lastSeq - 1) & 0xFF;
+```
+
+This is immune to night gating — a gated sensor sends nothing, so `seq` does not advance, and the
+first frame after the gate is `lastSeq + 1` for a gap of zero. Re-baselining on the first frame of
+each wake makes it immune to cart-off time too, satisfying *"this time gap should not be counted
+toward missed messages"* with **no persistence, no RTC memory, and no dependence on whether the
+install is always-on or deep-sleeping.**
+
+**`seq` cannot detect a *dead* sensor**, because silence produces no gap — so silence is handled
+separately by the 24-hour awake-time rule in §13.3.1. The two are complementary: `seq` counts what
+was missed while the sensor was talking; the timer catches it going quiet altogether.
+
+### 13.3 Display states
+
+`lbl_pair_mailbox` label becomes the fixed literal **`PAIR MBX`**, set in EEZ; C stops writing it.
+
+| Condition | `lbl_mailbox_id_str` | Colour |
+|---|---|---|
+| Not paired, no live offer | `NO MAILBOX` | white |
+| Live offer, id ≠ paired | `deadbeef OFFERED` | white |
+| Paired, silent ≥ 24 h awake (§13.3.1) | `a1b2c3d4 SILENT` | **red** `#ff0000` |
+| Paired, no contact yet this wake | `a1b2c3d4` | white |
+| Paired, contact, nothing missed | `a1b2c3d4` | **green** `#00ff2d` |
+| Paired, contact, missed N ≥ 1 | `a1b2c3d4 (N)` | **yellow** `#ffff00` |
+
+The miss count is parenthesised so it reads as an annotation rather than as part of the hex id,
+which is otherwise easy to misread at a glance.
+
+Precedence, highest first: **OFFERED → SILENT → yellow(N) → green → white.** Yellow is suppressed at
+zero per your note, and because green/yellow are separated by the miss count rather than a timer, the
+colour and the number can never disagree. Red reuses the GCI disconnected colour.
+
+#### 13.3.1 Silent-sensor detection — 24 h of *awake* time
+
+`seq` cannot see silence, so a dead sensor would otherwise sit at white forever. A 24-hour threshold
+solves this and is immune to the night gate, being roughly double the longest legitimate quiet
+period.
+
+The measurement must be **awake time, not wall-clock**. Wall-clock cannot distinguish "the sensor is
+silent" from "we were not listening": a cart parked Monday to Friday has a four-day-old last contact
+even if the sensor transmitted hourly all week — a false alarm on a healthy sensor, and precisely the
+cart-off case that must not count.
+
+```c
+#define MBX_SILENT_MS (24UL * 60UL * 60UL * 1000UL)
+
+// Silent when nothing has been heard for 24 h of continuous listening. Falls back
+// to time-since-boot when the paired mailbox has never been heard this wake, which
+// is the common already-dead-at-power-on case.
+uint32_t since = millis() - (s_heardThisWake ? s_lastHeardMs : s_bootMs);
+bool silent = (s_pairedMbxId != 0) && (since >= MBX_SILENT_MS);
+```
+
+No persistence, no RTC memory, no dependence on GPS time — `millis()` within the current wake session
+is sufficient, which also sidesteps the install-dependent power question.
+
+**Behaviour by installation, stated so it is not later mistaken for a bug:**
+- **NO_GCI** (GCD powered continuously, only the display sleeps): `millis()` runs unbroken, so this
+  works as intended — red appears 24 h after genuine silence.
+- **GCI** (deep sleep when the cart is off): the timer restarts each wake, so the warning appears only
+  if the cart runs 24 h continuously — in practice, rarely. This is graceful degradation, not a
+  defect: a GCD that is not listening cannot legitimately distinguish a dead sensor from a parked
+  cart, and the alternative (wall-clock) trades this silence for false alarms.
+
+*If dead-sensor detection is later wanted in deep-sleep installs, the addition is a persisted
+last-heard epoch (NVS key `mbx_heard`, ≤15 chars) plus a rule that requires ~1 h of listening in the
+new wake before trusting a wall-clock gap. That needs a valid GPS clock, which is unreliable before
+lock — see the `time(NULL)` hazard in §3.3 — so it is deliberately not in scope here.*
+
+Two rules that fall out of this and are worth stating:
+
+- **A PAIR offer from the already-paired mailbox is treated as contact, not an offer.** It updates
+  `seq`/health and shows green, rather than `OFFERED`. Accepting it is a no-op, so advertising it as
+  actionable would be misleading.
+- **An offer from a different id takes precedence over the paired display** while live (45 s), then
+  reverts. It is transient and actionable; the paired id is static status.
+
+The button keeps its rev 3 behaviour: short click accepts, long press forgets, and `LV_STATE_CHECKED`
+green exactly while a claimable offer is pending.
+
+### 13.4 Implementation
+
+**EEZ Studio (first).**
+1. New **string** variable `mailbox_id_str`; bind `lbl_mailbox_id_str`'s **Text** to it.
+2. Set `lbl_pair_mbx`'s Text to the literal **`PAIR MBX`** (it currently has no tick block — keep it
+   that way).
+3. Export.
+
+**`hot_packet_parser.cpp`** — read field 2 with the existing `hotField()`, parse to `uint8_t`, and
+pass it through: `mailboxOnFrame(mbxId, present, isPairOffer, seq, seqValid)`.
+
+**`mailbox.h` / `.cpp`** — replace `mailboxStatusText()` with:
+
+```c
+const char* mailboxIdText(void);   // for get_var_mailbox_id_str(); static buffer
+uint8_t     mailboxHealth(void);   // 0 = white, 1 = green, 2 = yellow, 3 = red/silent
+```
+
+New state, all single-writer by the §3.2 discipline (parser writes, GUI reads):
+
+```c
+static volatile uint8_t  s_lastSeq;        // last seq from the paired mailbox
+static volatile bool     s_seqValid;       // false until first contact this wake
+static volatile uint16_t s_missedCount;    // saturating; reset on pair/forget
+static volatile uint32_t s_lastHeardMs;    // millis() of last matched frame
+static volatile bool     s_heardThisWake;  // false until first contact this wake
+static           uint32_t s_bootMs;        // set once in mailboxLoad()
+```
+
+Contact handling, applied to **any** matched frame (NORM, DEV, PAIR) from the paired id, before the
+existing PRESENT/ABSENT edge logic:
+
+```c
+if (!s_seqValid) { s_seqValid = true; }                       // baseline, no count
+else             { s_missedCount += (uint8_t)(seq - s_lastSeq - 1); }
+s_lastSeq       = seq;
+s_lastHeardMs   = millis();      // also feeds the 24 h silence timer (§13.3.1)
+s_heardThisWake = true;
+```
+
+`mailboxAcceptOffer()` and `mailboxForget()` clear `s_seqValid` and `s_missedCount` alongside the
+existing glyph-state reset — a new sensor starts with a clean history.
+
+**`get_set_vars.{h,cpp}`** — `get_var_mailbox_id_str()` returning `mailboxIdText()`, plus a no-op
+`set_var_mailbox_id_str()`, mirroring the existing string-variable pattern (`get_var_sats_hdop()`).
+
+**`settings2_screen.cpp`** — delete the `lbl_pair_mbx` writes, `s_mbxLabelCache` and `s_mbxLabelMs`.
+Add a colour update in the existing 1 Hz pump block, modelled on `updateEspnowGciMacColor()` but
+reusing the pump's existing `lv_scr_act() == objects.settings2` guard rather than duplicating it:
+
+```c
+uint8_t h = mailboxHealth();
+if (h != s_lastHealth) {
+    s_lastHealth = h;
+    lv_color_t c = (h == 1) ? lv_color_hex(0xff00ff2d)   // green  — healthy
+                 : (h == 2) ? lv_color_hex(0xffffff00)   // yellow — frames missed
+                 : (h == 3) ? lv_color_hex(0xffff0000)   // red    — silent 24 h
+                            : lv_color_white();          // white  — awaiting / unpaired
+    lv_obj_set_style_text_color(objects.lbl_mailbox_id_str, c, LV_PART_MAIN | LV_STATE_DEFAULT);
+}
+```
+
+### 13.5 Verification
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | Boot unpaired | `NO MAILBOX`, white; button reads `PAIR MBX` |
+| 2 | Send `\|#03#PAIR#a1b2c3d4#5#…` | `a1b2c3d4 OFFERED` white; button green |
+| 3 | Short click | `a1b2c3d4` white (paired, no contact yet); button back to blue |
+| 4 | Send `\|#03#NORM#a1b2c3d4#6#…#PRESENT` | `a1b2c3d4` **green**; glyph lights |
+| 5 | Send seq **7** | still green, no count — consecutive |
+| 6 | Send seq **10** (skipping 8, 9) | `a1b2c3d4 2` **yellow** |
+| 7 | Send seq 11 | stays `a1b2c3d4 2` yellow — count is cumulative, not reset by good frames |
+| 8 | Send `\|#03#PAIR#a1b2c3d4#12#…` (own sensor) | treated as contact — no `OFFERED`, count unchanged |
+| 9 | Send `\|#03#PAIR#deadbeef#…` | `deadbeef OFFERED` white, button green; after 45 s reverts to `a1b2c3d4 2` yellow |
+| 10 | Accept `deadbeef` | `deadbeef` white — history cleared for the new sensor |
+| 11 | Long press | `NO MAILBOX` white |
+| 12 | Reboot while paired | `a1b2c3d4` white until the first frame — off-time did not count as missed |
+| 13 | Simulate the night gate: pause 10 min, resume at the next consecutive seq | no miss counted — the gap is time, not `seq` |
+| 14 | Temporarily set `MBX_SILENT_MS` to ~2 min, pair, then send nothing | `a1b2c3d4 SILENT` red after the timeout; restore the real value afterwards |
+| 15 | With the short timeout, send a frame before it elapses | timer resets — stays green/yellow, never reaches red |
+
+### 13.6 Open items
+
+- **O-8 — dead-sensor detection in deep-sleep installs.** Handled for NO_GCI installs by §13.3.1; in
+  GCI installs the 24 h awake timer rarely elapses. Closing that gap needs a persisted last-heard
+  epoch plus a listening-time qualifier, and a trustworthy GPS clock. Deferred deliberately.
+- **Confirm `MBX_SILENT_MS = 24 h` clears DDR04's gate.** The threshold assumes the longest
+  legitimate quiet period is a single night. If the sensor can also gate on low battery or for
+  multi-day stretches, raise it accordingly — it is one `#define`.
+- **Sensor-side assumptions to confirm:** `seq` increments once per transmission, shares one counter
+  across NORM/DEV/PAIR modes, and is not reset by the pair button. If PAIR frames use a separate
+  counter, exclude them from the gap maths.
+
+### 13.7 As built — rev 4
+
+**Long press is now global, and doubled.** `LONG_PRESS_TIME_MS 800` in `config.h`, applied once via
+`lv_indev_set_long_press_time()` in `initTouchscreen()`. LVGL 9 exposes this only at runtime per
+input device — it is **not** an `lv_conf.h` setting, so it cannot be lost when the build script
+re-copies the config template.
+
+This replaced a first attempt that scoped the longer hold to the pair button alone
+(`PRESSED` + `LONG_PRESSED_REPEAT` + a fired flag). That machinery existed only to avoid a dead zone
+between LVGL's 400 ms `SHORT_CLICKED` cutoff and the 800 ms hold; once the global threshold moved to
+800 ms, `SHORT_CLICKED` covers everything below it and the workaround was deleted. **It also affects
+chat-row reply**, which is the intended consistency but the one other place it will be felt.
+
+**A stray EEZ variable breaks the link, not just the display.** During bring-up the project briefly
+declared two string variables for one label (`lbl_mbx_id_value` and `mailbox_id_str`). EEZ puts
+*every* declared native variable into `ui.c`'s `native_vars` table, so **both** needed C definitions
+or the firmware would not link — regardless of which one the label was bound to. Deleting the unused
+variable in EEZ Studio and re-exporting is the fix; defining both is a valid stopgap since they can
+return the same text. Generalises the §12.4 lesson: an orphaned EEZ variable is a build break, while
+an orphaned EEZ *expression* is a silent display break.
+
+**`lbl_remote_mac_addr` was deleted** from the EEZ project during the layout rework — the "REMOTE MAC"
+caption on the GCI row. No C code referenced it, so there was no build impact, and it leaves both
+pairing rows symmetric as `[button][value]`.
+
+**Chime map, final:** `tone_alert()` on the PRESENT rising edge, `tone_message()` on accepting an
+offer, `tone_confirm()` on a long-press forget. Silent when a snoozed glyph returns.
+
+**Not yet verified on hardware.** The seq-gap counting, the colour states, the 800 ms holds and the
+snooze behaviour all compile and are logically traced, but none has been exercised on the CYD. The
+24 h `SILENT` state is impractical to test as-is — temporarily shrink `MBX_SILENT_MS` to a couple of
+minutes to exercise it.
+

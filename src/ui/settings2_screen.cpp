@@ -25,10 +25,12 @@ static uint32_t s_fuelWritePendingMs = 0;
 // Same debounce for the mailbox pairing write.
 static uint32_t s_mbxWritePendingMs = 0;
 
-// Last text written to lbl_pair_mbx. Writing a label invalidates it, so the
-// pump only writes when the string actually changes.
-static char     s_mbxLabelCache[24] = "";
-static uint32_t s_mbxLabelMs = 0;
+// lbl_pair_mbx is a fixed "PAIR MBX" literal owned by EEZ; C never writes it.
+// lbl_mailbox_id_str carries the status text, also EEZ-owned via the
+// mailbox_id_str variable — C drives only its colour, mirroring how
+// updateEspnowGciMacColor() handles lbl_gci_mac_addr_value one row above.
+static uint32_t s_mbxLabelMs   = 0;
+static uint8_t  s_lastHealth   = 0xFF;   // force a write on first evaluation
 
 // Mirrors LV_STATE_CHECKED on btn_pair_mailbox: green while an unclaimed offer
 // is pending, i.e. exactly while tapping the button does something. Tracked so
@@ -77,7 +79,9 @@ static void fuelCycleCb(lv_event_t *) {
 
 // Claims the pending mailbox offer. SHORT_CLICKED, not CLICKED: LVGL 9 sends
 // CLICKED on release regardless of press duration, so pairing it with the
-// long-press handler below would re-accept an offer immediately after forgetting it.
+// long-press handler below would re-accept an offer immediately after forgetting
+// it. SHORT_CLICKED covers everything shorter than LONG_PRESS_TIME_MS, so there
+// is no gap between the two gestures.
 static void mbxAcceptCb(lv_event_t *) {
     if (mailboxAcceptOffer()) {
         tone_message();
@@ -85,9 +89,12 @@ static void mbxAcceptCb(lv_event_t *) {
     }
 }
 
-// Long press forgets the paired mailbox, turning the feature off.
+// Long press (LONG_PRESS_TIME_MS, set globally in initTouchscreen) forgets the
+// paired mailbox. Confirms audibly, since the hold is long enough that you would
+// otherwise not know when to let go.
 static void mbxForgetCb(lv_event_t *) {
     mailboxForget();
+    tone_confirm();
     s_mbxWritePendingMs = millis();
 }
 
@@ -99,8 +106,6 @@ void settings2ScreenInit() {
     if (objects.btn_pair_mailbox) {
         lv_obj_add_event_cb(objects.btn_pair_mailbox, mbxAcceptCb, LV_EVENT_SHORT_CLICKED, nullptr);
         lv_obj_add_event_cb(objects.btn_pair_mailbox, mbxForgetCb, LV_EVENT_LONG_PRESSED,  nullptr);
-        mailboxStatusText(s_mbxLabelCache, sizeof s_mbxLabelCache);
-        lv_label_set_text(objects.lbl_pair_mbx, s_mbxLabelCache);
     }
 
     // Register pre-render hide for every future visit to Settings2.
@@ -145,17 +150,25 @@ void settings2ScreenPump() {
     // is active — writing a label invalidates it, and invalidating an object on
     // an inactive screen queues dirty regions that show up as sluggish transitions.
     uint32_t now = millis();
-    if (objects.lbl_pair_mbx && (now - s_mbxLabelMs) >= 1000) {
+    if ((now - s_mbxLabelMs) >= 1000) {
         s_mbxLabelMs = now;
-        char buf[24];
-        mailboxStatusText(buf, sizeof buf);
-        if (strcmp(buf, s_mbxLabelCache) != 0) {
-            strcpy(s_mbxLabelCache, buf);
-            lv_label_set_text(objects.lbl_pair_mbx, buf);
+
+        // Colour of the id string: white awaiting / unpaired, green healthy,
+        // yellow with a miss count, red after 24 h of silence. Only written on a
+        // change — setting a style invalidates the object.
+        uint8_t h = mailboxHealth();
+        if (h != s_lastHealth && objects.lbl_mailbox_id_str) {
+            s_lastHealth = h;
+            lv_color_t c = (h == MBX_HEALTH_OK)     ? lv_color_hex(0xff00ff2d)
+                         : (h == MBX_HEALTH_MISSED) ? lv_color_hex(0xffffff00)
+                         : (h == MBX_HEALTH_SILENT) ? lv_color_hex(0xffff0000)
+                                                    : lv_color_white();
+            lv_obj_set_style_text_color(objects.lbl_mailbox_id_str, c,
+                                        LV_PART_MAIN | LV_STATE_DEFAULT);
         }
 
-        // Green while there is something to claim. Independent of the label, so
-        // it still reads correctly if the label text is ever contested.
+        // Button turns green while there is something to claim, so it is
+        // highlighted exactly when pressing it does something.
         uint32_t offer = mailboxFreshOfferId();
         bool pending = (offer != 0 && offer != mailboxGetPairedId());
         if (pending != s_mbxOfferPending) {

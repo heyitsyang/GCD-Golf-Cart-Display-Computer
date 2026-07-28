@@ -4,7 +4,8 @@
       "Bash(find:*)",
       "Read(//c/Users/Yang/.claude/projects/c--Users-Yang-Documents-PlatformIO-Projects-GCD-Golf-Cart-Display-Computer/memory/**)",
       "Bash(cp \"/c/Users/Yang/.claude/plans/i-have-created-a-bubbly-reddy.md\" \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\" && ls -la \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\")",
-      "Bash(cp \"/c/Users/Yang/.claude/plans/i-have-created-a-bubbly-reddy.md\" \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\" && wc -c \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\")"
+      "Bash(cp \"/c/Users/Yang/.claude/plans/i-have-created-a-bubbly-reddy.md\" \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\" && wc -c \"/c/Users/Yang/Documents/PlatformIO/Projects/GCD-Golf-Cart_Display-Computer/Documentation/GCD Mailbox Glyph Design Plan.md\")",
+      "Bash(awk ' *)"
     ],
     "deny": [],
     "ask": [],

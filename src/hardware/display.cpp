@@ -110,6 +110,13 @@ void initTouchscreen() {
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev, my_touchpad_read);
 
+    // One long-press threshold for the whole UI. LVGL's built-in default is
+    // 400 ms, which is easy to trigger by accident on destructive gestures
+    // (forgetting a paired mailbox, opening a reply). Set once here so every
+    // long press in the project behaves identically — LVGL 9 exposes this only
+    // at runtime, per input device; it is not an lv_conf.h setting.
+    lv_indev_set_long_press_time(indev, LONG_PRESS_TIME_MS);
+
 #if DEBUG_INIT == 1
     Serial.println("Touchscreen initialized");
 #endif

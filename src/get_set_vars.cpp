@@ -763,6 +763,18 @@ void set_var_mail_available(bool value) {
     (void)value;
 }
 
+// Text for lbl_mailbox_id_str on Settings 2. EEZ owns this label's TEXT via this
+// variable while C owns only its COLOUR — the same split as
+// lbl_gci_mac_addr_value / updateEspnowGciMacColor(). Keeping C out of the text
+// entirely is what prevents the tick-block fight that blanked lbl_pair_mbx.
+const char *get_var_mailbox_id_str() {
+    return mailboxIdText();
+}
+
+void set_var_mailbox_id_str(const char *value) {
+    (void)value;
+}
+
 int32_t get_var_lux_now() {
     return lux_now;
 }
