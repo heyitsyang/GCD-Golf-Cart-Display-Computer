@@ -17,7 +17,7 @@ Design date: 2026-07-26 (rev 3) · Built and verified: 2026-07-27 · Codebase: *
 > **Read §12 before changing any of this** — it records where the as-built differs from the plan
 > below, which is otherwise left in its original forward-looking form.
 >
-> ### 🔨 Rev 4 is built, pending hardware verification — see §13
+> ### ✅ Rev 4 is built, verified on hardware, and committed — see §13
 >
 > A UI revision to make mailbox pairing consistent with the GCI pairing row above it: fixed
 > `PAIR MBX` button label, plus a separate colour-coded `lbl_mailbox_id_str` value string carrying
@@ -601,16 +601,17 @@ D-1 … D-5 were confirmed on 2026-07-26; D-6 … D-8 are open.
 
 ## 7. Open items
 
-- **O-1 — GCM / sensor RF alignment.** ✅ **Closed.** The sensor's **primary** channel will be set to
-  `GolfCart`, matching the cart mesh, so the DDR02a §4.2 primary-name-hash slot derivation puts both
-  radios on the same frequency.
+- **O-1 — GCM / sensor RF alignment.** ✅ **Decided; closes on documentation.** The sensor's
+  **primary** channel will be set to `GolfCart`, matching the cart mesh, so the DDR02a §4.2
+  primary-name-hash slot derivation puts both radios on the same frequency. Nothing to build — this
+  closes when it is written down as an installer step (§7.1).
 - **O-2 — filter-on-input softening.** ⛔ **Dissolved** with the MBX filter. *(Your question — how
   does someone reset `mbx_id` for a replacement sensor? — is answered directly by the UI:
   **long-press the button to forget**, or just press the new sensor's pair button and accept the
   offer, which overwrites. Neither requires knowing either id.)*
-- **O-4 — sensor firmware dependency (the only thing gating rev 3).** Pair mode requires a **button
-  on the mailbox sensor** that emits `mode=PAIR` frames. Only `mode` and `mbx_id` need be valid in
-  that frame.
+- **O-4 — sensor firmware dependency. The one genuinely open engineering item.** ⏳ **Blocked on
+  hardware: the mailbox sensor has not been built yet.** Pair mode requires a **button on the mailbox
+  sensor** that emits `mode=PAIR` frames. Only `mode` and `mbx_id` need be valid in that frame.
 
   **One frame per button press is sufficient — no repeat window is required.** Pairing is done with
   the cart and the mailbox in close proximity, so the link is short and effectively lossless, and the
@@ -634,10 +635,11 @@ D-1 … D-5 were confirmed on 2026-07-26; D-6 … D-8 are open.
 
   This is a change to the sensor project (DDR02a §5), not to the GCD. **The GCD side is fully
   testable without it** — send a `PAIR` frame by hand from a phone (verification step 3).
-- **O-5 — label the id on the sensor (recommended either way; zero firmware cost).** DDR05 computes
-  the CRC-32 on-chip during programming; print it over UPDI/serial and put a sticker inside the
-  mailbox lid. This does not replace pairing — it makes the accepted id *checkable*, and it is the
-  only recovery path if the sensor's pair button ever fails.
+- **O-5 — label the id on the sensor.** ✅ **Decided; closes on documentation.** DDR05 computes the
+  CRC-32 on-chip during programming; print it over UPDI/serial and put a sticker inside the mailbox
+  lid. This does not replace pairing — it makes the accepted id *checkable*, and it is the only
+  recovery path if the sensor's pair button ever fails. Zero firmware cost; it closes when the
+  programming step is written down (§7.1).
 - **O-6 — a second cart can accept the same offer.** Not a defect: two drivers sharing one mailbox is
   a legitimate case, and the sensor cannot tell anyone apart anyway. Worth stating so it does not get
   "fixed" later.
@@ -674,6 +676,32 @@ D-1 … D-5 were confirmed on 2026-07-26; D-6 … D-8 are open.
     the parser was in fact working. Pair offers, pair/unpair and glyph state edges now log
     **unconditionally**; they are rare and user-initiated, matching the ESP-NOW
     "always show pairing success" precedent. No new flag was added.
+
+### 7.1 Where the open items actually stand (2026-07-28)
+
+The GCD firmware is complete, verified and committed. Nothing on this list is waiting on GCD code,
+and the remaining items fall into exactly two groups.
+
+**Documentation-gated — decided, nothing to build. These close when the manual gains Mailbox Sensor
+content:**
+
+| | What the documentation owes |
+|---|---|
+| **O-1** | Installer step: set the sensor's **primary** channel to `GolfCart` so it shares the cart mesh's RF slot |
+| **O-5** | Programming step: read the `mbx_id` over UPDI/serial and put a sticker inside the mailbox lid |
+| **O-7** | Operator content: pairing procedure, the glyph and its long-press snooze, un-pair/replace, the colour key |
+| **O-8** | One sentence for GCI-install owners: `SILENT` may never appear, because the GCD sleeps with the cart |
+
+**Hardware-gated — one item:**
+
+| | Status |
+|---|---|
+| **O-4** | ⏳ **The mailbox sensor has not been built yet.** Firmware needs a pair button emitting one `mode=PAIR` frame per press. Until the hardware exists, the sensor-side `seq` assumptions (§13.6) also stay unconfirmed, since every test to date has used hand-sent frames. |
+
+**Open decision:** whether the Mailbox Sensor content becomes a **new section in the GCS User
+Manual** or a **separate Mailbox Sensor Manual**. O-1 and O-5 are installer/programming steps rather
+than operator steps, which is the argument for a separate document — or for splitting them into the
+Assembly and Software Installation manuals as originally suggested under O-7. Undecided.
 
 ---
 
@@ -857,10 +885,10 @@ a second sensor id or patience.
 
 ---
 
-## 13. Rev 4 — GCI-consistent pairing UI + sensor health (BUILT)
+## 13. Rev 4 — GCI-consistent pairing UI + sensor health (BUILT AND VERIFIED)
 
-> **Status: built 2026-07-28, pending hardware verification.** Compiles clean at RAM 23.4% /
-> Flash 64.2%. §13.7 records where the as-built differs from the design in §13.1-§13.6.
+> **Status: built, verified on hardware, and committed 2026-07-28.** RAM 23.4% / Flash 64.2%.
+> §13.7 records where the as-built differs from the design in §13.1-§13.6.
 
 **Context.** The rev 3 UI packed everything into one button label (`PAIR MBX a1b2c3d4`), which does
 not match how GCI pairing presents itself one row above it on the same screen. Rev 4 splits it into
@@ -906,9 +934,37 @@ each wake makes it immune to cart-off time too, satisfying *"this time gap shoul
 toward missed messages"* with **no persistence, no RTC memory, and no dependence on whether the
 install is always-on or deep-sleeping.**
 
-**`seq` cannot detect a *dead* sensor**, because silence produces no gap — so silence is handled
-separately by the 24-hour awake-time rule in §13.3.1. The two are complementary: `seq` counts what
-was missed while the sensor was talking; the timer catches it going quiet altogether.
+**`seq` cannot detect a *dead* sensor**, because silence produces no gap. A partial mitigation exists
+in the 24-hour awake-time rule (§13.3.1), which works in NO_GCI installs but rarely fires in GCI ones.
+**Detecting a dead sensor in a deep-sleeping install is now explicitly out of scope** — see §13.2.1.
+
+#### 13.2.1 The miss count wraps at 256, and that is accepted
+
+`seq` is a **single byte**, so the gap arithmetic aliases: `gap = (seq - lastSeq - 1) & 0xFF` recovers
+`N mod 256`, not `N`.
+
+| Frames actually missed | Gap the GCD computes |
+|---|---|
+| 1 | 1 |
+| 255 | 255 |
+| **256** | **0 — indistinguishable from a perfect run** |
+| 257 | 1 |
+
+At the hourly re-assertion rate, 256 missed frames is about **10.7 days**. So an outage of roughly
+that length, or any multiple of it, reads as *healthy*. There is no way around this from the GCD
+side — the information is not in the packet.
+
+*(`s_missedCount` is a `uint16_t` accumulating across separate gap events and saturating at 9999, so
+the displayed total can legitimately exceed 255. That ceiling is not the limitation; the per-event
+8-bit aliasing above is.)*
+
+**Accepted deliberately (2026-07-28).** The count is understood as *"frames missed within this
+session, modulo 256"* — a link-quality hint, not an outage log. Yellow with a count is the best the
+GCD can honestly offer, and a dead sensor is simply not detectable in a deep-sleeping install. Every
+alternative considered — a persisted last-heard wall-clock epoch, persisting `seq` through sleep,
+escalating to red at N consecutive misses — either needs a trustworthy GPS clock that is not
+available before lock, cannot separate sleep-time gaps from missed-frame gaps, or still fails on a
+*fully* dead sensor because silence generates no frames to count. See §13.6.
 
 ### 13.3 Display states
 
@@ -1062,9 +1118,16 @@ if (h != s_lastHealth) {
 
 ### 13.6 Open items
 
-- **O-8 — dead-sensor detection in deep-sleep installs.** Handled for NO_GCI installs by §13.3.1; in
-  GCI installs the 24 h awake timer rarely elapses. Closing that gap needs a persisted last-heard
-  epoch plus a listening-time qualifier, and a trustworthy GPS clock. Deferred deliberately.
+- **O-8 — dead-sensor detection in deep-sleep installs.** ✅ **CLOSED as won't-do (2026-07-28);
+  documentation only.** Detecting a dead sensor in a deep-sleeping install is **out of scope**, and
+  the miss count is accepted as *"missed within this session, modulo 256"* (§13.2.1). Handled for
+  NO_GCI installs by §13.3.1; in GCI installs the 24 h awake timer
+  rarely elapses, so `SILENT` may simply never appear. That behaviour is **accepted, not a defect** —
+  a GCD that is asleep cannot distinguish a dead sensor from a parked cart, and the wall-clock
+  alternative trades this silence for false alarms on any cart left standing for a day.
+  What is owed is a sentence in the manual telling GCI-install owners not to rely on `SILENT` (§7.1),
+  **not** the persisted last-heard epoch sketched earlier. That remains available if the behaviour is
+  ever judged insufficient, but it is no longer the plan of record.
 - **Confirm `MBX_SILENT_MS = 24 h` clears DDR04's gate.** The threshold assumes the longest
   legitimate quiet period is a single night. If the sensor can also gate on low battery or for
   multi-day stretches, raise it accordingly — it is one `#define`.
@@ -1190,8 +1253,15 @@ Calling tones from `espnowTask` is safe and precedented — `beep_internal()` dr
 and `ledcWrite()` with no LVGL involvement, the same basis on which `mailbox.cpp` calls `tone_alert()`
 from `meshtasticCallbackTask`.
 
-**Not yet verified on hardware.** The seq-gap counting, the colour states, the 800 ms holds and the
-snooze behaviour all compile and are logically traced, but none has been exercised on the CYD. The
-24 h `SILENT` state is impractical to test as-is — temporarily shrink `MBX_SILENT_MS` to a couple of
-minutes to exercise it.
+**Verified on hardware 2026-07-28, and committed.** The colour states, the 800 ms holds, the pairing
+gestures and the snooze all behave as designed on the CYD with hand-sent frames. The snooze chime was
+found broken during that pass and fixed (§3.2) — the returning glyph was silent because the chime had
+been tied to the mail-state edge rather than the glyph edge.
+
+**Two things remain unexercised, both by nature rather than by omission:**
+- **The 24 h `SILENT` state**, which needs `MBX_SILENT_MS` temporarily shrunk to a couple of minutes.
+- **Real `seq` behaviour**, which cannot be checked until the sensor firmware exists (O-4). Everything
+  to date has used hand-sent frames, so the sensor-side assumptions in §13.6 are still assumptions:
+  that `seq` increments once per transmission, shares one counter across `NORM`/`DEV`/`PAIR`, and is
+  not reset by the pair button.
 

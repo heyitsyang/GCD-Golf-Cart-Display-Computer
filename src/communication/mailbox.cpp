@@ -116,6 +116,17 @@ void mailboxOnFrame(uint32_t mbxId, bool present, bool isPairOffer,
     // Count frames missed between two we actually received. The first frame of
     // each wake only establishes a baseline, which is what keeps cart-off time
     // out of the count.
+    //
+    // seq is ONE BYTE, so this recovers (frames missed) mod 256, not the true
+    // total: exactly 256 missed frames aliases to a gap of 0 and reads as a
+    // perfect run. At the hourly re-assertion rate that is a ~10.7 day outage.
+    // Accepted deliberately — the information is not in the packet, so no GCD
+    // change can recover it. Read the count as a link-quality hint scoped to the
+    // current session, not as an outage log. See design plan section 13.2.1.
+    //
+    // s_missedCount is uint16_t and accumulates across separate gap events
+    // (saturating at 9999), so the displayed total can exceed 255 legitimately.
+    // That ceiling is not the limitation; the per-event 8-bit aliasing is.
     if (seqValid) {
         if (s_seqValid) {
             uint8_t gap = (uint8_t)(seq - s_lastSeq - 1);
