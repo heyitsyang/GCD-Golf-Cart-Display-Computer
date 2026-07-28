@@ -4,8 +4,11 @@
 #include "globals.h"
 #include "settings2_screen.h"
 #include "communication/espnow_handler.h"
+#include "communication/mailbox.h"
+#include "hardware/display.h"
 #include "storage/preferences_manager.h"
 #include "config.h"
+#include <string.h>
 
 // Guard time before committing a cycle-button selection to NVM/ESP-NOW.
 // Long enough that the user can cycle past intermediate options without
@@ -19,19 +22,34 @@ static const char * const FUEL_NAMES[] = {
 // millis() timestamp of last fuel-type tap; 0 = no write pending
 static uint32_t s_fuelWritePendingMs = 0;
 
+// Same debounce for the mailbox pairing write.
+static uint32_t s_mbxWritePendingMs = 0;
+
+// Last text written to lbl_pair_mbx. Writing a label invalidates it, so the
+// pump only writes when the string actually changes.
+static char     s_mbxLabelCache[24] = "";
+static uint32_t s_mbxLabelMs = 0;
+
+// Mirrors LV_STATE_CHECKED on btn_pair_mailbox: green while an unclaimed offer
+// is pending, i.e. exactly while tapping the button does something. Tracked so
+// the state is only touched on a change — add/clear_state invalidates the object.
+static bool     s_mbxOfferPending = false;
+
 // True once the GPS row + home-loc section has been revealed this visit.
 // Reset by settings2LoadStartCb so next entry always starts with the reduced widget set.
 static bool s_gpsRowShown = false;
 
-// Hides GPS row and home-loc section. Called at boot and via SCREEN_LOAD_START so
+// Hides the home-loc section. Called at boot and via SCREEN_LOAD_START so
 // widgets are hidden before the first render of every Settings2 visit, keeping peak
 // draw-task heap low and preventing the OOM that plagued the original render pass.
+//
+// The sats/HDOP/lat/long labels used to be hidden here too, but they now live on
+// the Settings screen and are owned by settings_screen.cpp. Touching them from
+// here would toggle HIDDEN on objects belonging to an inactive screen — the
+// invalidate trap described in settings2ScreenOnExit() — and they could never be
+// revealed, because the pump below returns early unless Settings2 is active.
 static void doHideGpsWidgets() {
     lv_obj_add_flag(objects.container_gps_hide, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(objects.sats_hdop_1, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(objects.lbl_sats_hdop_value, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(objects.lbl_cur_lat_value, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(objects.lbl_cur_long_value, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(objects.at_home_indicator, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(objects.btn_set_home_loc, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(objects.set_home_loc_value, LV_OBJ_FLAG_HIDDEN);
@@ -57,10 +75,33 @@ static void fuelCycleCb(lv_event_t *) {
     s_fuelWritePendingMs = millis();
 }
 
+// Claims the pending mailbox offer. SHORT_CLICKED, not CLICKED: LVGL 9 sends
+// CLICKED on release regardless of press duration, so pairing it with the
+// long-press handler below would re-accept an offer immediately after forgetting it.
+static void mbxAcceptCb(lv_event_t *) {
+    if (mailboxAcceptOffer()) {
+        tone_message();
+        s_mbxWritePendingMs = millis();
+    }
+}
+
+// Long press forgets the paired mailbox, turning the feature off.
+static void mbxForgetCb(lv_event_t *) {
+    mailboxForget();
+    s_mbxWritePendingMs = millis();
+}
+
 void settings2ScreenInit() {
     if (!objects.btn_fuel_sensor_type) return;
     lv_label_set_text(objects.lbl_fuel_sensor_type, FUEL_NAMES[fuelSensorType]);
     lv_obj_add_event_cb(objects.btn_fuel_sensor_type, fuelCycleCb, LV_EVENT_CLICKED, nullptr);
+
+    if (objects.btn_pair_mailbox) {
+        lv_obj_add_event_cb(objects.btn_pair_mailbox, mbxAcceptCb, LV_EVENT_SHORT_CLICKED, nullptr);
+        lv_obj_add_event_cb(objects.btn_pair_mailbox, mbxForgetCb, LV_EVENT_LONG_PRESSED,  nullptr);
+        mailboxStatusText(s_mbxLabelCache, sizeof s_mbxLabelCache);
+        lv_label_set_text(objects.lbl_pair_mbx, s_mbxLabelCache);
+    }
 
     // Register pre-render hide for every future visit to Settings2.
     // SCREEN_LOAD_START fires before the first animation frame, so the hide
@@ -75,14 +116,10 @@ void settings2ScreenInit() {
 void settings2ScreenPump() {
     if (lv_scr_act() != objects.settings2) return;
 
-    // Reveal GPS row and home-loc section once GPS has a position fix.
+    // Reveal the home-loc section once GPS has a position fix.
     // Un-hiding triggers incremental redraw of only the newly visible area — no heap spike.
     if (!s_gpsRowShown && fix.valid.location) {
         lv_obj_clear_flag(objects.container_gps_hide, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(objects.sats_hdop_1, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(objects.lbl_sats_hdop_value, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(objects.lbl_cur_lat_value, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(objects.lbl_cur_long_value, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(objects.at_home_indicator, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(objects.btn_set_home_loc, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(objects.set_home_loc_value, LV_OBJ_FLAG_HIDDEN);
@@ -97,6 +134,38 @@ void settings2ScreenPump() {
         espNow.sendFuelConfig();
         s_fuelWritePendingMs = 0;
     }
+
+    if (s_mbxWritePendingMs != 0 &&
+        (millis() - s_mbxWritePendingMs) >= CYCLE_WRITE_DEBOUNCE_MS) {
+        queuePreferenceWrite("mbx_id", (int)mailboxGetPairedId());
+        s_mbxWritePendingMs = 0;
+    }
+
+    // Refresh the pair button at most once a second, and only while this screen
+    // is active — writing a label invalidates it, and invalidating an object on
+    // an inactive screen queues dirty regions that show up as sluggish transitions.
+    uint32_t now = millis();
+    if (objects.lbl_pair_mbx && (now - s_mbxLabelMs) >= 1000) {
+        s_mbxLabelMs = now;
+        char buf[24];
+        mailboxStatusText(buf, sizeof buf);
+        if (strcmp(buf, s_mbxLabelCache) != 0) {
+            strcpy(s_mbxLabelCache, buf);
+            lv_label_set_text(objects.lbl_pair_mbx, buf);
+        }
+
+        // Green while there is something to claim. Independent of the label, so
+        // it still reads correctly if the label text is ever contested.
+        uint32_t offer = mailboxFreshOfferId();
+        bool pending = (offer != 0 && offer != mailboxGetPairedId());
+        if (pending != s_mbxOfferPending) {
+            s_mbxOfferPending = pending;
+            if (objects.btn_pair_mailbox) {
+                if (pending) lv_obj_add_state(objects.btn_pair_mailbox, LV_STATE_CHECKED);
+                else         lv_obj_clear_state(objects.btn_pair_mailbox, LV_STATE_CHECKED);
+            }
+        }
+    }
 }
 
 void settings2ScreenOnExit() {
@@ -104,6 +173,10 @@ void settings2ScreenOnExit() {
         queuePreferenceWrite("fuel_sense_type", (int)fuelSensorType);
         espNow.sendFuelConfig();
         s_fuelWritePendingMs = 0;
+    }
+    if (s_mbxWritePendingMs != 0) {
+        queuePreferenceWrite("mbx_id", (int)mailboxGetPairedId());
+        s_mbxWritePendingMs = 0;
     }
     // No LVGL calls here — settings2LoadStartCb re-hides GPS widgets before
     // the next Settings2 render. See memory note "lvgl-offscreen-invalidate":

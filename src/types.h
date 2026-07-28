@@ -63,7 +63,8 @@ typedef struct {
 // Hot Packet Types
 enum HotPacketType {
     HOT_PACKET_WEATHER = 1,
-    HOT_PACKET_VENUE_EVENT = 2
+    HOT_PACKET_VENUE_EVENT = 2,
+    HOT_PACKET_MAILBOX = 3
 };
 
 // ESP-NOW message types (must match GCI)

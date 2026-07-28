@@ -3,6 +3,7 @@
 #include "globals.h"
 #include "types.h"
 #include "communication/chat_buffer.h"
+#include "communication/mailbox.h"
 #include <Meshtastic.h>
 
 void initPreferences() {
@@ -95,6 +96,10 @@ void loadPreferences() {
 
     // Chat / messaging UI
     mesh_filter = prefs.getInt("mesh_filter", 0);  // default = DIRECT MSGS
+
+    // Paired mailbox sensor id (0 = none). Reads prefs directly — the EEPROM
+    // write queue does not exist yet at this point in setup().
+    mailboxLoad();
 
     // Headlight auto-on/off lux thresholds
     lux_lights_on  = prefs.getInt("lux_lights_on",  200);

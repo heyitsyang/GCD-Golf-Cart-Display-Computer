@@ -4,9 +4,44 @@
 #include "types.h"
 #include "utils/time_utils.h"
 #include "storage/preferences_manager.h"
+#include "mailbox.h"
 
 bool isHotPacket(const char* text) {
     return (text != NULL && text[0] == '|');
+}
+
+// Pointer to '#'-delimited field `idx` (0-based) of s; length into *outLen.
+// NULL if absent or empty. Tolerates a missing trailing '#'. Never modifies input.
+const char* hotField(const char* s, uint8_t idx, uint8_t* outLen) {
+    if (!s || !outLen) return NULL;
+    *outLen = 0;
+    for (uint8_t i = 0; i < idx; i++) {
+        const char* sep = strchr(s, '#');
+        if (!sep) return NULL;       // ran out of fields
+        s = sep + 1;
+    }
+    const char* end = strchr(s, '#');
+    size_t len = end ? (size_t)(end - s) : strlen(s);
+    if (len == 0 || len > 255) return NULL;
+    *outLen = (uint8_t)len;
+    return s;
+}
+
+// Exactly 8 hex digits -> uint32. Case-insensitive. false otherwise.
+bool hotParseHex8(const char* p, uint8_t len, uint32_t* out) {
+    if (!p || !out || len != 8) return false;
+    uint32_t v = 0;
+    for (uint8_t i = 0; i < 8; i++) {
+        char c = p[i];
+        uint32_t d;
+        if      (c >= '0' && c <= '9') d = (uint32_t)(c - '0');
+        else if (c >= 'a' && c <= 'f') d = (uint32_t)(c - 'a' + 10);
+        else if (c >= 'A' && c <= 'F') d = (uint32_t)(c - 'A' + 10);
+        else return false;
+        v = (v << 4) | d;
+    }
+    *out = v;
+    return true;
 }
 
 int parseHotPacketType(const char* text) {
@@ -160,6 +195,37 @@ void processHotPacket(const char* text) {
             } else {
                 Serial.println("Venue/Event packet too short");
             }
+            break;
+        }
+
+        case HOT_PACKET_MAILBOX: {
+            // |#03#NORM#a1b2c3d4#5#87#142#PRESENT      (mode also: DEV | PAIR)
+            // Unlike the weather branch, this one is const-only — it must not
+            // tokenize the buffer in place.
+            const char* body = &text[HOT_PKT_HEADER_OFFSET];   // "NORM#a1b2c3d4#..."
+            uint8_t mdLen = 0, idLen = 0, stLen = 0;
+            const char* mdp = hotField(body, 0, &mdLen);       // mode
+            const char* idp = hotField(body, 1, &idLen);       // mbx_id
+            uint32_t mbxId = 0;
+            if (!idp || !hotParseHex8(idp, idLen, &mbxId)) {
+                Serial.println("MBX malformed");
+                break;
+            }
+
+            // A PAIR frame carries only mode + mbx_id; the rest is ignored by contract.
+            if (mdp && mdLen == 4 && memcmp(mdp, "PAIR", 4) == 0) {
+                mailboxOnFrame(mbxId, false, true);
+                break;
+            }
+
+            const char* stp = hotField(body, 5, &stLen);       // state
+            bool present;
+            if      (stp && stLen == 7 && memcmp(stp, "PRESENT", 7) == 0) present = true;
+            else if (stp && stLen == 6 && memcmp(stp, "ABSENT",  6) == 0) present = false;
+            else { Serial.println("MBX bad state"); break; }
+
+            // Unknown modes (e.g. DEV) fall through as NORM — forward-compatible.
+            mailboxOnFrame(mbxId, present, false);
             break;
         }
 

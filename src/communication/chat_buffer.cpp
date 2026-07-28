@@ -1,6 +1,7 @@
 #include "chat_buffer.h"
 #include "config.h"
 #include "globals.h"
+#include "hot_packet_parser.h"
 #include <Meshtastic.h>
 #include <string.h>
 #include <time.h>
@@ -50,6 +51,29 @@ void chatAbbreviate(const char *src, char *dst, size_t dstSize) {
             snprintf(dst, dstSize, "[WX_BCAST]");
         } else if (src[1] == '#' && src[2] == '0' && src[3] == '2') {
             snprintf(dst, dstSize, "[ENT_BCAST]");
+        } else if (src[1] == '#' && src[2] == '0' && src[3] == '3') {
+            // Mailbox. Diagnostics only — these rows are read-only under the
+            // DEBUG filter; pairing happens on the Settings 2 button. Rendered as
+            // "<MBX_PAIR a1b2c3d4>" for an offer, else "<MBX a1b2c3d4 P>".
+            // The id is located with hotField() rather than a fixed offset,
+            // because the mode field is 3 or 4 chars (DEV vs NORM/PAIR).
+            const char *body = &src[HOT_PKT_HEADER_OFFSET];
+            uint8_t mdLen = 0, idLen = 0, stLen = 0;
+            const char *mdp = hotField(body, 0, &mdLen);
+            const char *idp = hotField(body, 1, &idLen);
+            if (idp && idLen == 8) {
+                if (mdp && mdLen == 4 && memcmp(mdp, "PAIR", 4) == 0) {
+                    snprintf(dst, dstSize, "<MBX_PAIR %.8s>", idp);
+                } else {
+                    const char *stp = hotField(body, 5, &stLen);
+                    char st = '?';
+                    if      (stp && stLen == 7) st = 'P';
+                    else if (stp && stLen == 6) st = 'A';
+                    snprintf(dst, dstSize, "<MBX %.8s %c>", idp, st);
+                }
+            } else {
+                snprintf(dst, dstSize, "[HoT_PACKET]");
+            }
         } else {
             snprintf(dst, dstSize, "[HoT_PACKET]");
         }

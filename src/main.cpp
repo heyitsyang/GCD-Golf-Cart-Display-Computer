@@ -49,6 +49,8 @@
 #include "ui/chat_screen.h"
 #include "ui/canned_screen.h"
 #include "ui/settings2_screen.h"
+#include "ui/settings_screen.h"
+#include "ui/home_screen.h"
 #include "ui/menu_screen.h"
 
 // Utils
@@ -186,6 +188,10 @@ void setup() {
     HEAP_LOG("after cannedScreenInit");
     settings2ScreenInit();
     HEAP_LOG("after settings2ScreenInit");
+    settingsScreenInit();
+    HEAP_LOG("after settingsScreenInit");
+    homeScreenInit();
+    HEAP_LOG("after homeScreenInit");
     menuScreenInit();
     HEAP_LOG("after menuScreenInit");
     venueEventDisplayInit();

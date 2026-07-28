@@ -4,6 +4,7 @@
 #include "hardware/display.h"
 #include "communication/espnow_handler.h"
 #include "communication/chat_buffer.h"
+#include "communication/mailbox.h"
 #include "globals.h"
 
 // String variable definitions
@@ -747,6 +748,19 @@ bool get_var_headlights_on() {
 
 void set_var_headlights_on(bool value) {
     headlights_on = value;
+}
+
+// Mailbox glyph. State lives in mailbox.cpp, so there is no global to mirror.
+// mailboxGlyphOn() takes no lock, which it must not: ui_init() polls every
+// getter before the mutexes and queues are created.
+bool get_var_mail_available() {
+    return mailboxGlyphOn();
+}
+
+// Deliberately a no-op, mirroring set_var_num_unread_direct_msgs(): the parser
+// task owns this state, and a stray EEZ flow assignment must never fight it.
+void set_var_mail_available(bool value) {
+    (void)value;
 }
 
 int32_t get_var_lux_now() {
