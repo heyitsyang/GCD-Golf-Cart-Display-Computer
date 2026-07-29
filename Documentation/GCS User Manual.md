@@ -8,7 +8,9 @@ The system has three components:
 - **GCI** (Golf Cart Internal) — an internal computer installed inside the cart. It reads sensors (temperature, battery voltage, fuel level) and controls the headlight relay, sending telemetry data to the GCD wirelessly.
 - **GCM** (Golf Cart Mesh) — a Meshtastic LoRa radio module co-located with the GCD. It connects to the long-range mesh radio network, enabling messaging between carts, weather broadcasts, and entertainment schedule data.
 
-All three units are wired together via RJ cables that carry power and signals. The GCM is always connected to the GCD; the GCI requires a one-time software pairing step described in [System Setup](#system-setup-first-time-configuration). When GCI is installed, the cart's ignition switch controls GCD power-down (deep sleep). Without GCI, the GCD remains running whenever power is supplied and draws more battery between uses.
+All three units are wired together via RJ cables that carry power and signals. The GCM is always connected to the GCD; the GCI requires a one-time software pairing step described in [System Setup](#system-configuration-first-time). When GCI is installed, the cart's ignition switch controls GCD power-down (deep sleep). Without GCI, the GCD remains running whenever power is supplied and draws more battery between uses.
+
+An optional fourth component, the **Mailbox Sensor**, mounts inside a postal mailbox and lights a mail glyph on the Home screen when mail is delivered. It communicates over the mesh radio and requires no wiring to the cart. See the *GCS Mailbox Sensor Manual* for the full procedure.
 
 ---
 
@@ -20,7 +22,7 @@ Connect the three units before first use:
 
 1. Plug one RJ 6P6C cable from the GCD **To Mesh Radio** jack to the matching jack on the GCM enclosure. This cable carries +5V power, GPS signal, and mesh communications.
 2. Plug a second RJ 6P6C cable from the GCD **To GCI** jack to the matching jack on the GCI enclosure. This cable carries +5V power and the ignition status signal.
-3. GCI telemetry (fuel level, battery voltage, temperature, and headlight status) travels over **ESP-NOW** — a short-range WiFi protocol — with no additional cable. GCI must be paired with the GCD once before telemetry begins (see [System Setup](#system-setup-first-time-configuration)).
+3. GCI telemetry (fuel level, battery voltage, temperature, and headlight status) travels over **ESP-NOW** — a short-range WiFi protocol — with no additional cable. GCI must be paired with the GCD once before telemetry begins (see [System Setup](#system-configuration-first-time)).
 
 > Both RJ cables are keyed and only fit one way. Do not force.
 
@@ -62,16 +64,27 @@ A horizontal bar below the date represents fuel level as a percentage (full bar 
 
 ### Bottom Icon Bar
 
-Four icons run along the bottom of the screen:
+Five icons run along the bottom of the screen:
 
-| Icon | Meaning | Tap action |
+| Icon | Meaning | Touch action |
 |------|---------|------------|
 | Message bubble with number | Unread direct messages count | Opens Messages screen |
+| Yellow envelope | Mail is waiting in your mailbox (requires the optional Mailbox Sensor) | Long-press to snooze |
 | Green headlight symbol | Auto-headlights are currently ON | None (display only) |
 | Yellow golf cart | Service is due (Hrs Since Service exceeds interval) | Opens Vehicle screen |
 | Yellow fuel pump or battery | Fuel is below the low-fuel threshold; battery icon shown when Fuel Sensor Type is ADC ELECTRIC | None (display only) |
 
-The headlight icon, golf cart icon, and fuel/battery icon are only visible when their respective conditions are active. The message badge number counts only unread **direct messages** (not channel messages).
+The envelope, headlight icon, golf cart icon, and fuel/battery icon are only visible when their respective conditions are active. The message badge number counts only unread **direct messages** (not channel messages).
+
+### Mail Glyph
+
+The yellow envelope appears with a chime when the optional Mailbox Sensor reports that mail has been delivered, and disappears on its own when the mail is collected.
+
+**Press and hold the envelope for about a second to snooze it.** A click confirms. The snooze is temporary — because the mail is still there, the envelope returns at the sensor's next hourly report, with a chime. A short tap does nothing; the hold is required so that a stray touch cannot dismiss the reminder.
+
+The glyph is dark after every power-up until the sensor's next report, which may take up to an hour.
+
+For pairing, sensor health, and the full behaviour, see the *GCS Mailbox Sensor Manual*.
 
 ---
 
@@ -95,13 +108,24 @@ The Menu provides access to all secondary screens. Tap the back arrow (top-left)
 
 <img src="GCD%20Screens/Settings.jpg" width="213" alt="Settings Screen">
 
-Three sliders control the core display and audio experience. Tap the right arrow (top-right) to continue to Settings 2.
+Settings contains the GPS status readout and the display and audio controls. Tap the right arrow (top-right) to continue to Settings 2.
+
+### GPS Status Row (satellite icon) *(requires GPS fix)*
+
+*Read-only.* This row is hidden until the GCD acquires a GPS position fix, and appears automatically once one is available.
+
+- **Satellites / HDOP** (e.g., `5/7.5`) — number of satellites in use and horizontal dilution of precision. HDOP below 2.0 indicates good positional accuracy; above 5.0 is poor.
+- **Latitude / Longitude** — current GPS coordinates for reference.
 
 ### Day Backlight (sun icon) — range 1–10
 Display brightness during daytime hours. The system automatically switches between day and night backlight based on calculated sunrise and sunset times derived from your GPS position.
 
 ### Night Backlight (moon icon) — range 1–10
 Display brightness after sunset. Setting this lower than Day Backlight reduces glare when driving at night. The transition is automatic.
+
+### Backlight Timeout — range 0–30 minutes
+
+*(Applies when GCI is not installed.)* The screen dims and turns off after this many minutes of no touch input. Set to **0** to keep the screen on indefinitely. The screen wakes immediately on touch. When GCI is installed, the cart's ignition-off signal manages screen power automatically and this setting is not used.
 
 ### Volume (speaker icon) — range 1–10
 Controls the volume of alert tones and notification sounds from the built-in speaker.
@@ -112,31 +136,55 @@ Controls the volume of alert tones and notification sounds from the built-in spe
 
 <img src="GCD%20Screens/Settings2.jpg" width="213" alt="Settings 2 Screen">
 
-Settings 2 contains connectivity, GPS, display orientation, and system management controls. Navigate here using the right arrow on the Settings screen.
+Settings 2 contains the two pairing controls, plus display orientation, sensor, and system management settings. Navigate here using the right arrow on the Settings screen.
+
+The two pairing rows at the top share the same layout and the same gestures: a blue button on the left, and a colour-coded status value on the right.
+
+| Gesture | PAIR GCI | PAIR MBX |
+|---|---|---|
+| **Short tap** | Start pairing with the GCI | Accept a waiting mailbox offer |
+| **Long press** (about a second) | Unpair the GCI | Unpair the mailbox sensor |
 
 ### GCI MAC / PAIR GCI
 
-- The **GCI MAC** field shows the hardware address of the paired Golf Cart Internal computer. If no GCI has been paired, it shows a placeholder.
-- The **PAIR GCI** button initiates the wireless pairing process. See [System Setup](#system-setup-first-time-configuration) for step-by-step instructions.
+The value on the right shows the hardware address of the paired Golf Cart Internal computer, colour-coded:
+
+| Value | Colour | Meaning |
+|---|---|---|
+| `NONE` | white | No GCI paired. **Not a fault** — the GCI is optional |
+| `AA:BB:CC:DD:EE:FF` | green | Paired and responding |
+| `AA:BB:CC:DD:EE:FF` | red | Paired, but no longer answering — check GCI power |
+
+- **Short tap PAIR GCI** to start the wireless pairing process. See [System Setup](#system-configuration-first-time) for step-by-step instructions.
+- **Long press PAIR GCI** to unpair. The value returns to a white `NONE` and telemetry stops. Do this before pairing a replacement GCI.
+
+### Mailbox ID / PAIR MBX
+
+*(Requires the optional Mailbox Sensor.)* Shows which mailbox sensor this cart is watching and how healthy the link to it is.
+
+| Value | Colour | Meaning |
+|---|---|---|
+| `NO MAILBOX` | white | No sensor paired |
+| `a1b2c3d4 OFFERED` | white | A sensor is offering to pair — tap to claim it. The button also turns green |
+| `a1b2c3d4` | white | Paired, nothing heard yet since power-up. Normal; may take up to an hour |
+| `a1b2c3d4` | green | Paired and healthy |
+| `a1b2c3d4 (3)` | yellow | Paired, but 3 reports went missing. A small, stable count is normal on mesh radio |
+| `a1b2c3d4 SILENT` | red | Nothing heard for 24 hours of listening — likely a dead battery |
+
+- **Short tap PAIR MBX** to accept a waiting offer. A chime confirms.
+- **Long press PAIR MBX** to unpair. The value returns to `NO MAILBOX` and the mail glyph stops appearing.
+
+To pair, open this screen **first**, then press the pair button on the sensor — the offer is only claimable for 45 seconds. The full procedure, the meaning of the yellow count, and troubleshooting are in the *GCS Mailbox Sensor Manual*.
+
+> On carts fitted with a GCI, the red `SILENT` state may never appear, because the display sleeps with the ignition and the 24-hour listening timer restarts on each wake. This is intended behaviour.
 
 ### Temp Sensor Adj — range –10 to +10 °F
 
 A calibration offset added to the temperature reading reported by the GCI. If your temperature sensor consistently reads 3°F too high, set this to –3. Useful for compensating sensor placement (e.g., in a hot enclosure).
 
-### Backlight Timeout — range 0–30 minutes
+### Home Location (house icon) *(requires GPS fix)*
 
-*(Applies when GCI is not installed.)* The screen dims and turns off after this many minutes of no touch input. Set to **0** to keep the screen on indefinitely. The screen wakes immediately on touch. When GCI is installed, the cart's ignition-off signal manages screen power automatically and this setting is not used.
-
-### GPS Status Row and Home Location *(requires GPS fix)*
-
-The GPS status row and Home Location controls are hidden until the GCD acquires a GPS position fix. Once a fix is available, they appear automatically.
-
-**GPS Status** *(read-only)*:
-
-- **Satellites / HDOP** (e.g., `5/7.5`) — number of satellites in use and horizontal dilution of precision. HDOP below 2.0 indicates good positional accuracy; above 5.0 is poor.
-- **Latitude / Longitude** — current GPS coordinates for reference.
-
-**Home Location**:
+The Home Location controls are hidden until the GCD acquires a GPS position fix. Once a fix is available, they appear automatically. The GPS status readout itself is on the [Settings](#settings) screen.
 
 - **HOME OFF / HOME ON toggle** — tap to set your current GPS position as the "Home" location. Set this while parked at your garage or starting point.
 - **Fence slider** (100–1000 m) — the radius around the home point that counts as "at home."
@@ -166,7 +214,22 @@ Turn this **OFF** when you need to configure the GCM via Bluetooth (e.g., using 
 
 ### Reset Preferences
 
-- **RESET PREFS** — **wipes all saved settings back to factory defaults. This cannot be undone.** All paired devices, home location, odometer values, and preferences will be lost.
+**RESET PREFS** wipes all saved settings back to factory defaults and restarts the GCD. **This cannot be undone.** Everything below is erased:
+
+- **Touchscreen calibration** — see the warning below
+- **Paired devices** — both the GCI and the Mailbox Sensor
+- **Home location** and fence radius
+- **Odometer, trip, and service hour counters**
+- All sliders and toggles: backlights, volume, timeout, temperature offset, fuel sensor type, low-fuel threshold, service interval, LUX thresholds, flip screen, message filter
+- Cached weather and entertainment data, and saved unread direct messages
+
+> ### ⚠️ RESET PREFS erases the touchscreen calibration
+>
+> Touch calibration is stored alongside the other preferences and is wiped with them. **Recovering it is not something you can do from the touchscreen** — it requires a computer, flashing a separate calibration program onto the GCD, running through the calibration targets, and then flashing the main firmware back. See the *GCS Software Installation Manual*, section 3.
+>
+> The display remains usable in the meantime, but touch accuracy falls back to a rough automatic estimate that improves only as you touch the far edges of the screen. Expect taps to land noticeably off-target until the unit is recalibrated.
+>
+> **Do not use RESET PREFS as a troubleshooting step.** To clear a single paired device, long-press **PAIR GCI** or **PAIR MBX** instead — those affect only that pairing.
 
 ---
 
@@ -254,7 +317,7 @@ Narrows which messages are shown in the list. Tap the dropdown to cycle through:
 
 The selected filter is saved and persists across reboots.
 
-**HOT packets** are automated data broadcasts sent over the mesh by the weather and entertainment servers. They carry the content shown on the Weather and Now Playing screens and are not intended for reading as messages. ALL and the channel filters suppress them so they do not clutter the message list. Switch to DEBUG only when troubleshooting the data feed.
+**HOT packets** are automated data broadcasts sent over the mesh by the weather and entertainment servers, and by mailbox sensors. They carry the content shown on the Weather and Now Playing screens, and the mail glyph on the Home screen, and are not intended for reading as messages. ALL and the channel filters suppress them so they do not clutter the message list. Switch to DEBUG only when troubleshooting the data feed — mailbox rows appear there as `<MBX a1b2c3d4 P>`.
 
 **How the filter works — inbound and display:**
 
@@ -393,11 +456,11 @@ Before starting, check the GCI's small display. If it shows **WAITING FOR PAIRIN
 1. On the GCI enclosure, hold down the display button until the screen prompts for confirmation, then press the button again to confirm. The GCI is now in pairing mode.
 2. On GCD: navigate to Settings 2 → tap **PAIR GCI** within 30 seconds.
 3. On success:
-   - The GCI's MAC address fills in on the Settings 2 screen.
+   - The GCI's MAC address fills in on the Settings 2 screen, in green.
    - The GCI's small display shows the paired GCD's MAC address.
    - Temperature, battery, and fuel data begin appearing on the Home screen.
 
-Pairing is permanent and survives reboots. Repeat this step only if the GCI unit is replaced.
+Pairing is permanent and survives reboots. Repeat this step only if the GCI unit is replaced — long-press **PAIR GCI** to unpair the old unit first.
 
 ### Step 3: Configure Fuel Sensor
 
@@ -409,8 +472,8 @@ Pairing is permanent and survives reboots. Repeat this step only if the GCI unit
 ### Step 4: Set Home Location
 
 1. Drive or park the cart at your home/garage position.
-2. Open Settings 2. The GPS status row appears automatically once the GCD has a position fix; if it is not visible yet, wait for the satellite count to appear (4 or more satellites is ideal).
-3. Tap **HOME OFF** to toggle it to **HOME ON**.
+2. Open Settings and check the GPS status row. It appears automatically once the GCD has a position fix; if it is not visible yet, wait for the satellite count to appear (4 or more satellites is ideal).
+3. Continue to Settings 2 and tap **HOME OFF** to toggle it to **HOME ON**.
 4. Adjust the **Fence** slider to set the radius (in meters) that counts as "at home."
 
 ### Step 5: Set Auto-Headlight Thresholds (optional, requires BH1750 sensor on GCI)
@@ -421,6 +484,21 @@ Pairing is permanent and survives reboots. Repeat this step only if the GCI unit
    - Move the **left handle (On)** to the lux value where you want headlights to turn on (lower = darker conditions).
    - Move the **right handle (Off)** to the lux value where you want them to turn off (higher = brighter conditions).
 4. Keep a gap of at least 200–500 lux between the On and Off values to prevent rapid cycling.
+
+### Step 6: Pair the Mailbox Sensor (optional)
+
+Only needed if you have the optional Mailbox Sensor. The sensor must already be programmed and configured on the `GolfCart` primary channel — see the *GCS Mailbox Sensor Manual* for those steps.
+
+**Pair the sensor before you mount it in the mailbox.** The sensor detaches easily and the display does not, so bring the sensor to the cart rather than working a touchscreen and a button that are metres apart against a 45-second clock.
+
+1. Sit in the cart with the sensor **in your hand** and the display powered up.
+2. On the GCD, navigate to Settings → right arrow → Settings 2. Do this **before** the next step: the offer expires after 45 seconds.
+3. Press the pair button on the sensor.
+4. The **PAIR MBX** button turns green and the value beside it reads `a1b2c3d4 OFFERED`.
+5. Tap **PAIR MBX** once. A chime confirms and the id is now paired.
+6. Take the sensor out to the mailbox and mount it.
+
+The value turns green at the sensor's first report from its mounted position, which may take up to an hour — open and close the mailbox door to force one sooner. That first green also confirms the mailbox is within radio range. The mail glyph then appears on the Home screen whenever mail is delivered.
 
 ---
 

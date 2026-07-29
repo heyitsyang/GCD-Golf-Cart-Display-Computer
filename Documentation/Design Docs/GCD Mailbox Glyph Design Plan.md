@@ -705,29 +705,29 @@ D-1 … D-5 were confirmed on 2026-07-26; D-6 … D-8 are open.
 
 ### 7.1 Where the open items actually stand (2026-07-28)
 
-The GCD firmware is complete, verified and committed. Nothing on this list is waiting on GCD code,
-and the remaining items fall into exactly two groups.
+The GCD firmware is complete, verified and committed. Nothing on this list is waiting on GCD code.
 
-**Documentation-gated — decided, nothing to build. These close when the manual gains Mailbox Sensor
-content:**
+**Decision taken (2026-07-28):** the Mailbox Sensor content became a **separate all-in-one manual**,
+`Documentation/GCS Mailbox Sensor Manual.md`, carrying operator *and* installer/programming content.
+The alternative — splitting O-1 into the Software Installation Manual and O-5 into the Assembly
+Manual — was rejected because the sensor is a distinct product from the cart, and splitting it would
+have put one accessory's instructions across three documents. The GCS User Manual carries brief Home
+/ Settings 2 coverage plus a cross-reference; nothing is duplicated.
 
-| | What the documentation owes |
-|---|---|
-| **O-1** | Installer step: set the sensor's **primary** channel to `GolfCart` so it shares the cart mesh's RF slot |
-| **O-5** | Programming step: read the `mbx_id` over UPDI/serial and put a sticker inside the mailbox lid |
-| **O-7** | Operator content: pairing procedure, the glyph and its long-press snooze, un-pair/replace, the colour key |
-| **O-8** | One sentence for GCI-install owners: `SILENT` may never appear, because the GCD sleeps with the cart |
+**Documentation-gated — ✅ ALL CLOSED (2026-07-28):**
 
-**Hardware-gated — one item:**
+| | What was owed | Where it landed |
+|---|---|---|
+| **O-1** | Installer step: set the sensor's **primary** channel to `GolfCart` so it shares the cart mesh's RF slot | Mailbox Sensor Manual §4, with the LoRa/channel table copied from the GCM config, plus a DEBUG-filter verification procedure |
+| **O-5** | Programming step: read the `mbx_id` over UPDI/serial and put a sticker inside the mailbox lid | Mailbox Sensor Manual §5. UPDI pinout and readout command carry TBD markers pending O-4; the press-the-button-and-read-it-off-Settings-2 workaround is documented as the method that works today |
+| **O-7** | Operator content: pairing procedure, the glyph and its long-press snooze, un-pair/replace, the colour key | Mailbox Sensor Manual §7-§11; condensed into GCS User Manual → Home Screen → *Mail Glyph* and Settings 2 → *Mailbox ID / PAIR MBX* |
+| **O-8** | One sentence for GCI-install owners: `SILENT` may never appear, because the GCD sleeps with the cart | Mailbox Sensor Manual §8 (boxed note) and §14, plus a short note in the GCS User Manual Settings 2 section |
+
+**Hardware-gated — the only item still open:**
 
 | | Status |
 |---|---|
-| **O-4** | ⏳ **The mailbox sensor has not been built yet.** Firmware needs a pair button emitting one `mode=PAIR` frame per press. Until the hardware exists, the sensor-side `seq` assumptions (§13.6) also stay unconfirmed, since every test to date has used hand-sent frames. |
-
-**Open decision:** whether the Mailbox Sensor content becomes a **new section in the GCS User
-Manual** or a **separate Mailbox Sensor Manual**. O-1 and O-5 are installer/programming steps rather
-than operator steps, which is the argument for a separate document — or for splitting them into the
-Assembly and Software Installation manuals as originally suggested under O-7. Undecided.
+| **O-4** | ⏳ **The mailbox sensor has not been built yet.** Firmware needs a pair button emitting one `mode=PAIR` frame per press. Until the hardware exists, the sensor-side `seq` assumptions (§13.6) also stay unconfirmed, since every test to date has used hand-sent frames. **Two sections of the Mailbox Sensor Manual (§2 Hardware, §6 Installing in the Mailbox) are TBD stubs waiting on this**, as are the UPDI specifics in §5. |
 
 ---
 
@@ -1131,10 +1131,10 @@ if (h != s_lastHealth) {
 | 3 | Short click | `a1b2c3d4` white (paired, no contact yet); button back to blue |
 | 4 | Send `\|#03#NORM#a1b2c3d4#6#…#PRESENT` | `a1b2c3d4` **green**; glyph lights |
 | 5 | Send seq **7** | still green, no count — consecutive |
-| 6 | Send seq **10** (skipping 8, 9) | `a1b2c3d4 2` **yellow** |
-| 7 | Send seq 11 | stays `a1b2c3d4 2` yellow — count is cumulative, not reset by good frames |
+| 6 | Send seq **10** (skipping 8, 9) | `a1b2c3d4 (2)` **yellow** |
+| 7 | Send seq 11 | stays `a1b2c3d4 (2)` yellow — count is cumulative, not reset by good frames |
 | 8 | Send `\|#03#PAIR#a1b2c3d4#12#…` (own sensor) | treated as contact — no `OFFERED`, count unchanged |
-| 9 | Send `\|#03#PAIR#deadbeef#…` | `deadbeef OFFERED` white, button green; after 45 s reverts to `a1b2c3d4 2` yellow |
+| 9 | Send `\|#03#PAIR#deadbeef#…` | `deadbeef OFFERED` white, button green; after 45 s reverts to `a1b2c3d4 (2)` yellow |
 | 10 | Accept `deadbeef` | `deadbeef` white — history cleared for the new sensor |
 | 11 | Long press | `NO MAILBOX` white |
 | 12 | Reboot while paired | `a1b2c3d4` white until the first frame — off-time did not count as missed |
