@@ -5,6 +5,7 @@
 #include "ui_eez/ui.h"
 #include "ui_eez/screens.h"
 #include "ui_eez/styles.h"
+#include "ui_eez/eez-flow.h"
 #include "ui/venue_event_display.h"
 #include "ui/chat_screen.h"
 #include "ui/canned_screen.h"
@@ -220,10 +221,20 @@ void guiTask(void *parameter) {
                 else if (current_screen == objects.weather)                    sname = "WEATHER";
                 else if (current_screen == objects.now_playing)                sname = "NOW_PLAYING";
                 else if (current_screen == objects.num_entry)                  sname = "NUM_ENTRY";
-                Serial.printf("[%s] enter: free=%u max=%u\n",
+
+                // ui_tick() refreshes tick_screen(g_currentScreen), not whatever
+                // LVGL happens to be showing. Any screen change that bypasses
+                // eez_flow_set/push/pop_screen() desyncs the two and silently
+                // freezes every bound widget on the visible screen, so surface it
+                // here rather than waiting for someone to notice a stopped clock.
+                int16_t eezId = eez_flow_get_current_screen();
+                lv_obj_t *eezScreen = (eezId > 0) ? ((lv_obj_t **)&objects)[eezId - 1] : nullptr;
+                Serial.printf("[%s] enter: free=%u max=%u eez=%d%s\n",
                               sname,
                               (unsigned)ESP.getFreeHeap(),
-                              (unsigned)ESP.getMaxAllocHeap());
+                              (unsigned)ESP.getMaxAllocHeap(),
+                              (int)eezId,
+                              (eezScreen != current_screen) ? "  *** EEZ/LVGL DESYNC ***" : "");
             }
 #endif
             previous_screen = current_screen;
@@ -279,8 +290,16 @@ void handleInactivityCountdown(uint32_t now) {
             // Navigate to home with no animation — FADE_IN (triggered when EEZ sees
             // countdown=0) temporarily consumes ~45 KB, dropping largest_block below
             // glyph allocation threshold (2932B < 2944-3024B needed by Cart-60/REM-80).
+            //
+            // Must go through EEZ rather than lv_scr_load_anim(): replacePageHook()
+            // is the only writer of g_currentScreen, and ui_tick() refreshes exactly
+            // that one screen. A raw LVGL load leaves Home on the display while the
+            // flow keeps ticking the screen we left, so the clock — and every other
+            // expression-bound widget on Home — freezes until the user navigates
+            // with a real UI control. LV_SCR_LOAD_ANIM_NONE is preserved; only the
+            // bookkeeping changes.
             if (lv_scr_act() != objects.home) {
-                lv_scr_load_anim(objects.home, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
+                eez_flow_set_screen(SCREEN_ID_HOME, LV_SCR_LOAD_ANIM_NONE, 0, 0);
             }
             set_var_screen_inactivity_countdown(SCREEN_INACTIVITY_TIMEOUT_MS);
             return;

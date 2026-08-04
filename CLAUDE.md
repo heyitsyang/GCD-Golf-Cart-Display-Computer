@@ -53,6 +53,7 @@ pio device monitor
 - **NEVER modify any file in `src/ui_eez/` manually**: EEZ Studio overwrites all files in this directory on every project export/sync. Any manual edits will be silently lost.
 - **All files in `src/ui_eez/` are generated**: `eez-flow.cpp`, `screens.c`, `ui.c`, `styles.c`, `images.c`, and all headers are owned by EEZ Studio. Treat this directory the same as `lib/meshtastic-arduino_src/`.
 - **No patches are currently required**: `create_screens()` pre-creates all 14 screen FlowStates at boot; `getPageFlowState` reuses existing FlowStates rather than accumulating new ones. The EEZ Studio output is correct as-is for this project.
+- **NEVER call `lv_scr_load*()` directly to change screens**: always use `eez_flow_set_screen()`, `eez_flow_push_screen()`, or `eez_flow_pop_screen()` from `ui_eez/eez-flow.h`. `replacePageHook()` is the only writer of `g_currentScreen`, and `ui_tick()` refreshes `tick_screen(g_currentScreen)` — exactly one screen per pass. A raw LVGL load leaves the new screen on the display while the flow keeps ticking the old one, silently freezing every expression-bound widget on the visible screen (this is what froze the Home clock after each inactivity timeout). The `DEBUG_HEAP` screen-entry marker in `gui_task.cpp` prints `eez=<id>` and flags `*** EEZ/LVGL DESYNC ***` if the two ever disagree.
 
 ### 4. UART0 Split Architecture
 - **UART0 is split**: GPS RX on pin 3, Debug TX on pin 1. This is a unidirectional split configuration.
