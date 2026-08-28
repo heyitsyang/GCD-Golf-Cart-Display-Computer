@@ -3,10 +3,16 @@
 # program copies customized configuration files lv_conf.h and User_Setup.h
 # into their proper folders.
 #
-# lv_conf.h only copies if the destination file does not already exist.
-# This mechanism prevents this program from endlessly copying (platformio build flag
-# doesn't work as you would expect), so delete the destination .pio/libdeps/cyd/lv.conf
-# file first to cause a copy before the next build.
+# Each file is copied only when its content differs from the destination.
+# Comparing content (rather than existence) means edits to the templates
+# propagate on the next build automatically, while an unchanged file is left
+# untouched -- so its mtime never moves and SCons is not driven into an endless
+# rebuild. That was the reason for the old exists-only guard, which silently
+# discarded every template edit after the first build.
+#
+# Each file is also checked independently. The old guard tested only lv_conf.h
+# but gated BOTH copies, so a library update that clobbered User_Setup.h would
+# never be repaired as long as lv_conf.h happened to exist.
 #
 # Customizations to should be applied to the files in the NECESSARY TEMPLATE FILES folder
 #
@@ -48,21 +54,31 @@ os.makedirs(os.path.dirname(lv_conf_dest), exist_ok=True)
 os.makedirs(os.path.dirname(user_setup_dest), exist_ok=True)
 
 
-if os.path.exists(lv_conf_dest):
-    print("CYD files not copied - lv_conf.h already exists")
-else:
-# Copy files
+def copy_if_changed(src, dest, label):
+    """Copy src->dest only when the content differs, so unchanged files keep
+    their mtime and do not trigger a needless LVGL/TFT_eSPI rebuild."""
+    if not os.path.exists(src):
+        print(f"Error: template not found: {src}")
+        Exit(1)
+
+    if os.path.exists(dest):
+        with open(src, "rb") as f:
+            src_bytes = f.read()
+        with open(dest, "rb") as f:
+            dest_bytes = f.read()
+        if src_bytes == dest_bytes:
+            print(f"{label}: up to date")
+            return
+
     try:
-        copyfile(lv_conf_src, lv_conf_dest)
-        print(f"Copied {lv_conf_src} to {lv_conf_dest}")
-        copyfile(user_setup_src, user_setup_dest)
-        print(f"Copied {user_setup_src} to {user_setup_dest}")
-        print("CYD configuration files copied successfully.")
-    except FileNotFoundError as e:
-        print(f"Error copying file: {e}. Check if source files exist and paths are correct.")
-        Exit(1)
+        copyfile(src, dest)
+        print(f"{label}: UPDATED -> {dest}")
     except Exception as e:
-        print(f"An unexpected error occurred during file copying: {e}")
+        print(f"{label}: error copying: {e}")
         Exit(1)
+
+
+copy_if_changed(lv_conf_src, lv_conf_dest, "lv_conf.h")
+copy_if_changed(user_setup_src, user_setup_dest, "User_Setup.h")
 
 

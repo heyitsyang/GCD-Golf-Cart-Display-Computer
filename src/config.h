@@ -17,7 +17,7 @@
 #define DEBUG_ESPNOW 0                  // ESP-NOW verbose messages (pairing & telemetry always shown)
 #define DEBUG_OTA_TX_TEST 0             // Periodic T1,T2,T3... OTA test messages every 30s
 #define DEBUG_OTA_TX_TEST_CHANNEL 3     // Channel to send OTA test messages on (corresponds to UI channel selector)
-#define DEBUG_HEAP 0                    // Log free heap at various points (e.g. task entries, main loop, etc.)  
+#define DEBUG_HEAP 1                    // Log free heap at various points (e.g. task entries, main loop, etc.)  
 #define DEBUG_HEAP_INTERVAL_MS 5000     // Log free heap every N milliseconds when enabled
 
 // Speaker pin & default settings

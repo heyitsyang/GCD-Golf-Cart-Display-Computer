@@ -602,7 +602,17 @@
     #define LV_THEME_DEFAULT_GROW 1
 
     /*Default transition time in [ms]*/
-    #define LV_THEME_DEFAULT_TRANSITION_TIME 80
+    /*0 on GCD: the theme's press feedback (black recolor at opa 35, plus the
+      GROW +2px) still applies, it just snaps instead of fading in over 80ms and
+      fading back out after a 70ms hold. Set to 0 to cut heap pressure: a
+      non-zero value makes lv_theme_default attach LV_STYLE_TRANSITION to every
+      button/slider/switch/scrollbar, so each press AND release allocates an
+      lv_anim_t + a transition style + an obj->styles realloc, and drives ~3
+      extra full redraws per edge at LV_DEF_REFR_PERIOD 30 -- exactly the
+      lv_draw_task churn that starves the heap. At 0 the theme installs no
+      transition at all, so update_obj_state() collects zero transitions.
+      See scripts/fix_lv_obj_state_oom.py for the crash this contributes to.*/
+    #define LV_THEME_DEFAULT_TRANSITION_TIME 0
 #endif /*LV_USE_THEME_DEFAULT*/
 
 /*A very simple theme that is a good starting point for a custom theme*/
